@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bot Settings — ZoraBot</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body data-page="bot-settings">
+  <div id="loading-view" class="loading-wrap">
+    <div class="loading-card">
+      <div class="loading-logo">ZoraBot</div>
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <p class="loading-text" id="loading-text">Memuat...</p>
+    </div>
+  </div>
+
+  <div id="main-view" class="hidden">
+    <header class="topbar">
+      <button id="menu-btn" class="icon-btn" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="brand">ZoraBot</div>
+      <div class="user-chip" id="user-chip"></div>
+    </header>
+
+    <aside id="sidebar" class="sidebar">
+      <nav>
+        <div class="nav-label">Menu</div>
+        <a href="/dashboard" class="nav-item">Dashboard</a>
+        <a href="/connect" class="nav-item">Connect Bot</a>
+        <a href="/bot-settings" class="nav-item active">Bot Settings</a>
+        <a href="/feature-settings" class="nav-item">Feature Settings</a>
+        <div class="nav-label">Premium</div>
+        <a href="/upgrade" class="nav-item">Order Plan Premium</a>
+        <div class="nav-label">Akun</div>
+        <a href="/account" class="nav-item">Account</a>
+      </nav>
+      <button id="logout-btn" class="btn outline logout">Keluar</button>
+    </aside>
+    <div id="sidebar-overlay" class="overlay"></div>
+
+    <main class="content">
+      <h2>Bot Settings</h2>
+      <div class="field">
+        <label>Pilih Bot</label>
+        <select id="settings-bot-select"></select>
+      </div>
+      <div id="settings-form" class="form-grid">
+        <div class="field">
+          <label>Mode</label>
+          <select id="set-mode">
+            <option value="public">Public</option>
+            <option value="self">Self</option>
+          </select>
+        </div>
+        <div class="field check">
+          <label><input type="checkbox" id="set-autoread" /> Autoread</label>
+        </div>
+        <div class="field check">
+          <label><input type="checkbox" id="set-autotyping" /> Autotyping</label>
+        </div>
+        <div class="field check">
+          <label><input type="checkbox" id="set-noprefix" /> No Prefix</label>
+        </div>
+        <hr />
+        <p class="hint" id="premium-hint">Fitur di bawah hanya untuk Premium.</p>
+        <div class="field">
+          <label>Nama Bot</label>
+          <input type="text" id="set-botname" />
+        </div>
+        <div class="field">
+          <label>Owner Number</label>
+          <input type="text" id="set-ownernumber" placeholder="628xxxxxxxxx" />
+        </div>
+        <div class="field">
+          <label>Channel URL</label>
+          <input type="text" id="set-channelurl" />
+        </div>
+        <div class="field">
+          <label>Group URL</label>
+          <input type="text" id="set-groupurl" />
+        </div>
+        <button id="save-settings-btn" class="btn primary">Simpan</button>
+        <p id="settings-msg" class="msg"></p>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/bot-settings.js"></script>
+</body>
+</html>

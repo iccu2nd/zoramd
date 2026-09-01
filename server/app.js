@@ -8,6 +8,17 @@ import apiRouter from './routes/api.js'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const publicDir = path.join(__dirname, '..', 'public')
 
+const PAGE_MAP = {
+    '/': 'index.html',
+    '/login': 'login.html',
+    '/dashboard': 'dashboard.html',
+    '/connect': 'connect.html',
+    '/bot-settings': 'bot-settings.html',
+    '/feature-settings': 'feature-settings.html',
+    '/upgrade': 'upgrade.html',
+    '/account': 'account.html'
+}
+
 export function createApp() {
     const app = express()
 
@@ -15,7 +26,6 @@ export function createApp() {
     app.use(express.json({ limit: '1mb' }))
     app.use(cookieParser())
 
-    // Never expose env / secrets
     app.use((req, res, next) => {
         res.removeHeader('X-Powered-By')
         next()
@@ -23,24 +33,28 @@ export function createApp() {
 
     app.use('/api', apiRouter)
 
-    // Halaman login terpisah (endpoint /login dan /login.html)
-    app.get(['/login', '/login.html'], (req, res) => {
-        res.sendFile(path.join(publicDir, 'login.html'))
+    // Assets: css, js, images
+    app.use('/css', express.static(path.join(publicDir, 'css')))
+    app.use('/js', express.static(path.join(publicDir, 'js')))
+
+    // Clean page routes (no .html in URL)
+    for (const [route, file] of Object.entries(PAGE_MAP)) {
+        app.get(route, (req, res) => {
+            res.sendFile(path.join(publicDir, file))
+        })
+    }
+
+    // Legacy .html → clean URL
+    app.get(/^\/([a-z0-9-]+)\.html$/i, (req, res) => {
+        const base = '/' + req.params[0]
+        if (PAGE_MAP[base]) return res.redirect(301, base)
+        if (req.params[0] === 'index') return res.redirect(301, '/')
+        res.status(404).end()
     })
 
-    // Static assets (css, js, dll.)
-    app.use(express.static(publicDir))
-
-    // Dashboard SPA fallback — jangan override /login
-    app.get('*', (req, res, next) => {
-        if (req.path.startsWith('/api') || req.path.startsWith('/login')) {
-            return next()
-        }
-        // file statis yang tidak ketemu
-        if (path.extname(req.path)) {
-            return res.status(404).end()
-        }
-        res.sendFile(path.join(publicDir, 'index.html'))
+    app.get('*', (req, res) => {
+        if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Not found' })
+        res.redirect('/')
     })
 
     app.use((err, req, res, next) => {

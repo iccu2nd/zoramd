@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Feature Settings — ZoraBot</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body data-page="feature-settings">
+  <div id="loading-view" class="loading-wrap">
+    <div class="loading-card">
+      <div class="loading-logo">ZoraBot</div>
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <p class="loading-text" id="loading-text">Memuat...</p>
+    </div>
+  </div>
+
+  <div id="main-view" class="hidden">
+    <header class="topbar">
+      <button id="menu-btn" class="icon-btn" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="brand">ZoraBot</div>
+      <div class="user-chip" id="user-chip"></div>
+    </header>
+
+    <aside id="sidebar" class="sidebar">
+      <nav>
+        <div class="nav-label">Menu</div>
+        <a href="/dashboard" class="nav-item">Dashboard</a>
+        <a href="/connect" class="nav-item">Connect Bot</a>
+        <a href="/bot-settings" class="nav-item">Bot Settings</a>
+        <a href="/feature-settings" class="nav-item active">Feature Settings</a>
+        <div class="nav-label">Premium</div>
+        <a href="/upgrade" class="nav-item">Order Plan Premium</a>
+        <div class="nav-label">Akun</div>
+        <a href="/account" class="nav-item">Account</a>
+      </nav>
+      <button id="logout-btn" class="btn outline logout">Keluar</button>
+    </aside>
+    <div id="sidebar-overlay" class="overlay"></div>
+
+    <main class="content">
+      <h2>Feature Settings</h2>
+      <p class="hint">Atur ON/OFF tiap fitur. Jika OFF, logic fitur tidak dijalankan. Custom response, command, dan access rule hanya untuk Premium.</p>
+      <div class="field">
+        <label>Pilih Bot</label>
+        <select id="feature-bot-select"></select>
+      </div>
+      <div id="features-list" class="features-list"></div>
+    </main>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/feature-settings.js"></script>
+</body>
+</html>

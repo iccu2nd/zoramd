@@ -118,8 +118,16 @@ export async function handleMessage(sock, config, { messages, type }) {
     m.pluginName = isEvalCmd ? 'owner-eval' : (plugin ? cmd : undefined)
     printChatLog(m)
 
+    // onMessage plugins: respect Feature Settings OFF (backend, not just UI)
+    const botIdForGate = config.botId || sock.sessionId || 'default'
     for (const handler of getOnMessageHandlers()) {
         try {
+            const fKey = (handler.cmd && handler.cmd[0]) || handler.featureKey
+            if (fKey) {
+                const feat = await resolveFeature(botIdForGate, fKey)
+                if (!feat.enabled) continue
+                if (!checkAccessRule(feat.accessRule, m)) continue
+            }
             const isHandled = await handler.onMessage(m, { sock, config })
             if (isHandled) return
         } catch (e) {

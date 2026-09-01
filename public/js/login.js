@@ -28,7 +28,7 @@ async function api(path, opts = {}) {
 
 function redirectToApp() {
   const params = new URLSearchParams(location.search)
-  const next = params.get('next') || '/'
+  const next = params.get('next') || '/dashboard'
   // Hanya izinkan path relatif di domain yang sama
   const safe = next.startsWith('/') && !next.startsWith('//') ? next : '/'
   location.href = safe

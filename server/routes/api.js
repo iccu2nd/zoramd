@@ -10,11 +10,32 @@ import { createOrder, findOrder, findOrdersByAccount, markOrderChecked } from '.
 import { getMongoDb } from '../../lib/db/mongo.js'
 import { COLLECTIONS } from '../../lib/db/schema.js'
 import botManager from '../../lib/botManager.js'
+import { plugins } from '../../lib/plugins.js'
 import * as sociabuzz from '../../lib/sociabuzz.js'
 
 const router = Router()
 
+// Health (no secrets)
+router.get('/health', (req, res) => {
+    res.json({ ok: true, service: 'zorabot', time: new Date().toISOString() })
+})
+
+
 const PREMIUM_PRICE = 25000
+
+/** Normalize & validate international WhatsApp number (e.g. 628xxx). Returns digits-only or null. */
+function normalizePhone(raw) {
+    if (raw == null || raw === '') return null
+    let s = String(raw).trim()
+    // allow +62..., spaces, dashes from paste
+    s = s.replace(/[\s\-()]/g, '')
+    if (s.startsWith('+')) s = s.slice(1)
+    // convert leading 0 to 62 (ID local format)
+    if (s.startsWith('0')) s = '62' + s.slice(1)
+    if (!/^\d{10,15}$/.test(s)) return null
+    return s
+}
+
 
 // ---------- Auth ----------
 router.post('/auth/register', async (req, res) => {
@@ -79,7 +100,16 @@ router.get('/bots', authMiddleware, loadAccount, async (req, res) => {
                 createdAt: b.createdAt
             }
         }))
-        res.json({ bots: enriched })
+        let anyPremium = enriched.some(b => b.plan === 'premium')
+        // double-check live premium
+        for (const b of bots) {
+            if (await isBotPremium(b._id.toString())) { anyPremium = true; break }
+        }
+        const maxBots = anyPremium ? 3 : 1
+        res.json({
+            bots: enriched,
+            limits: { max: maxBots, used: enriched.length, plan: anyPremium ? 'premium' : 'free' }
+        })
     } catch (e) {
         res.status(500).json({ error: e.message })
     }
@@ -88,6 +118,25 @@ router.get('/bots', authMiddleware, loadAccount, async (req, res) => {
 router.post('/bots', authMiddleware, loadAccount, async (req, res) => {
     try {
         const { botName, ownerNumber } = req.body || {}
+        const existing = await findBotsByOwner(req.account._id)
+
+        // Cek apakah user punya minimal 1 bot premium (plan aktif)
+        let anyPremium = false
+        for (const b of existing) {
+            if (await isBotPremium(b._id.toString())) {
+                anyPremium = true
+                break
+            }
+        }
+        const maxBots = anyPremium ? 3 : 1
+        if (existing.length >= maxBots) {
+            return res.status(403).json({
+                error: anyPremium
+                    ? 'Batas Premium: maksimal 3 bot. Hapus bot lain dulu.'
+                    : 'Batas Free: maksimal 1 bot. Upgrade Premium untuk hingga 3 bot.'
+            })
+        }
+
         const sessionId = 'bot_' + uuidv4().replace(/-/g, '').slice(0, 16)
         const bot = await createBot({
             ownerId: req.account._id,
@@ -95,7 +144,6 @@ router.post('/bots', authMiddleware, loadAccount, async (req, res) => {
             botName: botName || 'ZoraBot',
             ownerNumber: ownerNumber || null
         })
-        // Init free subscription
         await getSubscription(bot._id.toString())
         res.json({
             bot: {
@@ -103,7 +151,8 @@ router.post('/bots', authMiddleware, loadAccount, async (req, res) => {
                 sessionId: bot.sessionId,
                 botName: bot.botName,
                 status: 'disconnected'
-            }
+            },
+            limits: { max: maxBots, used: existing.length + 1, plan: anyPremium ? 'premium' : 'free' }
         })
     } catch (e) {
         res.status(400).json({ error: e.message })
@@ -144,11 +193,15 @@ router.post('/bots/:botId/connect', authMiddleware, loadAccount, async (req, res
         const { phoneNumber, method } = req.body || {}
         // method: 'qr' | 'pairing'
         const forcePairing = method === 'pairing'
-        if (forcePairing && !phoneNumber) {
-            return res.status(400).json({ error: 'Nomor WhatsApp wajib untuk pairing code' })
+        let phone = null
+        if (forcePairing) {
+            phone = normalizePhone(phoneNumber)
+            if (!phone) {
+                return res.status(400).json({ error: 'Nomor WhatsApp tidak valid. Gunakan format internasional, contoh: 628xxxxxxxxxx' })
+            }
         }
         const state = await botManager.startBot(bot.sessionId, bot, {
-            phoneNumber: forcePairing ? phoneNumber : undefined,
+            phoneNumber: forcePairing ? phone : undefined,
             forcePairing
         })
         res.json({ state })
@@ -261,8 +314,42 @@ router.get('/bots/:botId/features', authMiddleware, loadAccount, async (req, res
         const bot = await findOwnedBot(req.params.botId, req.account._id)
         if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
         const premium = await isBotPremium(bot._id.toString())
-        const list = await getAllFeatureSettings(bot.sessionId)
-        res.json({ features: list, isPremium: premium, accessRules: ACCESS_RULES })
+        const saved = await getAllFeatureSettings(bot.sessionId)
+        const savedMap = {}
+        for (const s of saved) savedMap[s.featureKey] = s
+
+        // Katalog penuh dari plugins yang ter-load, dikelompokkan per category
+        const groups = {}
+        for (const [, plugin] of plugins) {
+            const cmds = plugin.cmd || []
+            if (!cmds.length) continue
+            const key = cmds[0]
+            const cat = (plugin.category || 'others').toLowerCase()
+            if (!groups[cat]) groups[cat] = []
+            // hindari duplikat key dalam group
+            if (groups[cat].some(f => f.featureKey === key)) continue
+            const s = savedMap[key] || {}
+            groups[cat].push({
+                featureKey: key,
+                aliases: cmds,
+                description: plugin.description || plugin.help || '',
+                enabled: s.enabled !== false,
+                customResponse: s.customResponse || null,
+                customCommand: s.customCommand || null,
+                accessRule: s.accessRule || 'public'
+            })
+        }
+        // sort keys in each group
+        for (const cat of Object.keys(groups)) {
+            groups[cat].sort((a, b) => a.featureKey.localeCompare(b.featureKey))
+        }
+
+        res.json({
+            groups,
+            categories: Object.keys(groups).sort(),
+            isPremium: premium,
+            accessRules: ACCESS_RULES
+        })
     } catch (e) {
         res.status(500).json({ error: e.message })
     }
