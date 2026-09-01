@@ -16,7 +16,9 @@ const PAGE_MAP = {
     '/bot-settings': 'bot-settings.html',
     '/feature-settings': 'feature-settings.html',
     '/upgrade': 'upgrade.html',
-    '/account': 'account.html'
+    '/account': 'account.html',
+    '/database': 'database.html',
+    '/admin': 'admin.html'
 }
 
 export function createApp() {

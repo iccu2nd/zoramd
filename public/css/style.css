@@ -334,3 +334,5 @@ body {
 #main-view { min-height: calc(100vh - 56px); }
 #loading-view.hidden { display: none !important; }
 #main-view.hidden { display: none !important; }
+
+.nav-admin.hidden { display: none !important; }

@@ -179,6 +179,8 @@
       try {
         var me = await api('/auth/me', { timeoutMs: 10000 })
         state.user = me.user
+        var navAd = document.getElementById('nav-admin')
+        if (navAd && me.user && me.user.isAdmin) navAd.classList.remove('hidden')
       } catch (e) {
         if (e.status === 401) {
           clearTimeout(safety)

@@ -1,8 +1,10 @@
 import { Router } from 'express'
+import { ObjectId } from 'mongodb'
 import { v4 as uuidv4 } from 'uuid'
 import { authMiddleware, loadAccount, register, login } from '../auth.js'
 import {
-    createBot, findBotsByOwner, findOwnedBot, updateOwnedBot, findBotBySessionId
+    createBot, findBotsByOwner, findOwnedBot, updateOwnedBot, findBotBySessionId,
+    listAllAccounts, listAllBots, setAccountRole, deleteBotById, updateAccount, findAccountById
 } from '../../lib/db/accounts.js'
 import { getSubscription, isBotPremium, activatePremium } from '../../lib/db/subscription.js'
 import { getAllFeatureSettings, setFeatureSetting, getFeatureSetting, ACCESS_RULES } from '../../lib/db/featureSettings.js'
@@ -35,6 +37,22 @@ function normalizePhone(raw) {
     return s
 }
 
+
+
+function isAdminAccount(account) {
+    if (!account) return false
+    if (account.role === 'admin') return true
+    const allow = (process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+    if (account.email && allow.includes(String(account.email).toLowerCase())) return true
+    return false
+}
+
+function requireAdmin(req, res, next) {
+    if (!isAdminAccount(req.account)) {
+        return res.status(403).json({ error: 'Akses admin saja' })
+    }
+    next()
+}
 
 // ---------- Auth ----------
 router.post('/auth/register', async (req, res) => {
@@ -75,7 +93,9 @@ router.get('/auth/me', authMiddleware, loadAccount, (req, res) => {
         user: {
             id: req.account._id,
             email: req.account.email,
-            name: req.account.name
+            name: req.account.name,
+            role: req.account.role || 'user',
+            isAdmin: isAdminAccount(req.account)
         }
     })
 })
@@ -206,7 +226,9 @@ router.post('/bots/:botId/connect', authMiddleware, loadAccount, async (req, res
         }
         const state = await botManager.startBot(bot.sessionId, bot, {
             phoneNumber: forcePairing ? phone : undefined,
-            forcePairing
+            forcePairing,
+            // pairing selalu session bersih agar tidak Stream Errored dari session setengah
+            clearSessionFirst: forcePairing || method === 'qr'
         })
         res.json({ state })
     } catch (e) {
@@ -489,5 +511,244 @@ router.get('/bots/:botId/premium', authMiddleware, loadAccount, async (req, res)
         res.status(500).json({ error: e.message })
     }
 })
+
+
+
+// ---------- Database export / import (database.json) ----------
+router.get('/bots/:botId/database', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const bot = await findOwnedBot(req.params.botId, req.account._id)
+        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        const db = await getMongoDb()
+        const sid = bot.sessionId
+        const [botData, botSettings, features, sub, authDocs] = await Promise.all([
+            db.collection(COLLECTIONS.BOT_DATA).findOne({ botId: sid }),
+            db.collection(COLLECTIONS.BOT_SETTINGS).findOne({ botId: sid }),
+            db.collection(COLLECTIONS.FEATURE_SETTINGS).find({ botId: sid }).toArray(),
+            db.collection(COLLECTIONS.SUBSCRIPTIONS).findOne({ botId: bot._id.toString() }),
+            db.collection(COLLECTIONS.WA_AUTH).find({ _id: { $regex: `^${sid}:` } }).toArray()
+        ])
+        const includeSession = req.query.session === '1'
+        const payload = {
+            format: 'zorabot-database',
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            bot: {
+                botName: bot.botName,
+                sessionId: sid,
+                ownerNumber: bot.ownerNumber,
+                identity: bot.identity
+            },
+            botData: botData ? {
+                users: botData.users || {},
+                chats: botData.chats || {},
+                contacts: botData.contacts || {},
+                lid_mapping: botData.lid_mapping || {},
+                msgs: botData.msgs || {}
+            } : { users: {}, chats: {}, contacts: {}, lid_mapping: {}, msgs: {} },
+            botSettings: botSettings || {},
+            featureSettings: features || [],
+            subscription: sub || null,
+            session: includeSession ? authDocs.map(d => ({ _id: d._id, value: d.value })) : null
+        }
+        res.setHeader('Content-Disposition', `attachment; filename="database-${sid}.json"`)
+        res.json(payload)
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.post('/bots/:botId/database/import', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const bot = await findOwnedBot(req.params.botId, req.account._id)
+        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        const body = req.body || {}
+        if (body.format && body.format !== 'zorabot-database') {
+            return res.status(400).json({ error: 'Format file tidak dikenali. Gunakan export ZoraBot.' })
+        }
+        const db = await getMongoDb()
+        const sid = bot.sessionId
+        const data = body.botData || body
+        const users = data.users || body.users || {}
+        const chats = data.chats || body.chats || {}
+        const contacts = data.contacts || body.contacts || {}
+        const lid_mapping = data.lid_mapping || body.lid_mapping || {}
+        const msgs = data.msgs || body.msgs || {}
+
+        await db.collection(COLLECTIONS.BOT_DATA).updateOne(
+            { botId: sid },
+            { $set: { botId: sid, users, chats, contacts, lid_mapping, msgs, updatedAt: new Date() } },
+            { upsert: true }
+        )
+
+        if (body.botSettings && typeof body.botSettings === 'object') {
+            const { _id, botId, ...settings } = body.botSettings
+            await db.collection(COLLECTIONS.BOT_SETTINGS).updateOne(
+                { botId: sid },
+                { $set: { ...settings, botId: sid, updatedAt: new Date() } },
+                { upsert: true }
+            )
+        }
+
+        if (Array.isArray(body.featureSettings)) {
+            for (const f of body.featureSettings) {
+                if (!f.featureKey) continue
+                await db.collection(COLLECTIONS.FEATURE_SETTINGS).updateOne(
+                    { botId: sid, featureKey: f.featureKey },
+                    { $set: {
+                        botId: sid,
+                        featureKey: f.featureKey,
+                        enabled: f.enabled !== false,
+                        customResponse: f.customResponse || null,
+                        customCommand: f.customCommand || null,
+                        accessRule: f.accessRule || 'public',
+                        updatedAt: new Date()
+                    }},
+                    { upsert: true }
+                )
+            }
+        }
+
+        // Import WhatsApp session (opsional)
+        let sessionImported = 0
+        if (Array.isArray(body.session) && body.session.length) {
+            // hapus session lama bot ini
+            await db.collection(COLLECTIONS.WA_AUTH).deleteMany({ _id: { $regex: `^${sid}:` } })
+            for (const doc of body.session) {
+                if (!doc || doc.value == null) continue
+                // remap id ke sessionId bot target
+                let id = String(doc._id || '')
+                const colon = id.indexOf(':')
+                const key = colon >= 0 ? id.slice(colon + 1) : id
+                const newId = `${sid}:${key}`
+                await db.collection(COLLECTIONS.WA_AUTH).updateOne(
+                    { _id: newId },
+                    { $set: { value: doc.value } },
+                    { upsert: true }
+                )
+                sessionImported++
+            }
+        }
+
+        if (body.bot?.botName || body.bot?.identity) {
+            await updateOwnedBot(bot._id.toString(), req.account._id.toString(), {
+                ...(body.bot.botName ? { botName: body.bot.botName } : {}),
+                ...(body.bot.identity ? { identity: body.bot.identity } : {}),
+                ...(body.bot.ownerNumber ? { ownerNumber: body.bot.ownerNumber } : {})
+            })
+        }
+
+        res.json({
+            ok: true,
+            imported: {
+                users: Object.keys(users).length,
+                chats: Object.keys(chats).length,
+                sessionKeys: sessionImported
+            },
+            note: sessionImported
+                ? 'Session diimpor. Restart/reconnect bot agar session dipakai.'
+                : 'Data bot diimpor. Session tidak disertakan (centang session saat export jika perlu).'
+        })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+// ---------- Admin panel ----------
+router.get('/admin/overview', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        const db = await getMongoDb()
+        const [accounts, bots, orders] = await Promise.all([
+            listAllAccounts(300),
+            listAllBots(500),
+            db.collection(COLLECTIONS.ORDERS).find({}).sort({ createdAt: -1 }).limit(100).toArray()
+        ])
+        res.json({
+            stats: {
+                users: accounts.length,
+                bots: bots.length,
+                orders: orders.length,
+                connected: bots.filter(b => b.status === 'connected').length
+            },
+            accounts: accounts.map(a => ({
+                id: a._id.toString(),
+                email: a.email,
+                name: a.name,
+                role: a.role || 'user',
+                createdAt: a.createdAt
+            })),
+            bots: bots.map(b => ({
+                id: b._id.toString(),
+                sessionId: b.sessionId,
+                botName: b.botName,
+                ownerId: b.ownerId?.toString(),
+                status: b.status,
+                createdAt: b.createdAt
+            })),
+            orders: orders.map(o => ({
+                orderId: o.orderId,
+                accountId: o.accountId,
+                botId: o.botId,
+                amount: o.amount,
+                status: o.status,
+                createdAt: o.createdAt
+            }))
+        })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.post('/admin/accounts/:id/role', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        const role = req.body?.role === 'admin' ? 'admin' : 'user'
+        await setAccountRole(req.params.id, role)
+        res.json({ ok: true, role })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.post('/admin/bots/:id/premium', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        const months = Number(req.body?.months) || 1
+        await activatePremium(req.params.id, { months })
+        res.json({ ok: true })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.delete('/admin/bots/:id', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        const db = await getMongoDb()
+        const bot = await db.collection(COLLECTIONS.BOTS).findOne({ _id: new ObjectId(req.params.id) })
+        if (bot?.sessionId) {
+            try { await botManager.stopBot(bot.sessionId, { clearSession: true }) } catch {}
+        }
+        await deleteBotById(req.params.id)
+        res.json({ ok: true })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.post('/admin/bots/:id/status', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        const db = await getMongoDb()
+        const bot = await db.collection(COLLECTIONS.BOTS).findOne({ _id: new ObjectId(req.params.id) })
+        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        const action = req.body?.action
+        if (action === 'stop') {
+            await botManager.stopBot(bot.sessionId, { clearSession: !!req.body.clearSession })
+        } else if (action === 'start') {
+            await botManager.startBot(bot.sessionId, bot, {})
+        }
+        res.json({ ok: true, state: botManager.getState(bot.sessionId) })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
 
 export default router

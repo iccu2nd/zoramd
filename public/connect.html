@@ -25,16 +25,18 @@
     </header>
 
     <aside id="sidebar" class="sidebar">
-      <nav>
+            <nav>
         <div class="nav-label">Menu</div>
         <a href="/dashboard" class="nav-item">Dashboard</a>
         <a href="/connect" class="nav-item active">Connect Bot</a>
         <a href="/bot-settings" class="nav-item">Bot Settings</a>
         <a href="/feature-settings" class="nav-item">Feature Settings</a>
+        <a href="/database" class="nav-item">Database</a>
         <div class="nav-label">Premium</div>
         <a href="/upgrade" class="nav-item">Order Plan Premium</a>
         <div class="nav-label">Akun</div>
         <a href="/account" class="nav-item">Account</a>
+        <a href="/admin" class="nav-item nav-admin hidden" id="nav-admin">Admin Panel</a>
       </nav>
       <button id="logout-btn" class="btn outline logout">Keluar</button>
     </aside>
@@ -74,8 +76,8 @@
     </main>
   </div>
 
-  <script src="/js/common.js?v=3"></script>
-  <script src="/js/connect.js?v=3"></script>
+  <script src="/js/common.js?v=5"></script>
+  <script src="/js/connect.js?v=5"></script>
 
   <script>
   // Safety net: jangan pernah stuck loading > 6 detik
