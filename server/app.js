@@ -23,11 +23,23 @@ export function createApp() {
 
     app.use('/api', apiRouter)
 
-    // Static dashboard
+    // Halaman login terpisah (endpoint /login dan /login.html)
+    app.get(['/login', '/login.html'], (req, res) => {
+        res.sendFile(path.join(publicDir, 'login.html'))
+    })
+
+    // Static assets (css, js, dll.)
     app.use(express.static(publicDir))
 
-    // SPA fallback
-    app.get('*', (req, res) => {
+    // Dashboard SPA fallback — jangan override /login
+    app.get('*', (req, res, next) => {
+        if (req.path.startsWith('/api') || req.path.startsWith('/login')) {
+            return next()
+        }
+        // file statis yang tidak ketemu
+        if (path.extname(req.path)) {
+            return res.status(404).end()
+        }
         res.sendFile(path.join(publicDir, 'index.html'))
     })
 

@@ -15,12 +15,13 @@ async function api(path, opts = {}) {
   const res = await fetch('/api' + path, { ...opts, headers, credentials: 'include' })
   const data = await res.json().catch(() => ({}))
   if (res.status === 401) {
-    // Sesi habis → paksa login
+    // Sesi habis → paksa login di halaman terpisah
     state.token = null
     state.user = null
     localStorage.removeItem('token')
     const err = new Error(data.error || 'Unauthorized')
     err.status = 401
+    // Jangan redirect di sini agar caller bisa handle; init/requireLogin yang mengarahkan
     throw err
   }
   if (!res.ok) throw new Error(data.error || res.statusText)
@@ -36,101 +37,33 @@ function setLoading(showLoading, text) {
   if (showLoading) {
     if (text) $('#loading-text').textContent = text
     show(el)
+    hide($('#main-view'))
   } else {
     hide(el)
   }
 }
 
-function setAuthView(loggedIn) {
+function showMainApp() {
   setLoading(false)
-  if (loggedIn) {
-    hide($('#auth-view'))
-    show($('#main-view'))
-    $('#user-chip').textContent = state.user?.email || ''
-  } else {
-    show($('#auth-view'))
-    hide($('#main-view'))
-  }
+  show($('#main-view'))
+  $('#user-chip').textContent = state.user?.email || ''
 }
 
 /** Wajib login dulu sebelum akses fitur (termasuk Connect Bot) */
 function requireLogin(actionLabel) {
   if (state.token && state.user) return true
-  setAuthView(false)
-  const msg = actionLabel
-    ? `Silakan masuk dulu untuk ${actionLabel}.`
-    : 'Silakan masuk dulu untuk melanjutkan.'
-  const err = $('#login-error')
-  if (err) err.textContent = msg
-  // Pastikan tab login aktif
-  $('#tab-login')?.classList.add('active')
-  $('#tab-register')?.classList.remove('active')
-  show($('#login-form'))
-  hide($('#register-form'))
+  const reason = actionLabel && actionLabel.includes('bot') ? 'connect' : 'required'
+  goToLogin(reason)
   return false
 }
 
 // ----- Auth -----
-$('#tab-login').onclick = () => {
-  $('#tab-login').classList.add('active')
-  $('#tab-register').classList.remove('active')
-  show($('#login-form'))
-  hide($('#register-form'))
-}
-$('#tab-register').onclick = () => {
-  $('#tab-register').classList.add('active')
-  $('#tab-login').classList.remove('active')
-  hide($('#login-form'))
-  show($('#register-form'))
-}
-
-$('#login-form').onsubmit = async (e) => {
-  e.preventDefault()
-  $('#login-error').textContent = ''
-  try {
-    const data = await api('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({
-        email: $('#login-email').value,
-        password: $('#login-password').value
-      })
-    })
-    state.token = data.token
-    state.user = data.user
-    localStorage.setItem('token', data.token)
-    hide($('#auth-view'))
-    setLoading(true, 'Memuat dashboard...')
-    await loadBots()
-    setAuthView(true)
-    navigate('dashboard')
-  } catch (err) {
-    $('#login-error').textContent = err.message
-  }
-}
-
-$('#register-form').onsubmit = async (e) => {
-  e.preventDefault()
-  $('#reg-error').textContent = ''
-  try {
-    const data = await api('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({
-        name: $('#reg-name').value,
-        email: $('#reg-email').value,
-        password: $('#reg-password').value
-      })
-    })
-    state.token = data.token
-    state.user = data.user
-    localStorage.setItem('token', data.token)
-    hide($('#auth-view'))
-    setLoading(true, 'Memuat dashboard...')
-    await loadBots()
-    setAuthView(true)
-    navigate('dashboard')
-  } catch (err) {
-    $('#reg-error').textContent = err.message
-  }
+function goToLogin(reason) {
+  const params = new URLSearchParams()
+  if (reason) params.set('reason', reason)
+  // next = path saat ini supaya setelah login kembali ke sini
+  params.set('next', location.pathname + location.search + location.hash)
+  location.href = '/login.html?' + params.toString()
 }
 
 $('#logout-btn').onclick = async () => {
@@ -138,7 +71,7 @@ $('#logout-btn').onclick = async () => {
   state.token = null
   state.user = null
   localStorage.removeItem('token')
-  setAuthView(false)
+  location.href = '/login.html'
 }
 
 // ----- Sidebar -----
@@ -258,12 +191,12 @@ $('#connect-start-btn').onclick = async () => {
     updateConnectUI(data.state)
     startStatusPoll(botId)
   } catch (e) {
-    if (e.message === 'Unauthorized' || /unauthorized|token/i.test(e.message)) {
-      requireLogin('menghubungkan bot')
-      $('#connect-status').textContent = 'Sesi berakhir. Silakan masuk lagi.'
-    } else {
-      $('#connect-status').textContent = e.message
+    if (e.status === 401 || /unauthorized|token/i.test(e.message || '')) {
+      goToLogin('session')
+      return
     }
+    $('#connect-status').textContent = e.message
+
   } finally {
     $('#connect-start-btn').disabled = false
   }
@@ -557,46 +490,35 @@ function escapeHtml(s) {
 
 // ----- Init -----
 async function init() {
-  // Tampilkan loading dulu
-  hide($('#auth-view'))
-  hide($('#main-view'))
   setLoading(true, 'Memuat ZoraBot...')
+  hide($('#main-view'))
 
-  // Minimal delay supaya loading terlihat (UX)
-  const minDelay = new Promise(r => setTimeout(r, 600))
+  const minDelay = new Promise(r => setTimeout(r, 500))
+
+  if (!state.token) {
+    await minDelay
+    goToLogin('required')
+    return
+  }
 
   try {
-    if (state.token) {
-      setLoading(true, 'Memeriksa sesi...')
-      const [, data] = await Promise.all([
-        minDelay,
-        api('/auth/me').catch(() => null)
-      ])
-      if (data?.user) {
-        state.user = data.user
-        setLoading(true, 'Memuat dashboard...')
-        await loadBots()
-        setAuthView(true)
-        navigate('dashboard')
-        return
-      }
-      // Token invalid
-      localStorage.removeItem('token')
-      state.token = null
-      state.user = null
-    } else {
-      await minDelay
-    }
-  } catch {
+    setLoading(true, 'Memeriksa sesi...')
+    const [, data] = await Promise.all([
+      minDelay,
+      api('/auth/me')
+    ])
+    state.user = data.user
+    setLoading(true, 'Memuat dashboard...')
+    await loadBots()
+    showMainApp()
+    navigate('dashboard')
+  } catch (e) {
     localStorage.removeItem('token')
     state.token = null
     state.user = null
+    const reason = (e && e.status === 401) ? 'session' : 'required'
+    goToLogin(reason)
   }
-
-  // Belum login → halaman masuk
-  setLoading(true, 'Menyiapkan halaman masuk...')
-  await new Promise(r => setTimeout(r, 300))
-  setAuthView(false)
 }
 
 init()

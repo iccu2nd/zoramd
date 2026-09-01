@@ -17,36 +17,6 @@
       </div>
     </div>
 
-    <!-- Auth screens -->
-    <div id="auth-view" class="auth-wrap hidden">
-      <div class="auth-card">
-        <h1>ZoraBot</h1>
-        <p class="subtitle">WhatsApp JadiBot Platform</p>
-        <div class="tabs">
-          <button type="button" id="tab-login" class="tab active">Masuk</button>
-          <button type="button" id="tab-register" class="tab">Daftar</button>
-        </div>
-        <form id="login-form" class="auth-form">
-          <label>Email</label>
-          <input type="email" id="login-email" required autocomplete="email" />
-          <label>Password</label>
-          <input type="password" id="login-password" required minlength="6" autocomplete="current-password" />
-          <button type="submit" class="btn primary">Masuk</button>
-          <p id="login-error" class="error"></p>
-        </form>
-        <form id="register-form" class="auth-form hidden">
-          <label>Nama</label>
-          <input type="text" id="reg-name" autocomplete="name" />
-          <label>Email</label>
-          <input type="email" id="reg-email" required autocomplete="email" />
-          <label>Password</label>
-          <input type="password" id="reg-password" required minlength="6" autocomplete="new-password" />
-          <button type="submit" class="btn primary">Daftar</button>
-          <p id="reg-error" class="error"></p>
-        </form>
-      </div>
-    </div>
-
     <!-- Main app -->
     <div id="main-view" class="hidden">
       <header class="topbar">
@@ -59,11 +29,14 @@
 
       <aside id="sidebar" class="sidebar">
         <nav>
+          <div class="nav-label">Menu</div>
           <a href="#dashboard" data-page="dashboard" class="nav-item active">Dashboard</a>
           <a href="#connect" data-page="connect" class="nav-item">Connect Bot</a>
           <a href="#bot-settings" data-page="bot-settings" class="nav-item">Bot Settings</a>
           <a href="#feature-settings" data-page="feature-settings" class="nav-item">Feature Settings</a>
-          <a href="#upgrade" data-page="upgrade" class="nav-item">Upgrade Plan</a>
+          <div class="nav-label">Premium</div>
+          <a href="#upgrade" data-page="upgrade" class="nav-item">Order Plan Premium</a>
+          <div class="nav-label">Akun</div>
           <a href="#account" data-page="account" class="nav-item">Account</a>
         </nav>
         <button id="logout-btn" class="btn outline logout">Keluar</button>
@@ -74,6 +47,7 @@
         <!-- Dashboard -->
         <section id="page-dashboard" class="page">
           <h2>Dashboard</h2>
+          <p class="hint">Kelola bot WhatsApp Anda. Buat bot baru, lalu hubungkan lewat menu Connect Bot.</p>
           <div class="row">
             <button id="create-bot-btn" class="btn primary">+ Buat Bot Baru</button>
           </div>
@@ -164,17 +138,17 @@
         <!-- Feature Settings -->
         <section id="page-feature-settings" class="page hidden">
           <h2>Feature Settings</h2>
+          <p class="hint">Atur ON/OFF tiap fitur. Jika OFF, logic fitur tidak dijalankan. Custom response, command, dan access rule hanya untuk Premium.</p>
           <div class="field">
             <label>Pilih Bot</label>
             <select id="feature-bot-select"></select>
           </div>
-          <p class="hint">Matikan fitur agar logic-nya benar-benar tidak dijalankan. Custom response & access rule hanya Premium.</p>
           <div id="features-list" class="features-list"></div>
         </section>
 
         <!-- Upgrade -->
         <section id="page-upgrade" class="page hidden">
-          <h2>Upgrade Plan</h2>
+          <h2>Order Plan Premium</h2>
           <div class="field">
             <label>Pilih Bot</label>
             <select id="upgrade-bot-select"></select>
@@ -200,9 +174,10 @@
                 <option value="mandiri">Mandiri</option>
               </select>
             </div>
-            <button id="order-premium-btn" class="btn primary">Buat Pembayaran</button>
+            <button id="order-premium-btn" class="btn primary">Order Premium — Rp25.000</button>
             <div id="payment-info" class="payment-info hidden"></div>
-            <div class="row gap" style="margin-top:12px">
+            <p class="hint" style="margin-top:14px">Setelah bayar, masukkan Order ID lalu cek status secara manual.</p>
+            <div class="row gap">
               <input type="text" id="check-order-id" placeholder="Order ID" />
               <button id="check-payment-btn" class="btn outline">Cek Status Pembayaran</button>
             </div>

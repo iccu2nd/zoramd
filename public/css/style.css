@@ -245,3 +245,23 @@ body {
   .content { margin-left: var(--sidebar-w); max-width: 800px; padding: 28px 24px 48px; }
   .overlay { display: none !important; }
 }
+
+.auth-notice {
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 0.9rem;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+}
+
+/* Sidebar label */
+.sidebar .nav-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  padding: 8px 12px 4px;
+  font-weight: 600;
+}
