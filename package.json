@@ -1,0 +1,43 @@
+{
+  "name": "zorabot",
+  "version": "1.0.0",
+  "description": "ZoraBot - Portable WhatsApp JadiBot Platform",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@napi-rs/canvas": "*",
+    "@whiskeysockets/baileys": "latest",
+    "adm-zip": "^0.5.17",
+    "axios": "^1.6.8",
+    "bcryptjs": "^2.4.3",
+    "bycf": "^1.0.5",
+    "chalk": "^5.3.0",
+    "cheerio": "^1.0.0",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "form-data": "^4.0.0",
+    "jsdom": "^27.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.9.0",
+    "node-fetch": "^3.3.2",
+    "node-shazam": "^1.2.7",
+    "node-webpmux": "^3.1.7",
+    "pdf-lib": "^1.17.1",
+    "pino": "^8.19.0",
+    "qrcode": "^1.5.4",
+    "sharp": "^0.33.5",
+    "uuid": "^10.0.0",
+    "yt-search": "^2.13.1"
+  }
+}
