@@ -23,42 +23,66 @@ const state = {
 async function api(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) }
   if (state.token) headers.Authorization = `Bearer ${state.token}`
-  const res = await fetch('/api' + path, { ...opts, headers, credentials: 'include' })
-  const data = await res.json().catch(() => ({}))
-  if (res.status === 401) {
-    state.token = null
-    state.user = null
-    localStorage.removeItem('token')
-    const err = new Error(data.error || 'Unauthorized')
-    err.status = 401
-    throw err
+
+  const ctrl = new AbortController()
+  const timeoutMs = opts.timeoutMs || 15000
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
+
+  try {
+    const res = await fetch('/api' + path, {
+      ...opts,
+      headers,
+      credentials: 'include',
+      signal: ctrl.signal
+    })
+    const data = await res.json().catch(() => ({}))
+    if (res.status === 401) {
+      state.token = null
+      state.user = null
+      localStorage.removeItem('token')
+      const err = new Error(data.error || 'Unauthorized')
+      err.status = 401
+      throw err
+    }
+    if (!res.ok) throw new Error(data.error || res.statusText || 'Request failed')
+    return data
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      const err = new Error('Timeout: server tidak merespons. Coba refresh.')
+      err.status = 408
+      throw err
+    }
+    throw e
+  } finally {
+    clearTimeout(timer)
   }
-  if (!res.ok) throw new Error(data.error || res.statusText)
-  return data
 }
 
 function goToLogin(reason) {
   const params = new URLSearchParams()
   if (reason) params.set('reason', reason)
-  params.set('next', location.pathname + location.search + location.hash)
-  location.href = '/login?' + params.toString()
+  const next = location.pathname + location.search + location.hash
+  if (next && !next.startsWith('/login')) params.set('next', next)
+  location.replace('/login?' + params.toString())
 }
 
 function setLoading(on, text) {
   const el = $('#loading-view')
   if (!el) return
   if (on) {
-    if (text) $('#loading-text').textContent = text
-    show(el)
-    hide($('#main-view'))
+    if (text && $('#loading-text')) $('#loading-text').textContent = text
+    el.classList.remove('hidden')
+    const main = $('#main-view')
+    if (main) main.classList.add('hidden')
   } else {
-    hide(el)
+    el.classList.add('hidden')
   }
 }
 
 function showMainApp() {
   setLoading(false)
-  show($('#main-view'))
+  const main = $('#main-view')
+  if (main) main.classList.remove('hidden')
   if ($('#user-chip')) $('#user-chip').textContent = state.user?.email || ''
 }
 
@@ -72,29 +96,24 @@ function bindShell() {
     $('#sidebar-overlay')?.classList.remove('show')
   })
   $('#logout-btn')?.addEventListener('click', async () => {
-    try { await api('/auth/logout', { method: 'POST' }) } catch {}
+    try { await api('/auth/logout', { method: 'POST', timeoutMs: 5000 }) } catch {}
     state.token = null
     state.user = null
     localStorage.removeItem('token')
-    location.href = '/login'
+    location.replace('/login')
   })
-  // Highlight active nav by path
   const path = location.pathname.replace(/\/$/, '') || '/'
   $$('.nav-item').forEach(a => {
-    const href = a.getAttribute('href') || ''
-    const clean = href.replace(/\.html$/, '').replace(/\/$/, '') || '/'
-    const here = path.replace(/\.html$/, '') || '/'
-    if (href === path || clean === here || (here === '/' && (href === '/' || href === '/dashboard'))) {
-      a.classList.add('active')
-    } else {
-      a.classList.remove('active')
-    }
+    const href = (a.getAttribute('href') || '').replace(/\/$/, '') || '/'
+    if (href === path) a.classList.add('active')
+    else a.classList.remove('active')
   })
 }
 
 async function loadBots() {
   const data = await api('/bots')
   state.bots = data.bots || []
+  state.limits = data.limits || null
   return state.bots
 }
 
@@ -102,36 +121,72 @@ function fillBotSelect(selectId) {
   const sel = $('#' + selectId)
   if (!sel) return
   const cur = sel.value
-  sel.innerHTML = state.bots.map(b =>
+  sel.innerHTML = (state.bots || []).map(b =>
     `<option value="${escapeHtml(b.id)}">${escapeHtml(b.botName)} (${escapeHtml(b.status)})</option>`
   ).join('')
   if (cur) sel.value = cur
 }
 
-/** Auth gate + shell for dashboard pages */
+/** Auth gate + shell — never stuck on loading */
 async function bootPage(pageInit) {
-  setLoading(true, 'Memuat ZoraBot...')
-  bindShell()
-
-  if (!state.token) {
-    goToLogin('required')
-    return
-  }
-
   try {
+    setLoading(true, 'Memuat...')
+    bindShell()
+
+    if (!state.token) {
+      goToLogin('required')
+      return
+    }
+
     setLoading(true, 'Memeriksa sesi...')
-    const data = await api('/auth/me')
-    state.user = data.user
+    try {
+      const data = await api('/auth/me', { timeoutMs: 12000 })
+      state.user = data.user
+    } catch (e) {
+      if (e.status === 401) {
+        goToLogin('session')
+        return
+      }
+      // Lainnya: tetap coba buka dashboard
+      console.warn('auth/me failed', e)
+    }
+
     setLoading(true, 'Memuat data...')
-    await loadBots()
+    try {
+      await loadBots()
+    } catch (e) {
+      if (e.status === 401) {
+        goToLogin('session')
+        return
+      }
+      console.warn('loadBots failed', e)
+      state.bots = []
+    }
+
     showMainApp()
-    if (typeof pageInit === 'function') await pageInit()
+
+    if (typeof pageInit === 'function') {
+      try {
+        await pageInit()
+      } catch (e) {
+        console.warn('pageInit failed', e)
+      }
+    }
   } catch (e) {
-    if (e.status === 401 || !state.token) goToLogin('session')
-    else {
-      setLoading(false)
+    console.error('bootPage fatal', e)
+    showMainApp()
+    const box = $('#bots-list') || $('#connect-status') || document.querySelector('main')
+    if (box && e.message) {
+      const p = document.createElement('p')
+      p.className = 'error'
+      p.textContent = e.message
+      box.prepend?.(p)
+    }
+  } finally {
+    // Pastikan loading selalu hilang
+    setLoading(false)
+    if ($('#main-view')?.classList.contains('hidden') && state.token) {
       showMainApp()
-      alert(e.message || 'Gagal memuat')
     }
   }
 }

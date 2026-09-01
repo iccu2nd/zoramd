@@ -10,7 +10,6 @@ import { createOrder, findOrder, findOrdersByAccount, markOrderChecked } from '.
 import { getMongoDb } from '../../lib/db/mongo.js'
 import { COLLECTIONS } from '../../lib/db/schema.js'
 import botManager from '../../lib/botManager.js'
-import { plugins } from '../../lib/plugins.js'
 import * as sociabuzz from '../../lib/sociabuzz.js'
 
 const router = Router()
@@ -100,10 +99,15 @@ router.get('/bots', authMiddleware, loadAccount, async (req, res) => {
                 createdAt: b.createdAt
             }
         }))
-        let anyPremium = enriched.some(b => b.plan === 'premium')
-        // double-check live premium
-        for (const b of bots) {
-            if (await isBotPremium(b._id.toString())) { anyPremium = true; break }
+        // plan sudah dari getSubscription; isBotPremium untuk cek expiry
+        let anyPremium = false
+        for (const b of enriched) {
+            if (b.plan === 'premium' && await isBotPremium(b.id)) {
+                anyPremium = true
+                b.plan = 'premium'
+            } else if (b.plan === 'premium') {
+                b.plan = 'free' // expired
+            }
         }
         const maxBots = anyPremium ? 3 : 1
         res.json({
@@ -319,6 +323,7 @@ router.get('/bots/:botId/features', authMiddleware, loadAccount, async (req, res
         for (const s of saved) savedMap[s.featureKey] = s
 
         // Katalog penuh dari plugins yang ter-load, dikelompokkan per category
+        const { plugins } = await import('../../lib/plugins.js')
         const groups = {}
         for (const [, plugin] of plugins) {
             const cmds = plugin.cmd || []
