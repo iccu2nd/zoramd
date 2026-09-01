@@ -330,3 +330,7 @@ body {
   .content { margin-left: var(--sidebar-w); max-width: 820px; padding: 28px 24px 56px; }
   .overlay { display: none !important; }
 }
+
+#main-view { min-height: calc(100vh - 56px); }
+#loading-view.hidden { display: none !important; }
+#main-view.hidden { display: none !important; }

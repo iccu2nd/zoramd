@@ -46,7 +46,20 @@
     </main>
   </div>
 
-  <script src="/js/common.js?v=2"></script>
-  <script src="/js/account.js?v=2"></script>
+  <script src="/js/common.js?v=3"></script>
+  <script src="/js/account.js?v=3"></script>
+
+  <script>
+  // Safety net: jangan pernah stuck loading > 6 detik
+  setTimeout(function () {
+    var lv = document.getElementById('loading-view');
+    var mv = document.getElementById('main-view');
+    if (lv && !lv.classList.contains('hidden') && getComputedStyle(lv).display !== 'none') {
+      lv.classList.add('hidden');
+      lv.style.display = 'none';
+      if (mv) { mv.classList.remove('hidden'); mv.style.display = ''; }
+    }
+  }, 6000);
+  </script>
 </body>
 </html>

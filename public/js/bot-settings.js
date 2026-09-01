@@ -1,61 +1,74 @@
-const { $, state, api, bootPage, fillBotSelect } = window.Zora
+(function () {
+  'use strict'
+  if (!window.Zora) return
+  var Z = window.Zora
 
-async function loadSettings() {
-  const botId = $('#settings-bot-select')?.value
-  if (!botId) return
-  try {
-    const data = await api(`/bots/${botId}/settings`)
-    const s = data.settings || {}
-    $('#set-mode').value = s.mode || 'public'
-    $('#set-autoread').checked = !!s.autoread
-    $('#set-autotyping').checked = !!s.autotyping
-    $('#set-noprefix').checked = !!s.noprefix
-    $('#set-botname').value = data.botName || ''
-    $('#set-ownernumber').value = data.ownerNumber || ''
-    const id = data.identity || {}
-    $('#set-channelurl').value = id.channelUrl || ''
-    $('#set-groupurl').value = id.groupUrl || ''
-    const disabled = !data.isPremium
-    ;['set-botname', 'set-ownernumber', 'set-channelurl', 'set-groupurl'].forEach(i => {
-      $('#' + i).disabled = disabled
-    })
-    $('#premium-hint').textContent = data.isPremium
-      ? 'Akun Premium aktif — semua pengaturan tersedia.'
-      : 'Fitur di bawah hanya untuk Premium. Upgrade di menu Order Plan Premium.'
-  } catch (e) {
-    $('#settings-msg').textContent = e.message
-  }
-}
-
-bootPage(() => {
-  fillBotSelect('settings-bot-select')
-  loadSettings()
-  $('#settings-bot-select').onchange = loadSettings
-  $('#save-settings-btn').onclick = async () => {
-    const botId = $('#settings-bot-select')?.value
+  async function loadSettings() {
+    var botId = Z.$('#settings-bot-select') && Z.$('#settings-bot-select').value
     if (!botId) return
-    $('#settings-msg').textContent = ''
     try {
-      await api(`/bots/${botId}/settings`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          mode: $('#set-mode').value,
-          autoread: $('#set-autoread').checked,
-          autotyping: $('#set-autotyping').checked,
-          noprefix: $('#set-noprefix').checked,
-          botName: $('#set-botname').value,
-          ownerNumber: $('#set-ownernumber').value,
-          identity: {
-            channelUrl: $('#set-channelurl').value,
-            groupUrl: $('#set-groupurl').value
-          }
-        })
+      var data = await Z.api('/bots/' + botId + '/settings')
+      var s = data.settings || {}
+      if (Z.$('#set-mode')) Z.$('#set-mode').value = s.mode || 'public'
+      if (Z.$('#set-autoread')) Z.$('#set-autoread').checked = !!s.autoread
+      if (Z.$('#set-autotyping')) Z.$('#set-autotyping').checked = !!s.autotyping
+      if (Z.$('#set-noprefix')) Z.$('#set-noprefix').checked = !!s.noprefix
+      if (Z.$('#set-botname')) Z.$('#set-botname').value = data.botName || ''
+      if (Z.$('#set-ownernumber')) Z.$('#set-ownernumber').value = data.ownerNumber || ''
+      var id = data.identity || {}
+      if (Z.$('#set-channelurl')) Z.$('#set-channelurl').value = id.channelUrl || ''
+      if (Z.$('#set-groupurl')) Z.$('#set-groupurl').value = id.groupUrl || ''
+      var disabled = !data.isPremium
+      ;['set-botname', 'set-ownernumber', 'set-channelurl', 'set-groupurl'].forEach(function (i) {
+        var el = Z.$('#' + i)
+        if (el) el.disabled = disabled
       })
-      $('#settings-msg').textContent = 'Tersimpan'
-      $('#settings-msg').className = 'msg ok'
+      if (Z.$('#premium-hint')) {
+        Z.$('#premium-hint').textContent = data.isPremium
+          ? 'Premium aktif — semua pengaturan tersedia.'
+          : 'Fitur di bawah hanya Premium. Upgrade di Order Plan Premium.'
+      }
     } catch (e) {
-      $('#settings-msg').textContent = e.message
-      $('#settings-msg').className = 'msg err'
+      if (Z.$('#settings-msg')) Z.$('#settings-msg').textContent = e.message
     }
   }
-})
+
+  Z.bootPage(function () {
+    Z.fillBotSelect('settings-bot-select')
+    loadSettings()
+    var sel = Z.$('#settings-bot-select')
+    if (sel) sel.onchange = loadSettings
+    var save = Z.$('#save-settings-btn')
+    if (save) save.onclick = async function () {
+      var botId = Z.$('#settings-bot-select') && Z.$('#settings-bot-select').value
+      if (!botId) return
+      if (Z.$('#settings-msg')) Z.$('#settings-msg').textContent = ''
+      try {
+        await Z.api('/bots/' + botId + '/settings', {
+          method: 'PUT',
+          body: {
+            mode: Z.$('#set-mode') && Z.$('#set-mode').value,
+            autoread: Z.$('#set-autoread') && Z.$('#set-autoread').checked,
+            autotyping: Z.$('#set-autotyping') && Z.$('#set-autotyping').checked,
+            noprefix: Z.$('#set-noprefix') && Z.$('#set-noprefix').checked,
+            botName: Z.$('#set-botname') && Z.$('#set-botname').value,
+            ownerNumber: Z.$('#set-ownernumber') && Z.$('#set-ownernumber').value,
+            identity: {
+              channelUrl: Z.$('#set-channelurl') && Z.$('#set-channelurl').value,
+              groupUrl: Z.$('#set-groupurl') && Z.$('#set-groupurl').value
+            }
+          }
+        })
+        if (Z.$('#settings-msg')) {
+          Z.$('#settings-msg').textContent = 'Tersimpan'
+          Z.$('#settings-msg').className = 'msg ok'
+        }
+      } catch (e) {
+        if (Z.$('#settings-msg')) {
+          Z.$('#settings-msg').textContent = e.message
+          Z.$('#settings-msg').className = 'msg err'
+        }
+      }
+    }
+  })
+})()

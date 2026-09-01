@@ -1,102 +1,115 @@
-const { $, show, hide, state, api, bootPage, fillBotSelect, goToLogin } = window.Zora
+(function () {
+  'use strict'
+  if (!window.Zora) return
+  var Z = window.Zora
+  var pollTimer = null
 
-function updateConnectUI(st) {
-  if (!st) return
-  $('#connect-status').textContent = `Status: ${st.status}` + (st.lastError ? ` (${st.lastError})` : '')
-  if (st.qr) {
-    show($('#qr-wrap'))
-    $('#qr-img').src = st.qr
-  } else hide($('#qr-wrap'))
-  if (st.pairingCode) {
-    show($('#pairing-code-wrap'))
-    $('#pairing-code').textContent = st.pairingCode
-  } else hide($('#pairing-code-wrap'))
-}
+  function updateConnectUI(st) {
+    if (!st) return
+    var box = Z.$('#connect-status')
+    if (box) box.textContent = 'Status: ' + st.status + (st.lastError ? ' (' + st.lastError + ')' : '')
+    var qrWrap = Z.$('#qr-wrap')
+    var qrImg = Z.$('#qr-img')
+    if (st.qr && qrWrap && qrImg) {
+      qrImg.src = st.qr
+      Z.show(qrWrap)
+    } else if (qrWrap) Z.hide(qrWrap)
+    var pWrap = Z.$('#pairing-code-wrap')
+    var pCode = Z.$('#pairing-code')
+    if (st.pairingCode && pWrap && pCode) {
+      pCode.textContent = st.pairingCode
+      Z.show(pWrap)
+    } else if (pWrap) Z.hide(pWrap)
+  }
 
-function startStatusPoll(botId) {
-  stopStatusPoll()
-  state.pollTimer = setInterval(async () => {
-    try {
-      const data = await api(`/bots/${botId}/status`)
-      updateConnectUI(data.state)
-      if (data.state?.status === 'connected' || data.state?.status === 'disconnected') {
-        if (data.state.status === 'connected') stopStatusPoll()
+  function stopPoll() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  }
+  function startPoll(botId) {
+    stopPoll()
+    pollTimer = setInterval(async function () {
+      try {
+        var data = await Z.api('/bots/' + botId + '/status', { timeoutMs: 8000 })
+        updateConnectUI(data.state)
+        if (data.state && (data.state.status === 'connected' || data.state.status === 'disconnected')) {
+          if (data.state.status === 'connected') stopPoll()
+        }
+      } catch (e) {}
+    }, 2500)
+  }
+
+  Z.bootPage(function () {
+    Z.fillBotSelect('connect-bot-select')
+
+    document.querySelectorAll('input[name="connect-method"]').forEach(function (r) {
+      r.onchange = function () {
+        var wrap = Z.$('#pairing-phone-wrap')
+        if (!wrap) return
+        if (r.value === 'pairing' && r.checked) Z.show(wrap)
+        else Z.hide(wrap)
       }
-    } catch {}
-  }, 2500)
-}
-function stopStatusPoll() {
-  if (state.pollTimer) clearInterval(state.pollTimer)
-  state.pollTimer = null
-}
+    })
 
-bootPage(() => {
-  fillBotSelect('connect-bot-select')
+    var startBtn = Z.$('#connect-start-btn')
+    if (startBtn) startBtn.onclick = async function () {
+      var botId = Z.$('#connect-bot-select') && Z.$('#connect-bot-select').value
+      if (!botId) return alert('Pilih bot dulu')
+      var method = (document.querySelector('input[name="connect-method"]:checked') || {}).value || 'qr'
+      var phone = Z.$('#pairing-phone') && Z.$('#pairing-phone').value
+      var box = Z.$('#connect-status')
+      if (box) box.innerHTML = '<div class="inline-loading"><span class="dot-spinner"></span> Menghubungkan...</div>'
+      Z.hide(Z.$('#qr-wrap'))
+      Z.hide(Z.$('#pairing-code-wrap'))
+      startBtn.disabled = true
+      try {
+        var data = await Z.api('/bots/' + botId + '/connect', {
+          method: 'POST',
+          body: { method: method, phoneNumber: phone },
+          timeoutMs: 20000
+        })
+        updateConnectUI(data.state)
+        startPoll(botId)
+        setTimeout(async function () {
+          try {
+            var s = await Z.api('/bots/' + botId + '/status')
+            updateConnectUI(s.state)
+          } catch (e) {}
+        }, 3000)
+      } catch (e) {
+        if (e.status === 401) return Z.goToLogin('session')
+        if (box) box.textContent = e.message
+      } finally {
+        startBtn.disabled = false
+      }
+    }
 
-  document.querySelectorAll('input[name="connect-method"]').forEach(r => {
-    r.onchange = () => {
-      if (r.value === 'pairing' && r.checked) show($('#pairing-phone-wrap'))
-      else hide($('#pairing-phone-wrap'))
+    var stopBtn = Z.$('#connect-stop-btn')
+    if (stopBtn) stopBtn.onclick = async function () {
+      var botId = Z.$('#connect-bot-select') && Z.$('#connect-bot-select').value
+      if (!botId) return
+      stopPoll()
+      try {
+        await Z.api('/bots/' + botId + '/disconnect', { method: 'POST', body: {} })
+        var box = Z.$('#connect-status')
+        if (box) box.textContent = 'Terputus'
+        Z.hide(Z.$('#qr-wrap'))
+        Z.hide(Z.$('#pairing-code-wrap'))
+      } catch (e) { alert(e.message) }
+    }
+
+    var logoutBtn = Z.$('#connect-logout-btn')
+    if (logoutBtn) logoutBtn.onclick = async function () {
+      var botId = Z.$('#connect-bot-select') && Z.$('#connect-bot-select').value
+      if (!botId) return
+      if (!confirm('Logout session? Bot harus pairing ulang.')) return
+      stopPoll()
+      try {
+        await Z.api('/bots/' + botId + '/disconnect', { method: 'POST', body: { clearSession: true } })
+        var box = Z.$('#connect-status')
+        if (box) box.textContent = 'Session dihapus'
+        Z.hide(Z.$('#qr-wrap'))
+        Z.hide(Z.$('#pairing-code-wrap'))
+      } catch (e) { alert(e.message) }
     }
   })
-
-  $('#connect-start-btn').onclick = async () => {
-    const botId = $('#connect-bot-select')?.value
-    if (!botId) return alert('Pilih bot dulu')
-    const method = document.querySelector('input[name="connect-method"]:checked')?.value || 'qr'
-    const phoneNumber = $('#pairing-phone')?.value
-    $('#connect-status').innerHTML = '<div class="inline-loading"><span class="dot-spinner"></span> Menghubungkan bot...</div>'
-    hide($('#qr-wrap'))
-    hide($('#pairing-code-wrap'))
-    $('#connect-start-btn').disabled = true
-    try {
-      const data = await api(`/bots/${botId}/connect`, {
-        method: 'POST',
-        body: JSON.stringify({ method, phoneNumber })
-      })
-      updateConnectUI(data.state)
-      // Poll lebih sering di awal supaya QR / pairing code muncul
-      startStatusPoll(botId)
-      // Satu fetch ekstra setelah 3s (pairing code butuh delay di server)
-      setTimeout(async () => {
-        try {
-          const s = await api(`/bots/${botId}/status`)
-          updateConnectUI(s.state)
-        } catch {}
-      }, 3000)
-    } catch (e) {
-      if (e.status === 401) return goToLogin('session')
-      $('#connect-status').textContent = e.message
-    } finally {
-      $('#connect-start-btn').disabled = false
-    }
-  }
-
-  $('#connect-stop-btn').onclick = async () => {
-    const botId = $('#connect-bot-select')?.value
-    if (!botId) return
-    stopStatusPoll()
-    try {
-      await api(`/bots/${botId}/disconnect`, { method: 'POST', body: JSON.stringify({}) })
-      $('#connect-status').textContent = 'Terputus'
-      hide($('#qr-wrap'))
-      hide($('#pairing-code-wrap'))
-    } catch (e) { alert(e.message) }
-  }
-
-  $('#connect-logout-btn').onclick = async () => {
-    const botId = $('#connect-bot-select')?.value
-    if (!botId) return
-    if (!confirm('Logout session? Bot harus pairing ulang.')) return
-    stopStatusPoll()
-    try {
-      await api(`/bots/${botId}/disconnect`, {
-        method: 'POST',
-        body: JSON.stringify({ clearSession: true })
-      })
-      $('#connect-status').textContent = 'Session dihapus'
-      hide($('#qr-wrap'))
-      hide($('#pairing-code-wrap'))
-    } catch (e) { alert(e.message) }
-  }
-})
+})()
