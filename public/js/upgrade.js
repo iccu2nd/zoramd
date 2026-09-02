@@ -8,12 +8,8 @@
 
   function savePending(data) {
     try {
-      if (!data) {
-        localStorage.removeItem(STORAGE_KEY)
-        return
-      }
+      if (!data) { localStorage.removeItem(STORAGE_KEY); return }
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        botId: data.botId,
         orderId: data.orderId,
         amount: data.amount,
         expiresAt: data.expiresAt,
@@ -34,8 +30,18 @@
         return null
       }
       return data
-    } catch (e) {
-      return null
+    } catch (e) { return null }
+  }
+
+  function setOrderBtnVisible(show) {
+    var btn = document.getElementById('order-premium-btn')
+    if (!btn) return
+    if (show) {
+      btn.classList.remove('hidden')
+      btn.style.display = ''
+    } else {
+      btn.classList.add('hidden')
+      btn.style.display = 'none'
     }
   }
 
@@ -56,12 +62,31 @@
         el.textContent = 'Order kedaluwarsa. Buat order baru.'
         clearInterval(expiryTimer)
         savePending(null)
+        setOrderBtnVisible(true)
         return
       }
       el.textContent = 'Berlaku sisa ' + fmtTime(left) + ' (max 30 menit)'
     }
     tick()
     expiryTimer = setInterval(tick, 1000)
+  }
+
+  function hideCheckingOverlay() {
+    var ov = document.getElementById('pay-check-overlay')
+    if (ov) ov.remove()
+  }
+
+  function showCheckingOverlay() {
+    hideCheckingOverlay()
+    var ov = document.createElement('div')
+    ov.id = 'pay-check-overlay'
+    ov.className = 'pay-check-overlay'
+    ov.innerHTML =
+      '<div class="pay-check-card">' +
+        '<div class="pay-check-spinner"></div>' +
+        '<p>Memeriksa status pembayaran...</p>' +
+      '</div>'
+    document.body.appendChild(ov)
   }
 
   function showPaidSuccess() {
@@ -76,20 +101,28 @@
           '</svg>' +
         '</div>' +
         '<p class="pay-success-title">Pembayaran berhasil</p>' +
-        '<p class="pay-success-sub">Premium aktif</p>' +
+        '<p class="pay-success-sub">Premium aktif di akun Anda</p>' +
       '</div>'
     var actions = document.querySelector('.payment-actions')
     if (actions) actions.remove()
     var exp = document.getElementById('order-expiry')
     if (exp) exp.textContent = ''
+    setOrderBtnVisible(false)
+  }
+
+  function payMethod() {
+    return (document.getElementById('pay-method') && document.getElementById('pay-method').value) || 'qris'
   }
 
   function renderPayment(data) {
     var info = document.getElementById('payment-info')
     if (!info) return
     Z.show(info)
+    setOrderBtnVisible(false)
     var p = data.payment || {}
+    var method = (p.method || payMethod() || '').toLowerCase()
     var html = ''
+    var payLink = p.redirect_url || p.payment_link || p.pending_url || null
 
     if (p.qr_string || p.qr_image) {
       var qrSrc = p.qr_image || ('https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=' + encodeURIComponent(p.qr_string))
@@ -98,28 +131,29 @@
           '<img id="qris-img" src="' + Z.escapeHtml(qrSrc) + '" alt="QRIS"/>' +
           '<p class="hint" style="margin:8px 0 0">Scan QRIS untuk bayar</p>' +
         '</div>'
-      html +=
-        '<div class="payment-actions">' +
-          '<a class="btn outline" id="dl-qris" href="' + Z.escapeHtml(qrSrc) + '" download="qris-zorabot.png" target="_blank" rel="noopener">' +
-            '<i class="fa-solid fa-download"></i><span>Download QRIS</span></a>' +
-          '<button type="button" class="btn primary" id="btn-check-pay">Cek Status</button>' +
-          '<button type="button" class="btn danger" id="btn-cancel-pay">Batalkan</button>' +
-        '</div>'
-    } else {
-      html +=
-        '<div class="payment-actions">' +
-          '<button type="button" class="btn primary" id="btn-check-pay">Cek Status</button>' +
-          '<button type="button" class="btn danger" id="btn-cancel-pay">Batalkan</button>' +
-        '</div>'
-      if (p.account_number) {
-        html += '<p style="margin-top:10px">No. rekening: <strong>' + Z.escapeHtml(p.account_number) + '</strong>' +
-          (p.bank ? ' (' + Z.escapeHtml(p.bank) + ')' : '') + '</p>'
-      }
-      if (p.redirect_url || p.payment_link) {
-        var link = p.redirect_url || p.payment_link
-        html += '<p style="margin-top:8px"><a href="' + Z.escapeHtml(link) + '" target="_blank" rel="noopener">Buka halaman pembayaran</a></p>'
+    }
+
+    html += '<div class="payment-actions">'
+    if (p.qr_string || p.qr_image) {
+      var qrSrc2 = p.qr_image || ('https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=' + encodeURIComponent(p.qr_string))
+      html += '<a class="btn outline" id="dl-qris" href="' + Z.escapeHtml(qrSrc2) + '" download="qris-zorabot.png" target="_blank" rel="noopener">' +
+        '<i class="fa-solid fa-download"></i><span>Download QRIS</span></a>'
+    }
+    // DANA / ewallet: tombol bayar sekarang ke link
+    if (method === 'dana' || method === 'gopay' || method === 'ovo' || payLink) {
+      if (payLink) {
+        html += '<a class="btn primary" id="btn-pay-now" href="' + Z.escapeHtml(payLink) + '" target="_blank" rel="noopener">Bayar Sekarang</a>'
       }
     }
+    html += '<button type="button" class="btn outline" id="btn-check-pay">Cek Status</button>'
+    html += '<button type="button" class="btn danger" id="btn-cancel-pay">Batalkan</button>'
+    html += '</div>'
+
+    if (p.account_number) {
+      html += '<p style="margin-top:10px;text-align:center">No. rekening: <strong>' + Z.escapeHtml(p.account_number) + '</strong>' +
+        (p.bank ? ' (' + Z.escapeHtml(p.bank) + ')' : '') + '</p>'
+    }
+
     html += '<p class="hint" style="margin-top:10px;text-align:center">Total: Rp' + Number(data.amount || 0).toLocaleString('id-ID') + '</p>'
     html += '<p class="expiry-note" id="order-expiry"></p>'
     info.innerHTML = html
@@ -133,10 +167,8 @@
   }
 
   async function loadPremium() {
-    var botId = Z.$('#upgrade-bot-select') && Z.$('#upgrade-bot-select').value
-    if (!botId) return
     try {
-      var data = await Z.api('/bots/' + botId + '/premium')
+      var data = await Z.api('/premium')
       var sub = data.subscription || {}
       var box = Z.$('#sub-status')
       if (box) {
@@ -144,6 +176,7 @@
           ? '<span class="badge premium">Premium</span> aktif sampai ' + (sub.expiresAt ? new Date(sub.expiresAt).toLocaleString('id-ID') : '-')
           : '<span class="badge free">Free</span> — upgrade untuk fitur lengkap'
       }
+      if (data.isPremium) setOrderBtnVisible(false)
     } catch (e) {
       var box = Z.$('#sub-status')
       if (box) box.textContent = e.message
@@ -151,16 +184,15 @@
   }
 
   async function doCheck(orderId) {
-    var botId = Z.$('#upgrade-bot-select') && Z.$('#upgrade-bot-select').value
     var oid = orderId || (currentOrder && currentOrder.orderId)
-    if (!botId || !oid) return
+    if (!oid) return
     var msg = Z.$('#upgrade-msg')
-    var btn = document.getElementById('btn-check-pay')
-    if (btn) btn.classList.add('is-loading')
+    showCheckingOverlay()
     try {
-      var data = await Z.api('/bots/' + botId + '/premium/check', {
+      var data = await Z.api('/premium/check', {
         method: 'POST', body: { orderId: oid }, timeoutMs: 25000
       })
+      hideCheckingOverlay()
       if (data.status === 'paid') {
         if (msg) { msg.textContent = 'Pembayaran berhasil. Premium aktif!'; msg.className = 'msg ok' }
         showPaidSuccess()
@@ -170,35 +202,34 @@
       } else if (data.status === 'expired') {
         if (msg) { msg.textContent = data.message || 'Order kedaluwarsa'; msg.className = 'msg err' }
         savePending(null)
+        setOrderBtnVisible(true)
       } else if (data.status === 'cancelled') {
         if (msg) { msg.textContent = 'Order dibatalkan'; msg.className = 'msg' }
         savePending(null)
+        setOrderBtnVisible(true)
       } else {
         if (msg) { msg.textContent = 'Pembayaran belum masuk. Bayar dulu lalu cek lagi.'; msg.className = 'msg' }
       }
     } catch (e) {
+      hideCheckingOverlay()
       if (msg) { msg.textContent = e.message; msg.className = 'msg err' }
-    } finally {
-      if (btn) btn.classList.remove('is-loading')
     }
   }
 
   async function doCancel(orderId) {
-    var botId = Z.$('#upgrade-bot-select') && Z.$('#upgrade-bot-select').value
     var oid = orderId || (currentOrder && currentOrder.orderId)
-    if (!botId || !oid) return
+    if (!oid) return
     if (!confirm('Batalkan transaksi ini?')) return
     var msg = Z.$('#upgrade-msg')
     try {
-      await Z.api('/bots/' + botId + '/premium/cancel', {
-        method: 'POST', body: { orderId: oid }
-      })
+      await Z.api('/premium/cancel', { method: 'POST', body: { orderId: oid } })
       if (msg) { msg.textContent = 'Transaksi dibatalkan.'; msg.className = 'msg' }
       if (expiryTimer) clearInterval(expiryTimer)
       savePending(null)
       currentOrder = null
       var info = document.getElementById('payment-info')
       if (info) { info.innerHTML = ''; Z.hide(info) }
+      setOrderBtnVisible(true)
     } catch (e) {
       if (msg) { msg.textContent = e.message; msg.className = 'msg err' }
     }
@@ -206,15 +237,9 @@
 
   function restorePending() {
     var pending = loadPending()
-    if (!pending) return
-    var sel = Z.$('#upgrade-bot-select')
-    if (sel && pending.botId) {
-      // pilih bot yang sama jika masih ada di list
-      var found = false
-      for (var i = 0; i < sel.options.length; i++) {
-        if (sel.options[i].value === pending.botId) { found = true; break }
-      }
-      if (found) sel.value = pending.botId
+    if (!pending) {
+      setOrderBtnVisible(true)
+      return
     }
     currentOrder = pending
     renderPayment(pending)
@@ -226,29 +251,16 @@
   }
 
   Z.bootPage(function () {
-    Z.fillBotSelect('upgrade-bot-select')
-    loadPremium()
-    restorePending()
-    var sel = Z.$('#upgrade-bot-select')
-    if (sel) sel.onchange = function () {
-      loadPremium()
-      // jika pindah bot, tampilkan pending hanya jika botId cocok
-      var pending = loadPending()
-      if (pending && pending.botId === sel.value) {
-        currentOrder = pending
-        renderPayment(pending)
-      }
-    }
+    loadPremium().then(function () {
+      restorePending()
+    })
 
     var orderBtn = Z.$('#order-premium-btn')
     if (orderBtn) orderBtn.onclick = async function () {
-      var botId = Z.$('#upgrade-bot-select') && Z.$('#upgrade-bot-select').value
-      if (!botId) return
       var msg = Z.$('#upgrade-msg')
       if (msg) msg.textContent = ''
-      // jika masih ada pending valid untuk bot ini, lanjutkan saja
       var pending = loadPending()
-      if (pending && pending.botId === botId) {
+      if (pending) {
         currentOrder = pending
         renderPayment(pending)
         if (msg) { msg.textContent = 'Masih ada transaksi aktif. Lanjutkan bayar.'; msg.className = 'msg' }
@@ -257,18 +269,18 @@
       orderBtn.classList.add('is-loading')
       orderBtn.disabled = true
       try {
-        var data = await Z.api('/bots/' + botId + '/premium/order', {
+        var data = await Z.api('/premium/order', {
           method: 'POST',
-          body: { method: (Z.$('#pay-method') && Z.$('#pay-method').value) || 'qris' },
+          body: { method: payMethod() },
           timeoutMs: 45000
         })
-        data.botId = botId
         currentOrder = data
         savePending(data)
         renderPayment(data)
         if (msg) { msg.textContent = 'Order dibuat. Bayar dalam 30 menit.'; msg.className = 'msg ok' }
       } catch (e) {
         if (msg) { msg.textContent = e.message; msg.className = 'msg err' }
+        setOrderBtnVisible(true)
       } finally {
         orderBtn.classList.remove('is-loading')
         orderBtn.disabled = false

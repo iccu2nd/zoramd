@@ -23,8 +23,8 @@
     return '<div class="feature-item" data-key="' + Z.escapeHtml(key) + '">' +
       '<div class="feature-row"><div class="feature-info"><span class="name">' + Z.escapeHtml(key) + '</span>' +
       (f.description ? '<span class="desc">' + Z.escapeHtml(String(f.description).slice(0, 80)) + '</span>' : '') +
-      '</div><label class="switch-label"><input type="checkbox" class="feat-enabled" ' +
-      (f.enabled !== false ? 'checked' : '') + '/> ON</label></div>' +
+      '</div><label class="switch"><input type="checkbox" class="feat-enabled" ' +
+      (f.enabled !== false ? 'checked' : '') + '/><span class="slider"></span></label></div>' +
       '<div class="feature-detail"><div class="field"><label>Access Rule</label><select class="feat-access" ' +
       (isPremium ? '' : 'disabled') + '>' +
       rules.map(function (r) {
@@ -110,13 +110,6 @@
   Z.bootPage(function () {
     Z.fillBotSelect('feature-bot-select')
     loadFeatures()
-    var rs = document.getElementById('restart-bot-btn')
-    if (rs) rs.onclick = async function () {
-      var botId = document.getElementById('feature-bot-select') && document.getElementById('feature-bot-select').value
-      if (!botId) return alert('Pilih bot')
-      if (!confirm('Restart bot agar pengaturan fitur diterapkan?')) return
-      try { await Z.restartBot(botId); alert('Bot di-restart') } catch (e) { alert(e.message) }
-    }
     var sel = Z.$('#feature-bot-select')
     if (sel) sel.onchange = loadFeatures
   })

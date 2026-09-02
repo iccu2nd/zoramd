@@ -234,7 +234,7 @@ code {
   }
 }
 .brand { font-weight: 700; font-size: 1.1rem; flex: 1; letter-spacing: -0.03em; }
-.user-chip {
+.user-chip { display: none !important; /* email chip disembunyikan */
   font-size: 0.78rem; color: var(--muted); background: var(--bg-soft);
   padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border);
   max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -576,4 +576,57 @@ code {
 }
 .pay-success-sub {
   font-size: 0.88rem; color: var(--muted); margin-top: 4px;
+}
+
+.pay-check-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(30, 27, 75, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeUp 0.2s ease;
+}
+.pay-check-card {
+  background: #fff; border-radius: 20px; padding: 28px 32px;
+  text-align: center; box-shadow: 0 16px 40px rgba(30,27,75,0.2);
+  min-width: 200px;
+}
+.pay-check-card p {
+  margin-top: 14px; font-size: 0.92rem; color: var(--text-2); font-weight: 500;
+}
+.pay-check-spinner {
+  width: 40px; height: 40px; margin: 0 auto;
+  border: 3px solid var(--border);
+  border-top-color: var(--purple);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* Feature list spacing */
+.feature-item {
+  margin-bottom: 12px !important;
+  padding: 14px 16px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+  background: var(--surface) !important;
+  box-shadow: var(--shadow) !important;
+}
+.feature-item + .feature-item { margin-top: 0; }
+.feat-group-body {
+  display: none;
+  border-top: 1px solid var(--border);
+  padding: 12px !important;
+  background: var(--bg-soft);
+  gap: 12px;
+}
+.feature-row {
+  align-items: center !important;
+  margin-bottom: 4px;
+}
+.feature-info .name {
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+}
+.feature-detail {
+  margin-top: 12px !important;
+  padding-top: 12px !important;
+  border-top: 1px dashed var(--border) !important;
 }

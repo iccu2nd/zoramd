@@ -6,7 +6,7 @@ import {
     createBot, findBotsByOwner, findOwnedBot, updateOwnedBot, findBotBySessionId, setBotStatus,
     listAllAccounts, listAllBots, setAccountRole, deleteBotById, updateAccount, findAccountById
 } from '../../lib/db/accounts.js'
-import { getSubscription, isBotPremium, activatePremium } from '../../lib/db/subscription.js'
+import { getSubscription, isBotPremium, activatePremium, isAccountPremium, activateAccountPremium, getAccountSubscription } from '../../lib/db/subscription.js'
 import { getAllFeatureSettings, setFeatureSetting, getFeatureSetting, ACCESS_RULES } from '../../lib/db/featureSettings.js'
 import { createOrder, findOrder, findOrdersByAccount, markOrderChecked, cancelOrder, isOrderExpired } from '../../lib/db/orders.js'
 import { getMongoDb } from '../../lib/db/mongo.js'
@@ -123,15 +123,9 @@ router.get('/bots', authMiddleware, loadAccount, async (req, res) => {
                 createdAt: b.createdAt
             }
         }))
-        // plan sudah dari getSubscription; isBotPremium untuk cek expiry
-        let anyPremium = false
+        const anyPremium = await isAccountPremium(req.account._id.toString())
         for (const b of enriched) {
-            if (b.plan === 'premium' && await isBotPremium(b.id)) {
-                anyPremium = true
-                b.plan = 'premium'
-            } else if (b.plan === 'premium') {
-                b.plan = 'free' // expired
-            }
+            b.plan = anyPremium ? 'premium' : 'free'
         }
         const maxBots = anyPremium ? 3 : 1
         res.json({
@@ -148,14 +142,7 @@ router.post('/bots', authMiddleware, loadAccount, async (req, res) => {
         const { botName, ownerNumber } = req.body || {}
         const existing = await findBotsByOwner(req.account._id)
 
-        // Cek apakah user punya minimal 1 bot premium (plan aktif)
-        let anyPremium = false
-        for (const b of existing) {
-            if (await isBotPremium(b._id.toString())) {
-                anyPremium = true
-                break
-            }
-        }
+        const anyPremium = await isAccountPremium(req.account._id.toString())
         const maxBots = anyPremium ? 3 : 1
         if (existing.length >= maxBots) {
             return res.status(403).json({
@@ -268,7 +255,7 @@ router.get('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
         if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
-        const premium = await isBotPremium(bot._id.toString())
+        const premium = (await isAccountPremium(req.account._id.toString())) || (await isBotPremium(bot._id.toString()))
         const db = await getMongoDb()
         const settingsDoc = await db.collection(COLLECTIONS.BOT_SETTINGS).findOne({ botId: bot.sessionId })
         res.json({
@@ -287,7 +274,7 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
         if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
-        const premium = await isBotPremium(bot._id.toString())
+        const premium = ((await isAccountPremium(req.account._id.toString())) || (await isBotPremium(bot._id.toString())))
         const body = req.body || {}
 
         // Free users: limited settings only
@@ -343,7 +330,7 @@ router.get('/bots/:botId/features', authMiddleware, loadAccount, async (req, res
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
         if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
-        const premium = await isBotPremium(bot._id.toString())
+        const premium = ((await isAccountPremium(req.account._id.toString())) || (await isBotPremium(bot._id.toString())))
         const saved = await getAllFeatureSettings(bot.sessionId)
         const savedMap = {}
         for (const s of saved) savedMap[s.featureKey] = s
@@ -390,7 +377,7 @@ router.put('/bots/:botId/features/:featureKey', authMiddleware, loadAccount, asy
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
         if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
-        const premium = await isBotPremium(bot._id.toString())
+        const premium = ((await isAccountPremium(req.account._id.toString())) || (await isBotPremium(bot._id.toString())))
         const body = req.body || {}
         const patch = {}
 
@@ -413,6 +400,121 @@ router.put('/bots/:botId/features/:featureKey', authMiddleware, loadAccount, asy
         await setFeatureSetting(bot.sessionId, req.params.featureKey, patch)
         const updated = await getFeatureSetting(bot.sessionId, req.params.featureKey)
         res.json({ feature: updated })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+
+// ---------- Premium AKUN (bukan per bot) ----------
+router.get('/premium', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const sub = await getAccountSubscription(req.account._id.toString())
+        const orders = await findOrdersByAccount(req.account._id.toString())
+        res.json({
+            subscription: sub,
+            isPremium: await isAccountPremium(req.account._id.toString()),
+            price: PREMIUM_PRICE,
+            orders: orders.slice(0, 10)
+        })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.post('/premium/order', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const { method = 'qris', name } = req.body || {}
+        const payment = await sociabuzz.createPayment(PREMIUM_PRICE, {
+            name: name || req.account.name || 'ZoraBot User',
+            method,
+            message: `ZoraBot Premium Account - ${req.account.email || req.account._id}`
+        })
+        const orderId = payment.id || payment.trxId || ('ORD-' + Date.now())
+        const expiresAt = payment.expired_at || new Date(Date.now() + 30 * 60 * 1000).toISOString()
+        const pi = payment.payment_info || payment.paymentInfo || {}
+        const paymentInfo = {
+            ...payment,
+            ...pi,
+            qr_string: pi.qr_string || payment.qr_string || null,
+            pending_url: pi.pending_url || payment.pending_url || null,
+            method: pi.method || method,
+            redirect_url: pi.redirect_url || pi.payment_link || payment.redirect_url || null,
+            payment_link: pi.payment_link || pi.redirect_url || null
+        }
+        if (paymentInfo.qr_string) {
+            paymentInfo.qr_image = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=' + encodeURIComponent(paymentInfo.qr_string)
+        }
+        await createOrder({
+            accountId: req.account._id.toString(),
+            botId: null,
+            orderId,
+            amount: payment.total_amount || PREMIUM_PRICE,
+            paymentInfo,
+            expiresAt
+        })
+        res.json({
+            orderId,
+            amount: payment.total_amount || PREMIUM_PRICE,
+            baseAmount: PREMIUM_PRICE,
+            expiresAt,
+            payment: paymentInfo
+        })
+    } catch (e) {
+        res.status(500).json({ error: e.message || 'Gagal membuat order' })
+    }
+})
+
+router.post('/premium/check', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const { orderId } = req.body || {}
+        if (!orderId) return res.status(400).json({ error: 'orderId wajib' })
+        const order = await findOrder(orderId)
+        if (!order || order.accountId !== req.account._id.toString()) {
+            return res.status(404).json({ error: 'Order tidak ditemukan' })
+        }
+        if (order.status === 'paid') return res.json({ status: 'paid', already: true })
+        if (order.status === 'cancelled') return res.json({ status: 'cancelled' })
+        if (isOrderExpired(order)) {
+            await markOrderChecked(orderId, 'expired')
+            return res.json({ status: 'expired', message: 'Order kedaluwarsa (max 30 menit). Buat order baru.' })
+        }
+        let paid = false
+        try {
+            const pendingUrl = order.paymentInfo?.pending_url || order.paymentInfo?.url || order.paymentInfo?.pendingUrl
+            if (pendingUrl && typeof sociabuzz.statusPayment === 'function') {
+                const result = await sociabuzz.statusPayment(pendingUrl)
+                const st = (result?.status || result?.payment_status || '').toString().toLowerCase()
+                paid = st === 'paid' || st === 'success' || st === 'settlement' || result?.paid === true
+            } else {
+                const trx = typeof sociabuzz.getTransaction === 'function' ? sociabuzz.getTransaction(orderId) : null
+                if (trx) {
+                    const st = (trx.status || '').toString().toLowerCase()
+                    paid = st === 'paid' || st === 'success' || trx.paid === true
+                }
+            }
+        } catch (err) {
+            console.error('SociaBuzz check error:', err.message)
+        }
+        if (paid) {
+            await markOrderChecked(orderId, 'paid')
+            await activateAccountPremium(req.account._id.toString(), { months: 1 })
+            return res.json({ status: 'paid', activated: true })
+        }
+        await markOrderChecked(orderId, 'pending')
+        res.json({ status: 'pending' })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.post('/premium/cancel', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const { orderId } = req.body || {}
+        if (!orderId) return res.status(400).json({ error: 'orderId wajib' })
+        const result = await cancelOrder(orderId, req.account._id.toString())
+        if (!result.ok) return res.status(400).json({ error: result.error })
+        res.json({ ok: true, status: 'cancelled' })
     } catch (e) {
         res.status(500).json({ error: e.message })
     }
@@ -510,7 +612,7 @@ router.post('/bots/:botId/premium/check', authMiddleware, loadAccount, async (re
 
         if (paid) {
             await markOrderChecked(orderId, 'paid')
-            await activatePremium(bot._id.toString(), { months: 1 })
+            await activateAccountPremium(req.account._id.toString(), { months: 1 })
             return res.json({ status: 'paid', activated: true })
         }
 
