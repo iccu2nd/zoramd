@@ -70,9 +70,17 @@
       </div>
       <div class="field">
         <label>Metode</label>
-        <div class="radio-row">
-          <label><input type="radio" name="connect-method" value="qr" checked /> QR Code</label>
-          <label><input type="radio" name="connect-method" value="pairing" /> Pairing Code</label>
+        <div class="method-toggle" id="connect-method-toggle">
+          <label class="method-option active">
+            <input type="radio" name="connect-method" value="qr" checked />
+            <i class="fa-solid fa-qrcode"></i>
+            <span>QR Code</span>
+          </label>
+          <label class="method-option">
+            <input type="radio" name="connect-method" value="pairing" />
+            <i class="fa-solid fa-keyboard"></i>
+            <span>Pairing Code</span>
+          </label>
         </div>
       </div>
       <div id="pairing-phone-wrap" class="field hidden">
@@ -96,9 +104,9 @@
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=16"></script>
-  <script src="/js/common.js?v=16"></script>
-  <script src="/js/connect.js?v=16"></script>
+  <script src="/js/bg-pattern.js?v=17"></script>
+  <script src="/js/common.js?v=17"></script>
+  <script src="/js/connect.js?v=17"></script>
 
   <script>
   // Safety net: jangan pernah stuck loading > 6 detik

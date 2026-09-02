@@ -111,6 +111,9 @@
     document.querySelectorAll('input[name="connect-method"]').forEach(function (r) {
       r.onchange = function () {
         var wrap = Z.$('#pairing-phone-wrap')
+        document.querySelectorAll('.method-option').forEach(function (opt) {
+          opt.classList.toggle('active', opt.contains(r) ? r.checked : opt.querySelector('input').checked)
+        })
         if (!wrap) return
         if (r.value === 'pairing' && r.checked) Z.show(wrap)
         else Z.hide(wrap)
