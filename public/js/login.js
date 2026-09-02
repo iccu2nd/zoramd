@@ -75,18 +75,18 @@ function showNoticeFromQuery() {
   }
 }
 
-$('#tab-login').onclick = () => {
-  $('#tab-login').classList.add('active')
-  $('#tab-register').classList.remove('active')
-  show($('#login-form'))
-  hide($('#register-form'))
-}
-
-$('#tab-register').onclick = () => {
-  $('#tab-register').classList.add('active')
-  $('#tab-login').classList.remove('active')
+$('#go-register').onclick = (e) => {
+  e.preventDefault()
   hide($('#login-form'))
   show($('#register-form'))
+  $('#login-error').textContent = ''
+}
+
+$('#go-login').onclick = (e) => {
+  e.preventDefault()
+  hide($('#register-form'))
+  show($('#login-form'))
+  $('#reg-error').textContent = ''
 }
 
 $('#login-form').onsubmit = async (e) => {

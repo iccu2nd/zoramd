@@ -39,10 +39,6 @@
       <h1>ZoraBot</h1>
       <p class="subtitle">WhatsApp JadiBot Platform</p>
       <p id="auth-notice" class="auth-notice hidden"></p>
-      <div class="tabs">
-        <button type="button" id="tab-login" class="tab active">Masuk</button>
-        <button type="button" id="tab-register" class="tab">Daftar</button>
-      </div>
       <form id="login-form" class="auth-form">
         <label>Email</label>
         <input type="email" id="login-email" required autocomplete="email" />
@@ -51,6 +47,7 @@
         <button type="submit" class="btn primary" id="login-submit">Masuk</button>
         <p id="login-error" class="error"></p>
         <p class="subtitle" style="margin-top:14px"><a href="/forgot-password">Lupa password?</a></p>
+        <p class="subtitle" style="margin-top:6px">Belum punya akun? <a href="#" id="go-register">Daftar sekarang</a></p>
       </form>
       <form id="register-form" class="auth-form hidden">
         <label>Nama</label>
@@ -65,6 +62,7 @@
         </label>
         <button type="submit" class="btn primary" id="reg-submit" disabled>Daftar</button>
         <p id="reg-error" class="error"></p>
+        <p class="subtitle" style="margin-top:14px">Sudah punya akun? <a href="#" id="go-login">Masuk</a></p>
       </form>
     </div>
   </div>
