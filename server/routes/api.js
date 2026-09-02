@@ -27,8 +27,8 @@ router.get('/health', (req, res) => {
 })
 
 
-const PREMIUM_PRICE = 25000
-const PREMIUM_PLANS = { '7d': { days: 7, price: 10000, label: '7 Hari' }, '30d': { months: 1, price: 25000, label: '30 Hari' } }
+const PREMIUM_PRICE = 10000
+const PREMIUM_PLANS = { '7d': { days: 7, price: 5000, label: '7 Hari' }, '30d': { months: 1, price: 10000, label: '30 Hari' } }
 function resolvePlan(duration) { return PREMIUM_PLANS[duration] || PREMIUM_PLANS['30d'] }
 
 /** Normalize & validate international WhatsApp number (e.g. 628xxx). Returns digits-only or null. */

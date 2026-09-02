@@ -60,37 +60,20 @@
     <main class="content">
       <h2>Order Plan Premium</h2>
       <div class="plan-card">
-        <h3>Premium</h3>
-        <p class="price" id="plan-price">Rp25.000 <span>/ 30 hari</span></p>
-        <ul>
-          <li>Custom owner &amp; nama bot</li>
-          <li>Custom identitas, channel, grup</li>
-          <li>Feature settings lengkap</li>
-          <li>Custom response &amp; command</li>
-          <li>Access rules (Owner / Group / Public)</li>
-        </ul>
-        <div class="field">
-          <label>Durasi</label>
-          <select id="plan-duration">
-            <option value="7d">7 Hari — Rp10.000</option>
-            <option value="30d" selected>30 Hari — Rp25.000</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Metode Pembayaran</label>
-          <select id="pay-method">
-            <option value="qris">QRIS</option>
-            <option value="gopay">GoPay</option>
-            <option value="dana">DANA</option>
-            <option value="ovo">OVO</option>
-            <option value="bca">BCA</option>
-            <option value="mandiri">Mandiri</option>
-          </select>
+        <div id="plan-details">
+          <h3>Premium</h3>
+          <p class="price" id="plan-price">Rp10.000 <span>/ 30 hari</span></p>
+          <div class="field">
+            <label>Durasi</label>
+            <select id="plan-duration">
+              <option value="7d">7 Hari — Rp5.000</option>
+              <option value="30d" selected>30 Hari — Rp10.000</option>
+            </select>
+          </div>
         </div>
         <button id="order-premium-btn" class="btn primary">Order Premium</button>
         <div id="payment-info" class="payment-info hidden"></div>
         <p id="upgrade-msg" class="msg"></p>
-        <div id="sub-status" class="status-box"></div>
       </div>
     </main>
   </div>

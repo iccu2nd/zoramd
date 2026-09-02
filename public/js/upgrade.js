@@ -35,14 +35,17 @@
 
   function setOrderBtnVisible(show) {
     var btn = document.getElementById('order-premium-btn')
-    if (!btn) return
-    if (show) {
-      btn.classList.remove('hidden')
-      btn.style.display = ''
-    } else {
-      btn.classList.add('hidden')
-      btn.style.display = 'none'
+    var details = document.getElementById('plan-details')
+    if (btn) {
+      if (show) {
+        btn.classList.remove('hidden')
+        btn.style.display = ''
+      } else {
+        btn.classList.add('hidden')
+        btn.style.display = 'none'
+      }
     }
+    if (details) details.style.display = show ? '' : 'none'
   }
 
   function fmtTime(ms) {
@@ -135,10 +138,10 @@
   }
 
   function payMethod() {
-    return (document.getElementById('pay-method') && document.getElementById('pay-method').value) || 'qris'
+    return 'qris'
   }
 
-  var PLAN_PRICES = { '7d': { price: 10000, label: '7 hari' }, '30d': { price: 25000, label: '30 hari' } }
+  var PLAN_PRICES = { '7d': { price: 5000, label: '7 hari' }, '30d': { price: 10000, label: '30 hari' } }
   function planDuration() {
     return (document.getElementById('plan-duration') && document.getElementById('plan-duration').value) || '30d'
   }
@@ -202,13 +205,6 @@
   async function loadPremium() {
     try {
       var data = await Z.api('/premium')
-      var sub = data.subscription || {}
-      var box = Z.$('#sub-status')
-      if (box) {
-        box.innerHTML = data.isPremium
-          ? '<span class="badge premium">Premium</span> aktif sampai ' + (sub.expiresAt ? new Date(sub.expiresAt).toLocaleString('id-ID') : '-')
-          : '<span class="badge free">Free</span> — upgrade untuk fitur lengkap'
-      }
       if (data.isPremium) setOrderBtnVisible(false)
     } catch (e) {
       var box = Z.$('#sub-status')

@@ -35,7 +35,9 @@
       (isPremium ? '' : 'disabled') + ' placeholder="Kosongkan = default"/></div>' +
       '<div class="field"><label>Custom Command</label>' +
       '<input class="feat-command" type="text" value="' + Z.escapeHtml(f.customCommand || '') + '" ' +
-      (isPremium ? '' : 'disabled') + ' placeholder="Kosongkan = default"/></div>' +
+      (isPremium ? '' : 'disabled') + ' placeholder="Kosongkan = default"/>' +
+      '<span class="field-hint">Default: ' + Z.escapeHtml((f.aliases && f.aliases.length ? f.aliases : [key]).join(', ')) + '</span>' +
+      '</div>' +
       '<div class="row gap"><button type="button" class="btn outline feat-save">Simpan</button>' +
       '<span class="feat-saved msg ok"></span></div></div></div>'
   }
