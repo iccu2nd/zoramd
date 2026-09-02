@@ -86,11 +86,12 @@
   }
 
   function goToLogin(reason) {
-    var params = new URLSearchParams()
-    if (reason) params.set('reason', reason)
-    var next = location.pathname + location.search
-    if (next && next.indexOf('/login') !== 0) params.set('next', next)
-    location.replace('/login?' + params.toString())
+    try {
+      if (reason) sessionStorage.setItem('zora_login_reason', reason)
+      var next = location.pathname + location.search
+      if (next && next.indexOf('/login') !== 0) sessionStorage.setItem('zora_login_next', next)
+    } catch (e) {}
+    location.replace('/login')
   }
 
   function setLoading(on) {

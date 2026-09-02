@@ -26,9 +26,24 @@ async function api(path, opts = {}) {
   return data
 }
 
+function takeLoginNext() {
+  let next = null
+  try { next = sessionStorage.getItem('zora_login_next') } catch (e) {}
+  if (!next) next = new URLSearchParams(location.search).get('next')
+  try { sessionStorage.removeItem('zora_login_next') } catch (e) {}
+  return next || '/dashboard'
+}
+
+function takeLoginReason() {
+  let reason = null
+  try { reason = sessionStorage.getItem('zora_login_reason') } catch (e) {}
+  if (!reason) reason = new URLSearchParams(location.search).get('reason')
+  try { sessionStorage.removeItem('zora_login_reason') } catch (e) {}
+  return reason
+}
+
 function redirectToApp() {
-  const params = new URLSearchParams(location.search)
-  const next = params.get('next') || '/dashboard'
+  const next = takeLoginNext()
   // Hanya izinkan path relatif di domain yang sama
   const safe = next.startsWith('/') && !next.startsWith('//') ? next : '/'
   location.href = safe
@@ -57,8 +72,7 @@ async function checkExistingSession() {
 }
 
 function showNoticeFromQuery() {
-  const params = new URLSearchParams(location.search)
-  const reason = params.get('reason')
+  const reason = takeLoginReason()
   const notice = $('#auth-notice')
   if (!notice) return
   if (reason === 'connect') {
