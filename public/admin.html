@@ -11,7 +11,20 @@
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
     <div class="loading-card">
       <div class="loading-logo">ZoraBot</div>
-      <div class="loading-spinner" aria-hidden="true"></div>
+            <div class="spinner center" aria-hidden="true">
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+      </div>
       <p class="loading-text" id="loading-text">Memuat...</p>
     </div>
   </div>
@@ -45,6 +58,24 @@
 
     <main class="content">
       <h2>Admin Panel</h2>
+      <div class="info-card" style="margin-bottom:16px">
+        <h3 style="margin-bottom:10px">Iklan Free User</h3>
+        <p class="hint">Kirim otomatis ke semua grup bot Free (max 3x/hari). Premium tidak kena.</p>
+        <div class="toggle-row" style="border:none;padding:8px 0">
+          <div class="toggle-meta">
+            <strong>Auto Ads Free</strong>
+            <span>On/Off global</span>
+          </div>
+          <label class="switch"><input type="checkbox" id="admin-free-ads" checked /><span class="slider"></span></label>
+        </div>
+        <div class="field" style="margin-top:8px">
+          <label>Teks iklan</label>
+          <textarea id="admin-ads-text" rows="3"></textarea>
+        </div>
+        <button type="button" id="admin-ads-save" class="btn primary">Simpan</button>
+        <p id="admin-ads-msg" class="msg"></p>
+      </div>
+
       <p class="hint">Kelola seluruh user, bot, premium, dan order. Hanya akun admin.</p>
       <div id="admin-stats" class="limits-bar" style="margin-bottom:16px"></div>
 
@@ -65,9 +96,9 @@
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=14"></script>
-  <script src="/js/common.js?v=14"></script>
-  <script src="/js/admin.js?v=14"></script>
+  <script src="/js/bg-pattern.js?v=16"></script>
+  <script src="/js/common.js?v=16"></script>
+  <script src="/js/admin.js?v=16"></script>
   <script>
   setTimeout(function () {
     var lv = document.getElementById('loading-view');

@@ -6,6 +6,32 @@
   function esc(s) { return Z.escapeHtml(s) }
 
   Z.bootPage(async function () {
+    // Platform ads settings
+    try {
+      var plat = await Z.api('/admin/platform')
+      var s = plat.settings || {}
+      var adsEl = document.getElementById('admin-free-ads')
+      if (adsEl) adsEl.checked = s.freeAdsEnabled !== false
+      var adsTx = document.getElementById('admin-ads-text')
+      if (adsTx) adsTx.value = s.adsText || ''
+    } catch (e) {}
+    var saveAds = document.getElementById('admin-ads-save')
+    if (saveAds) saveAds.onclick = async function () {
+      var msg = document.getElementById('admin-ads-msg')
+      try {
+        await Z.api('/admin/platform', {
+          method: 'PUT',
+          body: {
+            freeAdsEnabled: document.getElementById('admin-free-ads').checked,
+            adsText: document.getElementById('admin-ads-text').value
+          }
+        })
+        if (msg) { msg.textContent = 'Tersimpan'; msg.className = 'msg ok' }
+      } catch (e) {
+        if (msg) { msg.textContent = e.message; msg.className = 'msg err' }
+      }
+    }
+
     if (!Z.state.user || !Z.state.user.isAdmin) {
       alert('Akses admin saja')
       location.replace('/dashboard')

@@ -13,6 +13,8 @@ import { hasActiveMenfesSession } from './plugins/_menfes.js'
 import { isPremiumActive } from './lib/plugins.js'
 import { setBotStatus } from './lib/db/accounts.js'
 import { resolveFeature, checkAccessRule } from './lib/featureGate.js'
+import { runWithFreeQueue } from './lib/freeQueue.js'
+import { isAccountPremium } from './lib/db/subscription.js'
 
 const prefixes = ['.', '/', '#', '!']
 
@@ -100,8 +102,7 @@ export async function handleMessage(sock, config, { messages, type }) {
     if (m.isGroup && !m.key.fromMe && global.db.data.chats[m.from]?.antidelete) cacheForDelete(m)
     if (settings.autoread) sock.readMessages([m.key]).catch(() => {})
 
-    const isEvalCmd = m.isOwner && (m.body.startsWith('=>') || m.body.startsWith('>') || m.body.startsWith('$'))
-
+    // eval / shell owner (=>, >, $) dihapus demi keamanan
     const prefix = prefixes.find(p => m.body.startsWith(p))
     let afterPrefix, cmd, plugin
 
@@ -115,7 +116,7 @@ export async function handleMessage(sock, config, { messages, type }) {
         plugin = getPlugin(cmd)
     }
 
-    m.pluginName = isEvalCmd ? 'owner-eval' : (plugin ? cmd : undefined)
+    m.pluginName = plugin ? cmd : undefined
     printChatLog(m, sock?.sessionId)
 
     // onMessage plugins: respect Feature Settings OFF (backend, not just UI)
@@ -132,13 +133,6 @@ export async function handleMessage(sock, config, { messages, type }) {
             if (isHandled) return
         } catch (e) {
             console.error(e)
-        }
-    }
-
-    if (isEvalCmd) {
-        const ownerPlugin = getPlugin('>')
-        if (ownerPlugin) {
-            return await ownerPlugin.run(m, { sock, config, text: m.text, isOwner: m.isOwner, jid: m.from })
         }
     }
 
@@ -192,18 +186,27 @@ export async function handleMessage(sock, config, { messages, type }) {
     try {
         const textWithoutCmd = afterPrefix.slice(cmd.length).trim()
         if (settings.autotyping) sock.sendPresenceUpdate('composing', m.from).catch(() => {})
-        // Allow plugins to use custom response if set
         if (feat.customResponse) m._customResponse = feat.customResponse
-        await plugin.run(m, {
-            sock,
-            config,
-            text: textWithoutCmd,
-            jid: m.from,
-            prefix: prefix || '',
-            cmd,
-            isOwner: m.isOwner,
-            isAdmin: m.isAdmin,
-            isBotAdmin: m.isBotAdmin
+
+        // Premium: langsung. Free: antrian global (satu proses fitur per waktu).
+        let premiumUser = false
+        try {
+            const ownerId = sock.botConfig?.ownerAccountId || config.ownerAccountId
+            if (ownerId) premiumUser = await isAccountPremium(String(ownerId))
+        } catch {}
+
+        await runWithFreeQueue(premiumUser, async () => {
+            await plugin.run(m, {
+                sock,
+                config,
+                text: textWithoutCmd,
+                jid: m.from,
+                prefix: prefix || '',
+                cmd,
+                isOwner: m.isOwner,
+                isAdmin: m.isAdmin,
+                isBotAdmin: m.isBotAdmin
+            })
         })
         if (settings.autotyping) sock.sendPresenceUpdate('paused', m.from).catch(() => {})
     } catch (e) {

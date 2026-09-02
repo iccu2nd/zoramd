@@ -12,6 +12,7 @@ import { createOrder, findOrder, findOrdersByAccount, markOrderChecked, cancelOr
 import { getMongoDb } from '../../lib/db/mongo.js'
 import { COLLECTIONS } from '../../lib/db/schema.js'
 import botManager from '../../lib/botManager.js'
+import { getPlatformSettings, setPlatformSettings } from '../../lib/platformSettings.js'
 import * as sociabuzz from '../../lib/sociabuzz.js'
 
 const router = Router()
@@ -838,6 +839,30 @@ router.post('/bots/:botId/database/import', authMiddleware, loadAccount, async (
 })
 
 // ---------- Admin panel ----------
+
+router.get('/admin/platform', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        const settings = await getPlatformSettings()
+        res.json({ settings })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.put('/admin/platform', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        const body = req.body || {}
+        const settings = await setPlatformSettings({
+            freeAdsEnabled: body.freeAdsEnabled,
+            adsText: body.adsText,
+            adsPerDay: body.adsPerDay
+        })
+        res.json({ settings })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
 router.get('/admin/overview', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
     try {
         const db = await getMongoDb()

@@ -5,6 +5,7 @@ import { ensureIndexes } from './lib/db/schema.js'
 import { loadPlugins } from './lib/plugins.js'
 import { createApp } from './server/app.js'
 import botManager from './lib/botManager.js'
+import { startAdsScheduler } from './lib/adsScheduler.js'
 import config from './config.js'
 
 dns.setDefaultResultOrder('ipv4first')
@@ -40,6 +41,7 @@ async function main() {
 
     // Resume previously connected bots (session still valid in Mongo)
     await botManager.resumeAll()
+    startAdsScheduler()
 }
 
 main().catch(e => {
