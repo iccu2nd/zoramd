@@ -41,14 +41,14 @@
       var qrSrc = p.qr_image || ('https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=' + encodeURIComponent(p.qr_string))
       html += '<div class="qris-box"><img id="qris-img" src="' + Z.escapeHtml(qrSrc) + '" alt="QRIS"/><p class="hint" style="margin:8px 0 0">Scan QRIS untuk bayar</p></div>'
       html += '<div class="payment-actions">' +
-        '<a class="btn outline" id="dl-qris" href="' + Z.escapeHtml(qrSrc) + '" download="qris-zorabot.png" target="_blank" rel="noopener">⬇ Download QRIS</a>' +
-        '<button type="button" class="btn primary" id="btn-check-pay">Cek Status Pembayaran</button>' +
-        '<button type="button" class="btn danger" id="btn-cancel-pay">Batalkan Transaksi</button>' +
+        '<a class="btn outline" id="dl-qris" href="' + Z.escapeHtml(qrSrc) + '" download="qris-zorabot.png" target="_blank" rel="noopener">⬇ Download QRIS</span></a>' +
+        '<button type="button" class="btn primary" id="btn-check-pay"><i class="fa-solid fa-circle-check"></i><span>Cek Status Pembayaran</span></button>' +
+        '<button type="button" class="btn danger" id="btn-cancel-pay"><i class="fa-solid fa-xmark"></i><span>Batalkan Transaksi</span></button>' +
         '</div>'
     } else {
       html += '<div class="payment-actions">' +
-        '<button type="button" class="btn primary" id="btn-check-pay">Cek Status Pembayaran</button>' +
-        '<button type="button" class="btn danger" id="btn-cancel-pay">Batalkan Transaksi</button>' +
+        '<button type="button" class="btn primary" id="btn-check-pay"><i class="fa-solid fa-circle-check"></i><span>Cek Status Pembayaran</span></button>' +
+        '<button type="button" class="btn danger" id="btn-cancel-pay"><i class="fa-solid fa-xmark"></i><span>Batalkan Transaksi</span></button>' +
         '</div>'
       if (p.account_number) {
         html += '<p style="margin-top:10px">No. rekening: <strong>' + Z.escapeHtml(p.account_number) + '</strong>' +

@@ -485,3 +485,34 @@ code {
 @media (prefers-reduced-motion: reduce) {
   .app-background canvas { display: none !important; }
 }
+
+/* Font Awesome icons */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nav-item i {
+  width: 1.15em;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.nav-item.active i,
+.nav-item:hover i {
+  color: var(--accent);
+}
+.btn i {
+  font-size: 0.9em;
+  line-height: 1;
+}
+.logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.brand::before {
+  content: "";
+}

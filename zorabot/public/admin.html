@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin Panel — ZoraBot</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body data-page="admin">
@@ -27,18 +28,18 @@
     <aside id="sidebar" class="sidebar">
       <nav>
         <div class="nav-label">Menu</div>
-        <a href="/dashboard" class="nav-item">Dashboard</a>
-        <a href="/connect" class="nav-item">Connect Bot</a>
-        <a href="/bot-settings" class="nav-item">Bot Settings</a>
-        <a href="/feature-settings" class="nav-item">Feature Settings</a>
-        <a href="/database" class="nav-item">Database</a>
+        <a href="/dashboard" class="nav-item"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+        <a href="/connect" class="nav-item"><i class="fa-solid fa-qrcode"></i><span>Connect Bot</span></a>
+        <a href="/bot-settings" class="nav-item"><i class="fa-solid fa-sliders"></i><span>Bot Settings</span></a>
+        <a href="/feature-settings" class="nav-item"><i class="fa-solid fa-puzzle-piece"></i><span>Feature Settings</span></a>
+        <a href="/database" class="nav-item"><i class="fa-solid fa-database"></i><span>Database</span></a>
         <div class="nav-label">Premium</div>
-        <a href="/upgrade" class="nav-item">Order Plan Premium</a>
+        <a href="/upgrade" class="nav-item"><i class="fa-solid fa-crown"></i><span>Order Plan Premium</span></a>
         <div class="nav-label">Akun</div>
-        <a href="/account" class="nav-item">Account</a>
-        <a href="/admin" class="nav-item nav-admin hidden active" id="nav-admin">Admin Panel</a>
+        <a href="/account" class="nav-item"><i class="fa-solid fa-user"></i><span>Account</span></a>
+        <a href="/admin" class="nav-item nav-admin hidden active" id="nav-admin"><i class="fa-solid fa-shield-halved"></i><span>Admin Panel</span></a>
       </nav>
-      <button id="logout-btn" class="btn outline logout">Keluar</button>
+      <button id="logout-btn" class="btn outline logout"><i class="fa-solid fa-right-from-bracket"></i><span>Keluar</span></button>
     </aside>
     <div id="sidebar-overlay" class="overlay"></div>
 
@@ -64,9 +65,9 @@
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=7"></script>
-  <script src="/js/common.js?v=7"></script>
-  <script src="/js/admin.js?v=7"></script>
+  <script src="/js/bg-pattern.js?v=8"></script>
+  <script src="/js/common.js?v=8"></script>
+  <script src="/js/admin.js?v=8"></script>
   <script>
   setTimeout(function () {
     var lv = document.getElementById('loading-view');
