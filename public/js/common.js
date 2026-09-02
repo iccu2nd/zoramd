@@ -163,10 +163,10 @@
     // Safety: hide loading after 8s no matter what
     var safety = setTimeout(function () {
       showMainApp()
-    }, 8000)
+    }, 4000)
 
     try {
-      setLoading(true, 'Memuat...')
+      setLoading(true, '')
       bindShell()
 
       if (!state.token) {
@@ -175,7 +175,7 @@
         return
       }
 
-      setLoading(true, 'Memeriksa sesi...')
+      /* skip text */
       try {
         var me = await api('/auth/me', { timeoutMs: 10000 })
         state.user = me.user
@@ -190,7 +190,7 @@
         console.warn('auth/me', e)
       }
 
-      setLoading(true, 'Memuat data...')
+      /* skip text */
       try {
         await loadBots()
       } catch (e) {

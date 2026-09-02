@@ -2,6 +2,13 @@
   'use strict'
   if (!window.Zora) return
   var Z = window.Zora
+  var toggleRestartTimer = null
+  function scheduleRestart(botId) {
+    if (toggleRestartTimer) clearTimeout(toggleRestartTimer)
+    toggleRestartTimer = setTimeout(function () {
+      Z.restartBot(botId).catch(function () {})
+    }, 1200)
+  }
   var CAT_LABEL = {
     main: 'Main', tools: 'Tools', group: 'Group', downloader: 'Downloader',
     games: 'Games', game: 'Games', fun: 'Fun', info: 'Info', owner: 'Owner',
@@ -73,6 +80,7 @@
             var on = group.querySelectorAll('.feat-enabled:checked').length
             var total = group.querySelectorAll('.feat-enabled').length
             group.querySelector('.feat-group-meta').textContent = on + '/' + total + ' aktif'
+            scheduleRestart(botId)
           } catch (err) { alert(err.message) }
         }
         var save = item.querySelector('.feat-save')
@@ -88,7 +96,9 @@
               }
             })
             var msg = item.querySelector('.feat-saved')
-            if (msg) { msg.textContent = 'Tersimpan'; setTimeout(function () { msg.textContent = '' }, 1500) }
+            if (msg) { msg.textContent = 'Tersimpan...'; }
+            try { await Z.restartBot(botId); if (msg) msg.textContent = 'Tersimpan' } catch (e) {}
+            setTimeout(function () { if (msg) msg.textContent = '' }, 1500)
           } catch (err) { alert(err.message) }
         }
       })

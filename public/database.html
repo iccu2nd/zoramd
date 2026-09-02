@@ -57,7 +57,7 @@
         <label class="switch-label" style="margin:12px 0">
           <input type="checkbox" id="db-include-session" /> Sertakan session WhatsApp
         </label>
-        <button type="button" id="db-download-btn" class="btn primary"><i class="fa-solid fa-download"></i><span>Download database.json</span></button>
+        <button type="button" id="db-download-btn" class="btn primary">Download JSON</button>
       </div>
 
       <div class="plan-card">
@@ -67,15 +67,15 @@
           <label>Pilih file JSON</label>
           <input type="file" id="db-file" accept=".json,application/json" />
         </div>
-        <button type="button" id="db-import-btn" class="btn primary"><i class="fa-solid fa-file-import"></i><span>Import ke bot terpilih</span></button>
+        <button type="button" id="db-import-btn" class="btn primary">Import</button>
         <p id="db-msg" class="msg"></p>
       </div>
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=8"></script>
-  <script src="/js/common.js?v=8"></script>
-  <script src="/js/database.js?v=8"></script>
+  <script src="/js/bg-pattern.js?v=9"></script>
+  <script src="/js/common.js?v=9"></script>
+  <script src="/js/database.js?v=9"></script>
   <script>
   setTimeout(function () {
     var lv = document.getElementById('loading-view');
@@ -84,7 +84,7 @@
       lv.classList.add('hidden'); lv.style.display = 'none';
       if (mv) { mv.classList.remove('hidden'); mv.style.display = ''; }
     }
-  }, 6000);
+  }, 3500);
   </script>
 </body>
 </html>

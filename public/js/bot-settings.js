@@ -72,9 +72,17 @@
             }
           }
         })
-        if (Z.$('#settings-msg')) {
-          Z.$('#settings-msg').textContent = 'Tersimpan'
-          Z.$('#settings-msg').className = 'msg ok'
+        try {
+          await Z.restartBot(botId)
+          if (Z.$('#settings-msg')) {
+            Z.$('#settings-msg').textContent = 'Tersimpan & diterapkan'
+            Z.$('#settings-msg').className = 'msg ok'
+          }
+        } catch (re) {
+          if (Z.$('#settings-msg')) {
+            Z.$('#settings-msg').textContent = 'Tersimpan (restart: ' + re.message + ')'
+            Z.$('#settings-msg').className = 'msg ok'
+          }
         }
       } catch (e) {
         if (Z.$('#settings-msg')) {

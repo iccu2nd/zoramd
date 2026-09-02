@@ -50,7 +50,7 @@
         <select id="connect-bot-select"></select>
       </div>
       <div class="row">
-        <button type="button" id="restart-bot-btn" class="btn outline" title="Restart bot"><i class="fa-solid fa-rotate-right"></i><span>Restart Bot</span></button>
+        <button type="button" id="restart-bot-btn" class="btn outline" title="Restart bot">Restart</button>
       </div>
       <div class="field">
         <label>Metode</label>
@@ -64,9 +64,9 @@
         <input type="tel" id="pairing-phone" inputmode="tel" autocomplete="tel" placeholder="628xxxxxxxxx" />
       </div>
       <div class="row gap">
-        <button id="connect-start-btn" class="btn primary"><i class="fa-solid fa-plug"></i><span>Hubungkan</span></button>
-        <button id="connect-stop-btn" class="btn outline"><i class="fa-solid fa-plug-circle-xmark"></i><span>Putuskan</span></button>
-        <button id="connect-logout-btn" class="btn danger"><i class="fa-solid fa-trash"></i><span>Logout Session</span></button>
+        <button id="connect-start-btn" class="btn primary">Hubungkan</button>
+        <button id="connect-stop-btn" class="btn outline">Putuskan</button>
+        <button id="connect-logout-btn" class="btn danger">Logout Session</button>
       </div>
       <div id="connect-status" class="status-box"></div>
       <div id="qr-wrap" class="qr-wrap hidden">
@@ -80,9 +80,9 @@
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=8"></script>
-  <script src="/js/common.js?v=8"></script>
-  <script src="/js/connect.js?v=8"></script>
+  <script src="/js/bg-pattern.js?v=9"></script>
+  <script src="/js/common.js?v=9"></script>
+  <script src="/js/connect.js?v=9"></script>
 
   <script>
   // Safety net: jangan pernah stuck loading > 6 detik
@@ -94,7 +94,7 @@
       lv.style.display = 'none';
       if (mv) { mv.classList.remove('hidden'); mv.style.display = ''; }
     }
-  }, 6000);
+  }, 3500);
   </script>
 </body>
 </html>

@@ -70,12 +70,12 @@
             <option value="mandiri">Mandiri</option>
           </select>
         </div>
-        <button id="order-premium-btn" class="btn primary"><i class="fa-solid fa-crown"></i><span>Order Premium — Rp25.000</span></button>
+        <button id="order-premium-btn" class="btn primary">Order Premium</button>
         <div id="payment-info" class="payment-info hidden"></div>
         <p class="hint" style="margin-top:14px">Setelah bayar, masukkan Order ID lalu cek status secara manual.</p>
         <div class="row gap">
           <input type="text" id="check-order-id" placeholder="Order ID" />
-          <button id="check-payment-btn" class="btn outline"><i class="fa-solid fa-circle-check"></i><span>Cek Status Pembayaran</span></button>
+          <button id="check-payment-btn" class="btn outline">Cek Status</button>
         </div>
         <p id="upgrade-msg" class="msg"></p>
         <div id="sub-status" class="status-box"></div>
@@ -83,9 +83,9 @@
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=8"></script>
-  <script src="/js/common.js?v=8"></script>
-  <script src="/js/upgrade.js?v=8"></script>
+  <script src="/js/bg-pattern.js?v=9"></script>
+  <script src="/js/common.js?v=9"></script>
+  <script src="/js/upgrade.js?v=9"></script>
 
   <script>
   // Safety net: jangan pernah stuck loading > 6 detik
@@ -97,7 +97,7 @@
       lv.style.display = 'none';
       if (mv) { mv.classList.remove('hidden'); mv.style.display = ''; }
     }
-  }, 6000);
+  }, 3500);
   </script>
 </body>
 </html>
