@@ -5,14 +5,14 @@ function hide(el) { el?.classList.add('hidden') }
 
 function setLoading(on, text) {
   const el = $('#loading-view')
-  if (!el) return
+  const auth = $('#auth-view')
   if (on) {
-    if (text) $('#loading-text').textContent = text
-    show(el)
-    hide($('#auth-view'))
+    if (text && $('#loading-text')) $('#loading-text').textContent = text
+    if (el) { el.classList.remove('hidden'); el.style.display = '' }
+    if (auth) { auth.classList.add('hidden'); auth.style.display = 'none' }
   } else {
-    hide(el)
-    show($('#auth-view'))
+    if (el) { el.classList.add('hidden'); el.style.display = 'none' }
+    if (auth) { auth.classList.remove('hidden'); auth.style.display = '' }
   }
 }
 
@@ -159,3 +159,11 @@ $('#register-form').onsubmit = async (e) => {
 }
 
 checkExistingSession()
+
+// Safety net: jangan pernah stuck di loading > 4 detik
+setTimeout(() => {
+  const lv = $('#loading-view')
+  if (lv && !lv.classList.contains('hidden') && getComputedStyle(lv).display !== 'none') {
+    setLoading(false)
+  }
+}, 4000)
