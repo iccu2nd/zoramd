@@ -3,7 +3,7 @@ import { ObjectId } from 'mongodb'
 import { v4 as uuidv4 } from 'uuid'
 import { authMiddleware, loadAccount, register, login } from '../auth.js'
 import {
-    createBot, findBotsByOwner, findOwnedBot, updateOwnedBot, findBotBySessionId,
+    createBot, findBotsByOwner, findOwnedBot, updateOwnedBot, findBotBySessionId, setBotStatus,
     listAllAccounts, listAllBots, setAccountRole, deleteBotById, updateAccount, findAccountById
 } from '../../lib/db/accounts.js'
 import { getSubscription, isBotPremium, activatePremium } from '../../lib/db/subscription.js'
@@ -12,6 +12,7 @@ import { createOrder, findOrder, findOrdersByAccount, markOrderChecked, cancelOr
 import { getMongoDb } from '../../lib/db/mongo.js'
 import { COLLECTIONS } from '../../lib/db/schema.js'
 import botManager from '../../lib/botManager.js'
+import { getChatLog } from '../../lib/liveChatlog.js'
 import * as sociabuzz from '../../lib/sociabuzz.js'
 
 const router = Router()
@@ -114,6 +115,10 @@ router.get('/bots', authMiddleware, loadAccount, async (req, res) => {
                 ownerNumber: b.ownerNumber,
                 identity: b.identity,
                 status: state.status || b.status,
+                enabled: b.enabled !== false,
+                waName: state.waName || null,
+                waNumber: state.waNumber || null,
+                profilePic: state.profilePic || null,
                 plan: sub.plan,
                 premiumExpiresAt: sub.expiresAt,
                 createdAt: b.createdAt
@@ -287,7 +292,7 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
         const body = req.body || {}
 
         // Free users: limited settings only
-        const allowedFree = ['mode', 'autoread', 'autotyping', 'noprefix']
+        const allowedFree = ['mode', 'autoread', 'autotyping', 'noprefix', 'gconly', 'enabled']
         const patchSettings = {}
         for (const k of allowedFree) {
             if (body[k] !== undefined) patchSettings[k] = body[k]
@@ -553,6 +558,40 @@ router.post('/bots/:botId/premium/cancel', authMiddleware, loadAccount, async (r
 })
 
 // Restart bot runtime (apply settings / reconnect)
+
+
+router.get('/bots/:botId/chatlog', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const bot = await findOwnedBot(req.params.botId, req.account._id)
+        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        const logs = getChatLog(bot.sessionId)
+        res.json({ logs, limit: 8 })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.post('/bots/:botId/power', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const bot = await findOwnedBot(req.params.botId, req.account._id)
+        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        const enabled = req.body?.enabled !== false
+        await updateOwnedBot(bot._id.toString(), req.account._id.toString(), { enabled })
+        const inst = botManager.get(bot.sessionId)
+        if (inst) inst.enabled = enabled
+        if (!enabled) {
+            await botManager.stopBot(bot.sessionId, { clearSession: false })
+            await setBotStatus(bot.sessionId, 'disconnected').catch(() => {})
+        } else {
+            // Nyalakan lagi tanpa pairing (session tetap)
+            await botManager.startBot(bot.sessionId, { ...bot, enabled: true }, { isRestart: true })
+        }
+        res.json({ ok: true, enabled, state: botManager.getState(bot.sessionId) })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
 router.post('/bots/:botId/restart', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)

@@ -18,7 +18,8 @@ const PAGE_MAP = {
     '/upgrade': 'upgrade.html',
     '/account': 'account.html',
     '/database': 'database.html',
-    '/admin': 'admin.html'
+    '/admin': 'admin.html',
+    '/chatlog': 'chatlog.html'
 }
 
 export function createApp() {

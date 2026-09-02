@@ -33,6 +33,7 @@
         <a href="/bot-settings" class="nav-item active"><i class="fa-solid fa-sliders"></i><span>Bot Settings</span></a>
         <a href="/feature-settings" class="nav-item"><i class="fa-solid fa-puzzle-piece"></i><span>Feature Settings</span></a>
         <a href="/database" class="nav-item"><i class="fa-solid fa-database"></i><span>Database</span></a>
+        <a href="/chatlog" class="nav-item"><i class="fa-solid fa-comments"></i><span>Live Chatlog</span></a>
         <div class="nav-label">Premium</div>
         <a href="/upgrade" class="nav-item"><i class="fa-solid fa-crown"></i><span>Order Plan Premium</span></a>
         <div class="nav-label">Akun</div>
@@ -53,21 +54,49 @@
         <button type="button" id="restart-bot-btn" class="btn outline" title="Restart bot">Restart</button>
       </div>
       <div id="settings-form" class="form-grid">
-        <div class="field">
+        <div class="toggle-list">
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <strong>Bot Aktif</strong>
+              <span>Matikan tanpa logout session / pairing ulang</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="set-enabled" checked /><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <strong>Autoread</strong>
+              <span>Tandai pesan terbaca otomatis</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="set-autoread" /><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <strong>Autotyping</strong>
+              <span>Tampilkan status mengetik</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="set-autotyping" /><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <strong>No Prefix</strong>
+              <span>Perintah tanpa awalan . / #</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="set-noprefix" /><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <strong>Gconly</strong>
+              <span>Hanya respons di grup</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="set-gconly" /><span class="slider"></span></label>
+          </div>
+        </div>
+        <div class="field" style="margin-top:16px">
           <label>Mode</label>
           <select id="set-mode">
             <option value="public">Public</option>
             <option value="self">Self</option>
           </select>
-        </div>
-        <div class="field check">
-          <label><input type="checkbox" id="set-autoread" /> Autoread</label>
-        </div>
-        <div class="field check">
-          <label><input type="checkbox" id="set-autotyping" /> Autotyping</label>
-        </div>
-        <div class="field check">
-          <label><input type="checkbox" id="set-noprefix" /> No Prefix</label>
         </div>
         <hr />
         <p class="hint" id="premium-hint">Fitur di bawah hanya untuk Premium.</p>
@@ -93,9 +122,9 @@
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=9"></script>
-  <script src="/js/common.js?v=9"></script>
-  <script src="/js/bot-settings.js?v=9"></script>
+  <script src="/js/bg-pattern.js?v=11"></script>
+  <script src="/js/common.js?v=11"></script>
+  <script src="/js/bot-settings.js?v=11"></script>
 
   <script>
   // Safety net: jangan pernah stuck loading > 6 detik

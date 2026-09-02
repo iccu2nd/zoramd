@@ -2,9 +2,9 @@
   'use strict'
   if (!window.Zora) return
   var Z = window.Zora
+
   async function doRestart(botId) {
     if (!botId) return alert('Pilih bot')
-    if (!confirm('Restart bot agar pengaturan diterapkan?')) return
     try {
       await Z.restartBot(botId)
       alert('Bot di-restart')
@@ -18,9 +18,11 @@
       var data = await Z.api('/bots/' + botId + '/settings')
       var s = data.settings || {}
       if (Z.$('#set-mode')) Z.$('#set-mode').value = s.mode || 'public'
+      if (Z.$('#set-enabled')) Z.$('#set-enabled').checked = data.enabled !== false
       if (Z.$('#set-autoread')) Z.$('#set-autoread').checked = !!s.autoread
       if (Z.$('#set-autotyping')) Z.$('#set-autotyping').checked = !!s.autotyping
       if (Z.$('#set-noprefix')) Z.$('#set-noprefix').checked = !!s.noprefix
+      if (Z.$('#set-gconly')) Z.$('#set-gconly').checked = !!(s.gconly === true || s.gconly === 'join' || s.gconly === 'closed')
       if (Z.$('#set-botname')) Z.$('#set-botname').value = data.botName || ''
       if (Z.$('#set-ownernumber')) Z.$('#set-ownernumber').value = data.ownerNumber || ''
       var id = data.identity || {}
@@ -46,17 +48,42 @@
     loadSettings()
     var sel = Z.$('#settings-bot-select')
     if (sel) sel.onchange = loadSettings
-    var save = Z.$('#save-settings-btn')
+
     var rs = Z.$('#restart-bot-btn')
     if (rs) rs.onclick = function () {
       var botId = Z.$('#settings-bot-select') && Z.$('#settings-bot-select').value
       doRestart(botId)
     }
+
+    // Bot On/Off — langsung tanpa simpan full form
+    var en = Z.$('#set-enabled')
+    if (en) en.onchange = async function () {
+      var botId = Z.$('#settings-bot-select') && Z.$('#settings-bot-select').value
+      if (!botId) return
+      var msg = Z.$('#settings-msg')
+      try {
+        await Z.api('/bots/' + botId + '/power', {
+          method: 'POST',
+          body: { enabled: en.checked },
+          timeoutMs: 30000
+        })
+        if (msg) {
+          msg.textContent = en.checked ? 'Bot diaktifkan' : 'Bot dimatikan (session tetap tersimpan)'
+          msg.className = 'msg ok'
+        }
+      } catch (e) {
+        en.checked = !en.checked
+        if (msg) { msg.textContent = e.message; msg.className = 'msg err' }
+      }
+    }
+
+    var save = Z.$('#save-settings-btn')
     if (save) save.onclick = async function () {
       var botId = Z.$('#settings-bot-select') && Z.$('#settings-bot-select').value
       if (!botId) return
       if (Z.$('#settings-msg')) Z.$('#settings-msg').textContent = ''
       try {
+        var gconlyOn = Z.$('#set-gconly') && Z.$('#set-gconly').checked
         await Z.api('/bots/' + botId + '/settings', {
           method: 'PUT',
           body: {
@@ -64,6 +91,7 @@
             autoread: Z.$('#set-autoread') && Z.$('#set-autoread').checked,
             autotyping: Z.$('#set-autotyping') && Z.$('#set-autotyping').checked,
             noprefix: Z.$('#set-noprefix') && Z.$('#set-noprefix').checked,
+            gconly: gconlyOn ? 'join' : false,
             botName: Z.$('#set-botname') && Z.$('#set-botname').value,
             ownerNumber: Z.$('#set-ownernumber') && Z.$('#set-ownernumber').value,
             identity: {

@@ -116,7 +116,7 @@ export async function handleMessage(sock, config, { messages, type }) {
     }
 
     m.pluginName = isEvalCmd ? 'owner-eval' : (plugin ? cmd : undefined)
-    printChatLog(m)
+    printChatLog(m, sock?.sessionId)
 
     // onMessage plugins: respect Feature Settings OFF (backend, not just UI)
     const botIdForGate = config.botId || sock.sessionId || 'default'

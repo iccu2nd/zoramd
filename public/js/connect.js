@@ -6,6 +6,43 @@
   var pollCount = 0
   var MAX_POLLS = 24 // ~2 menit @ 5s
 
+  function renderBotsList() {
+    var wrap = document.getElementById('connected-bots-list')
+    if (!wrap) return
+    var bots = Z.state.bots || []
+    if (!bots.length) {
+      wrap.innerHTML = '<p class="hint">Belum ada bot. Buat di Dashboard dulu.</p>'
+      return
+    }
+    wrap.innerHTML = bots.map(function (b) {
+      var pic = b.profilePic
+        ? '<img class="wa-avatar" src="' + Z.escapeHtml(b.profilePic) + '" alt="" />'
+        : '<div class="wa-avatar wa-avatar-fallback">' + Z.escapeHtml((b.waName || b.botName || '?').charAt(0).toUpperCase()) + '</div>'
+      var name = b.waName || b.botName || 'Bot'
+      var num = b.waNumber ? '+' + b.waNumber : (b.sessionId || '')
+      var st = b.status || 'disconnected'
+      var off = b.enabled === false
+      return '<div class="wa-bot-card' + (off ? ' is-off' : '') + '" data-id="' + Z.escapeHtml(b.id) + '">' +
+        pic +
+        '<div class="wa-bot-info">' +
+          '<div class="wa-bot-name">' + Z.escapeHtml(name) + '</div>' +
+          '<div class="wa-bot-meta">' + Z.escapeHtml(num) + '</div>' +
+        '</div>' +
+        '<span class="badge ' + Z.escapeHtml(st) + '">' + (off ? 'off' : Z.escapeHtml(st)) + '</span>' +
+      '</div>'
+    }).join('')
+    wrap.querySelectorAll('.wa-bot-card').forEach(function (card) {
+      card.onclick = function () {
+        var sel = document.getElementById('connect-bot-select')
+        if (sel) {
+          sel.value = card.getAttribute('data-id')
+          sel.dispatchEvent(new Event('change'))
+        }
+      }
+    })
+  }
+
+
   function updateConnectUI(st) {
     if (!st) return
     var box = Z.$('#connect-status')
@@ -65,6 +102,7 @@
 
   Z.bootPage(function () {
     Z.fillBotSelect('connect-bot-select')
+    renderBotsList()
     if (Z.state.user && Z.state.user.isAdmin) {
       var n = document.getElementById('nav-admin')
       if (n) n.classList.remove('hidden')
@@ -101,6 +139,7 @@
         })
         updateConnectUI(data.state)
         if (shouldPoll(data.state && data.state.status)) startPoll(botId)
+        Z.loadBots().then(renderBotsList).catch(function(){})
         // Satu fetch tambahan setelah 4s (kode pairing/QR sering muncul belakangan)
         setTimeout(async function () {
           try {

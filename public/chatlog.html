@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dashboard — ZoraBot</title>
+  <title>Live Chatlog — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
-<body data-page="dashboard">
+<body data-page="chatlog">
   <div id="loading-view" class="loading-wrap">
     <div class="loading-card">
       <div class="loading-logo">ZoraBot</div>
@@ -26,14 +26,14 @@
     </header>
 
     <aside id="sidebar" class="sidebar">
-            <nav>
+      <nav>
         <div class="nav-label">Menu</div>
-        <a href="/dashboard" class="nav-item active"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+        <a href="/dashboard" class="nav-item"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
         <a href="/connect" class="nav-item"><i class="fa-solid fa-qrcode"></i><span>Connect Bot</span></a>
         <a href="/bot-settings" class="nav-item"><i class="fa-solid fa-sliders"></i><span>Bot Settings</span></a>
         <a href="/feature-settings" class="nav-item"><i class="fa-solid fa-puzzle-piece"></i><span>Feature Settings</span></a>
         <a href="/database" class="nav-item"><i class="fa-solid fa-database"></i><span>Database</span></a>
-        <a href="/chatlog" class="nav-item"><i class="fa-solid fa-comments"></i><span>Live Chatlog</span></a>
+        <a href="/chatlog" class="nav-item active"><i class="fa-solid fa-comments"></i><span>Live Chatlog</span></a>
         <div class="nav-label">Premium</div>
         <a href="/upgrade" class="nav-item"><i class="fa-solid fa-crown"></i><span>Order Plan Premium</span></a>
         <div class="nav-label">Akun</div>
@@ -45,28 +45,25 @@
     <div id="sidebar-overlay" class="overlay"></div>
 
     <main class="content">
-      <h2>Dashboard</h2>
-      <p class="hint">Kelola bot WhatsApp Anda. Buat bot baru, lalu hubungkan lewat menu Connect Bot.</p>
-      <div id="limits-bar" class="limits-bar"></div>
-      <div class="row">
-        <button id="create-bot-btn" class="btn primary">Buat Bot Baru</button>
+      <h2>Live Chatlog</h2>
+      <p class="hint">8 pesan WhatsApp terbaru. Tidak disimpan permanen.</p>
+      <div class="field">
+        <label>Pilih Bot</label>
+        <select id="chatlog-bot-select"></select>
       </div>
-      <div id="bots-list" class="bots-list"></div>
+      <div id="chatlog-list" class="chatlog-list"></div>
     </main>
   </div>
 
   <script src="/js/bg-pattern.js?v=11"></script>
   <script src="/js/common.js?v=11"></script>
-  <script src="/js/dashboard.js?v=11"></script>
-
+  <script src="/js/chatlog.js?v=11"></script>
   <script>
-  // Safety net: jangan pernah stuck loading > 6 detik
   setTimeout(function () {
     var lv = document.getElementById('loading-view');
     var mv = document.getElementById('main-view');
-    if (lv && !lv.classList.contains('hidden') && getComputedStyle(lv).display !== 'none') {
-      lv.classList.add('hidden');
-      lv.style.display = 'none';
+    if (lv && getComputedStyle(lv).display !== 'none') {
+      lv.classList.add('hidden'); lv.style.display = 'none';
       if (mv) { mv.classList.remove('hidden'); mv.style.display = ''; }
     }
   }, 3500);
