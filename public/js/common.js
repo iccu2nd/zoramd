@@ -105,7 +105,14 @@
       main.style.display = ''
     }
     var chip = document.getElementById('user-chip')
-    if (chip && state.user) chip.textContent = state.user.email || ''
+    if (chip && state.user) {
+      var label = state.user.name || state.user.email || ''
+      chip.setAttribute('data-initial', label.trim().charAt(0) || '?')
+      var span = document.createElement('span')
+      span.textContent = label
+      chip.innerHTML = ''
+      chip.appendChild(span)
+    }
   }
 
   function bindShell() {
