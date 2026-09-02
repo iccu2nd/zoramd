@@ -28,7 +28,7 @@
     var connected = bots.filter(function (b) { return b.status === 'connected' }).length
     var isPremium = limits.plan === 'premium'
     bar.innerHTML =
-      '<div class="stat-card">' +
+      '<div class="stat-card' + (isPremium ? ' tone-gold' : '') + '">' +
         '<span class="stat-ico">' + ICO_PLAN + '</span>' +
         '<div><div class="stat-value">' + (isPremium ? 'Premium' : 'Free') + '</div><div class="stat-label">Paket Aktif</div></div>' +
       '</div>' +
