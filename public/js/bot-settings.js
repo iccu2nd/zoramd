@@ -13,9 +13,16 @@
 
   async function loadSettings() {
     var botId = Z.$('#settings-bot-select') && Z.$('#settings-bot-select').value
-    if (!botId) return
     var loading = Z.$('#settings-loading')
+    var empty = Z.$('#settings-empty')
     var content = Z.$('#settings-content')
+    if (!botId) {
+      if (loading) loading.classList.add('hidden')
+      if (content) content.classList.add('hidden')
+      if (empty) empty.classList.remove('hidden')
+      return
+    }
+    if (empty) empty.classList.add('hidden')
     if (loading) loading.classList.remove('hidden')
     if (content) content.classList.add('hidden')
     try {

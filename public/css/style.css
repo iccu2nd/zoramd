@@ -99,8 +99,7 @@ code {
 }
 .spinner.tiny { font-size: 14px; margin: 0; vertical-align: middle; }
 .panel-loading {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 48px 0; gap: 10px; color: var(--muted); font-size: 0.85rem;
+  text-align: center; padding: 48px 0; color: var(--muted); font-size: 0.85rem;
 }
 .panel-loading .spinner { margin: 0 auto; }
 
@@ -181,7 +180,7 @@ code {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   height: var(--h-control); padding: 0 18px; border-radius: 12px;
   border: none; font-size: 0.9rem; font-weight: 600; font-family: inherit;
-  cursor: pointer; line-height: 1; white-space: nowrap;
+  cursor: pointer; line-height: 1; white-space: nowrap; text-decoration: none;
   background: var(--surface); color: var(--text);
   box-shadow: var(--shadow), 0 1px 0 rgba(255,255,255,0.9) inset;
   border: 1px solid var(--border);

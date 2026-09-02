@@ -42,14 +42,17 @@
 
   async function loadFeatures() {
     var botId = Z.$('#feature-bot-select') && Z.$('#feature-bot-select').value
-    if (!botId) return
     var wrap = Z.$('#features-list')
     if (!wrap) return
+    if (!botId) {
+      wrap.innerHTML = '<p class="hint">Belum ada bot tersambung.</p>'
+      return
+    }
     wrap.innerHTML = '<div class="panel-loading"><div class="spinner center" aria-hidden="true">' +
       '<div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>' +
       '<div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>' +
       '<div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>' +
-      '</div><span>Memuat semua fitur...</span></div>'
+      '</div></div>'
     try {
       var data = await Z.api('/bots/' + botId + '/features', { timeoutMs: 15000 })
       var groups = data.groups || {}

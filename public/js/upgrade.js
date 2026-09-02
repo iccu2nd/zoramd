@@ -301,7 +301,6 @@
         currentOrder = data
         savePending(data)
         renderPayment(data)
-        if (msg) { msg.textContent = 'Order dibuat. Bayar dalam 30 menit.'; msg.className = 'msg ok' }
       } catch (e) {
         if (msg) { msg.textContent = e.message; msg.className = 'msg err' }
         setOrderBtnVisible(true)
