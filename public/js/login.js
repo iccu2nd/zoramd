@@ -112,9 +112,17 @@ $('#login-form').onsubmit = async (e) => {
   }
 }
 
+$('#reg-terms').onchange = () => {
+  $('#reg-submit').disabled = !$('#reg-terms').checked
+}
+
 $('#register-form').onsubmit = async (e) => {
   e.preventDefault()
   $('#reg-error').textContent = ''
+  if (!$('#reg-terms').checked) {
+    $('#reg-error').textContent = 'Kamu harus menyetujui Syarat & Ketentuan dulu'
+    return
+  }
   const btn = $('#reg-submit')
   btn.disabled = true
   try {

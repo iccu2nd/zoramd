@@ -6,6 +6,11 @@
   <title>Masuk — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .terms-row{display:flex;align-items:flex-start;gap:8px;margin:14px 0;font-size:13px;line-height:1.5;color:#888;cursor:pointer}
+    .terms-row input[type="checkbox"]{margin-top:2px;width:16px;height:16px;flex:none;cursor:pointer}
+    .terms-row a{color:inherit;text-decoration:underline}
+  </style>
 </head>
 <body>
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
@@ -45,6 +50,7 @@
         <input type="password" id="login-password" required minlength="6" autocomplete="current-password" />
         <button type="submit" class="btn primary" id="login-submit">Masuk</button>
         <p id="login-error" class="error"></p>
+        <p class="subtitle" style="margin-top:14px"><a href="/forgot-password">Lupa password?</a></p>
       </form>
       <form id="register-form" class="auth-form hidden">
         <label>Nama</label>
@@ -53,7 +59,11 @@
         <input type="email" id="reg-email" required autocomplete="email" />
         <label>Password</label>
         <input type="password" id="reg-password" required minlength="6" autocomplete="new-password" />
-        <button type="submit" class="btn primary" id="reg-submit">Daftar</button>
+        <label class="terms-row" for="reg-terms">
+          <input type="checkbox" id="reg-terms" />
+          <span>Saya setuju dengan <a href="/terms" target="_blank" rel="noopener">Syarat &amp; Ketentuan</a> dan <a href="/privacy" target="_blank" rel="noopener">Kebijakan Privasi</a> ZoraBot</span>
+        </label>
+        <button type="submit" class="btn primary" id="reg-submit" disabled>Daftar</button>
         <p id="reg-error" class="error"></p>
       </form>
     </div>

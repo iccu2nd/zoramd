@@ -11,6 +11,7 @@ const publicDir = path.join(__dirname, '..', 'public')
 const PAGE_MAP = {
     '/': 'index.html',
     '/login': 'login.html',
+    '/forgot-password': 'forgot-password.html',
     '/dashboard': 'dashboard.html',
     '/connect': 'connect.html',
     '/bot-settings': 'bot-settings.html',
@@ -19,7 +20,9 @@ const PAGE_MAP = {
     '/upgrade': 'upgrade.html',
     '/account': 'account.html',
     '/database': 'database.html',
-    '/admin': 'admin.html'
+    '/admin': 'admin.html',
+    '/terms': 'terms.html',
+    '/privacy': 'privacy.html'
 }
 
 export function createApp() {

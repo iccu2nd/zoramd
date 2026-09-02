@@ -1,7 +1,11 @@
 import { Router } from 'express'
 import { ObjectId } from 'mongodb'
 import { v4 as uuidv4 } from 'uuid'
-import { authMiddleware, loadAccount, register, login } from '../auth.js'
+import {
+    authMiddleware, loadAccount, register, login,
+    requestEmailVerification, confirmEmailVerification,
+    requestPasswordReset, resetPassword
+} from '../auth.js'
 import {
     createBot, findBotsByOwner, findOwnedBot, updateOwnedBot, findBotBySessionId, setBotStatus,
     listAllAccounts, listAllBots, setAccountRole, deleteBotById, updateAccount, findAccountById
@@ -98,9 +102,52 @@ router.get('/auth/me', authMiddleware, loadAccount, (req, res) => {
             email: req.account.email,
             name: req.account.name,
             role: req.account.role || 'user',
-            isAdmin: isAdminAccount(req.account)
+            isAdmin: isAdminAccount(req.account),
+            emailVerified: !!req.account.emailVerified
         }
     })
+})
+
+// ---------- Verifikasi email (OTP) ----------
+router.post('/auth/verify-email/request', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        if (req.account.emailVerified) return res.json({ ok: true, alreadyVerified: true })
+        await requestEmailVerification(req.account.email)
+        res.json({ ok: true })
+    } catch (e) {
+        res.status(400).json({ error: e.message })
+    }
+})
+
+router.post('/auth/verify-email/confirm', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const { code } = req.body || {}
+        await confirmEmailVerification(req.account.email, code)
+        res.json({ ok: true })
+    } catch (e) {
+        res.status(400).json({ error: e.message })
+    }
+})
+
+// ---------- Reset password (OTP, tanpa login) ----------
+router.post('/auth/password/forgot', async (req, res) => {
+    try {
+        await requestPasswordReset((req.body || {}).email)
+    } catch (e) {
+        console.error('[auth] forgot-password:', e.message)
+    }
+    // Selalu balas generik -- jangan bocorin apakah email itu terdaftar.
+    res.json({ ok: true, note: 'Kalau email terdaftar, kode reset sudah dikirim.' })
+})
+
+router.post('/auth/password/reset', async (req, res) => {
+    try {
+        const { email, code, newPassword } = req.body || {}
+        await resetPassword({ email, code, newPassword })
+        res.json({ ok: true })
+    } catch (e) {
+        res.status(400).json({ error: e.message })
+    }
 })
 
 // ---------- Bots ----------
