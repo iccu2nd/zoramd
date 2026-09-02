@@ -66,6 +66,15 @@
         <button type="button" id="restart-bot-btn" class="btn outline" title="Restart bot">Restart</button>
       </div>
       <div id="settings-form" class="form-grid">
+        <div id="settings-loading" class="panel-loading">
+          <div class="spinner center" aria-hidden="true">
+            <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+            <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+            <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+          </div>
+          <span>Memuat pengaturan...</span>
+        </div>
+        <div id="settings-content" class="hidden">
         <div class="toggle-list">
           <div class="toggle-row">
             <div class="toggle-meta">
@@ -130,6 +139,7 @@
         </div>
         <button id="save-settings-btn" class="btn primary">Simpan</button>
         <p id="settings-msg" class="msg"></p>
+        </div>
       </div>
     </main>
   </div>

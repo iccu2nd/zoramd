@@ -45,7 +45,11 @@
     if (!botId) return
     var wrap = Z.$('#features-list')
     if (!wrap) return
-    wrap.innerHTML = '<p class="hint">Memuat semua fitur...</p>'
+    wrap.innerHTML = '<div class="panel-loading"><div class="spinner center" aria-hidden="true">' +
+      '<div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>' +
+      '<div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>' +
+      '<div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>' +
+      '</div><span>Memuat semua fitur...</span></div>'
     try {
       var data = await Z.api('/bots/' + botId + '/features', { timeoutMs: 15000 })
       var groups = data.groups || {}

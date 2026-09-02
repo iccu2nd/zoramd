@@ -22,14 +22,60 @@
       return
     }
     list.innerHTML = Z.state.bots.map(function (b) {
-      return '<div class="bot-card"><div><h3>' + Z.escapeHtml(b.botName) +
+      return '<div class="bot-card" data-id="' + Z.escapeHtml(b.id) + '">' +
+        '<button type="button" class="bot-menu-btn" aria-label="Menu">&#8942;</button>' +
+        '<div class="bot-menu-dropdown hidden">' +
+          '<button type="button" data-act="settings">Pengaturan Bot</button>' +
+          '<button type="button" data-act="restart">Restart</button>' +
+          '<button type="button" data-act="power">' + (b.enabled !== false ? 'Matikan' : 'Nyalakan') + '</button>' +
+          '<button type="button" class="danger" data-act="disconnect">Putuskan Koneksi</button>' +
+        '</div>' +
+        '<div><h3>' + Z.escapeHtml(b.botName) +
         '</h3><div class="bot-meta">' + Z.escapeHtml(b.sessionId) +
         '</div></div><div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px">' +
         '<span class="badge ' + Z.escapeHtml(b.status) + '">' + Z.escapeHtml(b.status) + '</span>' +
         (b.plan === 'premium' ? '<span class="badge premium">Premium</span>' : '<span class="badge">Free</span>') +
         '</div></div>'
     }).join('')
+    closeAllMenus()
+    list.querySelectorAll('.bot-menu-btn').forEach(function (btn) {
+      btn.onclick = function (e) {
+        e.stopPropagation()
+        var dd = btn.nextElementSibling
+        var open = !dd.classList.contains('hidden')
+        closeAllMenus()
+        if (!open) dd.classList.remove('hidden')
+      }
+    })
+    list.querySelectorAll('.bot-menu-dropdown button').forEach(function (btn) {
+      btn.onclick = async function (e) {
+        e.stopPropagation()
+        var botId = btn.closest('.bot-card').dataset.id
+        var act = btn.dataset.act
+        closeAllMenus()
+        if (act === 'settings') { location.href = '/bot-settings'; return }
+        try {
+          if (act === 'restart') { await Z.restartBot(botId); alert('Bot di-restart') }
+          else if (act === 'power') {
+            var enable = btn.textContent === 'Nyalakan'
+            await Z.api('/bots/' + botId + '/power', { method: 'POST', body: { enabled: enable }, timeoutMs: 30000 })
+          } else if (act === 'disconnect') {
+            if (!confirm('Putuskan koneksi bot ini?')) return
+            await Z.api('/bots/' + botId + '/disconnect', { method: 'POST' })
+          }
+          var data = await Z.api('/bots')
+          Z.state.bots = data.bots || []
+          limits = data.limits || limits
+          renderBots()
+        } catch (e2) { alert(e2.message) }
+      }
+    })
   }
+
+  function closeAllMenus() {
+    document.querySelectorAll('.bot-menu-dropdown').forEach(function (d) { d.classList.add('hidden') })
+  }
+  document.addEventListener('click', closeAllMenus)
 
   Z.bootPage(function () {
     if (Z.state.limits) limits = Z.state.limits

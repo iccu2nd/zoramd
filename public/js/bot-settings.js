@@ -14,6 +14,10 @@
   async function loadSettings() {
     var botId = Z.$('#settings-bot-select') && Z.$('#settings-bot-select').value
     if (!botId) return
+    var loading = Z.$('#settings-loading')
+    var content = Z.$('#settings-content')
+    if (loading) loading.classList.remove('hidden')
+    if (content) content.classList.add('hidden')
     try {
       var data = await Z.api('/bots/' + botId + '/settings')
       var s = data.settings || {}
@@ -40,6 +44,9 @@
       }
     } catch (e) {
       if (Z.$('#settings-msg')) Z.$('#settings-msg').textContent = e.message
+    } finally {
+      if (loading) loading.classList.add('hidden')
+      if (content) content.classList.remove('hidden')
     }
   }
 

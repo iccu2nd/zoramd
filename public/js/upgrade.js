@@ -108,7 +108,6 @@
           '</svg>' +
         '</div>' +
         '<p class="pay-x-title">Pembayaran belum masuk</p>' +
-        '<p class="pay-success-sub">Bayar dulu lalu cek lagi</p>' +
       '</div>'
     document.body.appendChild(ov)
     setTimeout(function () { hideCheckingOverlay() }, 2200)

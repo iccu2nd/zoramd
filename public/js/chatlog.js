@@ -39,7 +39,7 @@
     if (!botId) return
     try {
       var data = await Z.api('/bots/' + botId + '/chatlog', { timeoutMs: 8000 })
-      render(data.logs || [])
+      render((data.logs || []).slice(0, 5))
     } catch (e) {
       var wrap = document.getElementById('chatlog-list')
       if (wrap) wrap.innerHTML = '<p class="error">' + Z.escapeHtml(e.message) + '</p>'
