@@ -265,13 +265,18 @@ router.post('/bots/:botId/connect', authMiddleware, loadAccount, async (req, res
                 return res.status(400).json({ error: 'Nomor WhatsApp tidak valid. Gunakan format internasional, contoh: 628xxxxxxxxxx' })
             }
         }
-        const state = await botManager.startBot(bot.sessionId, bot, {
+        const inst = await botManager.ensure(bot.sessionId, bot)
+        // JANGAN await sampai selesai -- requestPairingCode ke WhatsApp bisa lama
+        // (bahkan macet). Kalau di-await di sini, request HTTP ini ikut nunggu lama
+        // dan dashboard keliatan "loading" terus. Lempar ke background, biarkan
+        // frontend polling /status (sudah jalan tiap 5 detik) yang ambil kode begitu siap.
+        inst.start({
             phoneNumber: forcePairing ? phone : undefined,
             forcePairing,
             // pairing selalu session bersih agar tidak Stream Errored dari session setengah
             clearSessionFirst: forcePairing || method === 'qr'
-        })
-        res.json({ state })
+        }).catch(e => console.error(`[connect] start ${bot.sessionId}:`, e.message))
+        res.json({ state: { ...inst.getPublicState(), status: forcePairing ? 'pairing' : 'connecting' } })
     } catch (e) {
         res.status(500).json({ error: e.message })
     }
