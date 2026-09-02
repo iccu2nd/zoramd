@@ -89,6 +89,26 @@
     document.body.appendChild(ov)
   }
 
+  function showUnpaidX() {
+    hideCheckingOverlay()
+    var ov = document.createElement('div')
+    ov.id = 'pay-check-overlay'
+    ov.className = 'pay-check-overlay'
+    ov.innerHTML =
+      '<div class="pay-check-card">' +
+        '<div class="pay-x-circle" aria-hidden="true">' +
+          '<svg viewBox="0 0 52 52" class="pay-check-svg">' +
+            '<circle class="pay-x-bg" cx="26" cy="26" r="24" fill="none"/>' +
+            '<path class="pay-x-mark" fill="none" d="M16 16 L36 36 M36 16 L16 36"/>' +
+          '</svg>' +
+        '</div>' +
+        '<p class="pay-x-title">Pembayaran belum masuk</p>' +
+        '<p class="pay-success-sub">Bayar dulu lalu cek lagi</p>' +
+      '</div>'
+    document.body.appendChild(ov)
+    setTimeout(function () { hideCheckingOverlay() }, 2200)
+  }
+
   function showPaidSuccess() {
     var box = document.querySelector('.qris-box') || document.getElementById('payment-info')
     if (!box) return
@@ -139,11 +159,10 @@
       html += '<a class="btn outline" id="dl-qris" href="' + Z.escapeHtml(qrSrc2) + '" download="qris-zorabot.png" target="_blank" rel="noopener">' +
         '<i class="fa-solid fa-download"></i><span>Download QRIS</span></a>'
     }
-    // DANA / ewallet: tombol bayar sekarang ke link
-    if (method === 'dana' || method === 'gopay' || method === 'ovo' || payLink) {
-      if (payLink) {
-        html += '<a class="btn primary" id="btn-pay-now" href="' + Z.escapeHtml(payLink) + '" target="_blank" rel="noopener">Bayar Sekarang</a>'
-      }
+    // Bayar Sekarang hanya untuk non-QRIS (DANA/GoPay/OVO/dll)
+    var isQris = method === 'qris' || !!(p.qr_string || p.qr_image)
+    if (!isQris && payLink && (method === 'dana' || method === 'gopay' || method === 'ovo' || method === 'linkaja' || method === 'shopeepay_idr')) {
+      html += '<a class="btn primary" id="btn-pay-now" href="' + Z.escapeHtml(payLink) + '" target="_blank" rel="noopener">Bayar Sekarang</a>'
     }
     html += '<button type="button" class="btn outline" id="btn-check-pay">Cek Status</button>'
     html += '<button type="button" class="btn danger" id="btn-cancel-pay">Batalkan</button>'
@@ -208,6 +227,7 @@
         savePending(null)
         setOrderBtnVisible(true)
       } else {
+        showUnpaidX()
         if (msg) { msg.textContent = 'Pembayaran belum masuk. Bayar dulu lalu cek lagi.'; msg.className = 'msg' }
       }
     } catch (e) {

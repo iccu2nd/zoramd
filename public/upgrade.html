@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body data-page="upgrade">
-  <div id="loading-view" class="loading-wrap">
+  <div id="loading-view" class="loading-wrap hidden" style="display:none">
     <div class="loading-card">
       <div class="loading-logo">ZoraBot</div>
       <div class="loading-spinner" aria-hidden="true"></div>
@@ -16,7 +16,7 @@
     </div>
   </div>
 
-  <div id="main-view" class="hidden">
+  <div id="main-view">
     <header class="topbar">
       <button id="menu-btn" class="icon-btn" aria-label="Menu">
         <span></span><span></span><span></span>
@@ -74,9 +74,9 @@
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=13"></script>
-  <script src="/js/common.js?v=13"></script>
-  <script src="/js/upgrade.js?v=13"></script>
+  <script src="/js/bg-pattern.js?v=14"></script>
+  <script src="/js/common.js?v=14"></script>
+  <script src="/js/upgrade.js?v=14"></script>
 
   <script>
   // Safety net: jangan pernah stuck loading > 6 detik
@@ -88,7 +88,7 @@
       lv.style.display = 'none';
       if (mv) { mv.classList.remove('hidden'); mv.style.display = ''; }
     }
-  }, 3500);
+  }, 1500);
   </script>
 </body>
 </html>

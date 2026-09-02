@@ -1,4 +1,4 @@
-/* ZoraBot shared client — v3 */
+/* ZoraBot shared client — fast boot */
 (function (global) {
   'use strict'
 
@@ -16,10 +16,21 @@
     token: null,
     user: null,
     bots: [],
-    limits: null,
-    pollTimer: null
+    limits: null
   }
   try { state.token = localStorage.getItem('token') || null } catch (e) {}
+  try {
+    var cu = localStorage.getItem('zora_user')
+    if (cu) state.user = JSON.parse(cu)
+  } catch (e) {}
+  try {
+    var cb = localStorage.getItem('zora_bots')
+    if (cb) {
+      var parsed = JSON.parse(cb)
+      state.bots = parsed.bots || []
+      state.limits = parsed.limits || null
+    }
+  } catch (e) {}
 
   function withTimeout(promise, ms, label) {
     return new Promise(function (resolve, reject) {
@@ -30,7 +41,7 @@
         var err = new Error((label || 'Request') + ' timeout')
         err.status = 408
         reject(err)
-      }, ms || 12000)
+      }, ms || 10000)
       promise.then(function (v) {
         if (done) return
         done = true
@@ -49,22 +60,23 @@
     opts = opts || {}
     var headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {})
     if (state.token) headers.Authorization = 'Bearer ' + state.token
-
     var fetchOpts = {
       method: opts.method || 'GET',
       headers: headers,
       credentials: 'include'
     }
     if (opts.body != null) fetchOpts.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body)
-
-    var res = await withTimeout(fetch('/api' + path, fetchOpts), opts.timeoutMs || 12000, path)
+    var res = await withTimeout(fetch('/api' + path, fetchOpts), opts.timeoutMs || 10000, path)
     var data = {}
     try { data = await res.json() } catch (e) {}
-
     if (res.status === 401) {
       state.token = null
       state.user = null
-      try { localStorage.removeItem('token') } catch (e) {}
+      try {
+        localStorage.removeItem('token')
+        localStorage.removeItem('zora_user')
+        localStorage.removeItem('zora_bots')
+      } catch (e) {}
       var err = new Error(data.error || 'Unauthorized')
       err.status = 401
       throw err
@@ -81,31 +93,20 @@
     location.replace('/login?' + params.toString())
   }
 
-  function setLoading(on, text) {
-    var el = document.getElementById('loading-view')
-    if (!el) return
-    if (text) {
-      var t = document.getElementById('loading-text')
-      if (t) t.textContent = text
-    }
+  function setLoading(on) {
+    var lv = document.getElementById('loading-view')
+    var mv = document.getElementById('main-view')
     if (on) {
-      el.classList.remove('hidden')
-      el.style.display = ''
+      if (lv) { lv.classList.remove('hidden'); lv.style.display = '' }
+      if (mv) { mv.classList.add('hidden') }
     } else {
-      el.classList.add('hidden')
-      el.style.display = 'none'
+      if (lv) { lv.classList.add('hidden'); lv.style.display = 'none' }
+      if (mv) { mv.classList.remove('hidden'); mv.style.display = '' }
     }
   }
 
   function showMainApp() {
     setLoading(false)
-    var main = document.getElementById('main-view')
-    if (main) {
-      main.classList.remove('hidden')
-      main.style.display = ''
-    }
-    var chip = document.getElementById('user-chip')
-    if (chip && state.user) chip.textContent = state.user.email || ''
   }
 
   function bindShell() {
@@ -129,7 +130,11 @@
       logoutBtn.onclick = function () {
         state.token = null
         state.user = null
-        try { localStorage.removeItem('token') } catch (e) {}
+        try {
+          localStorage.removeItem('token')
+          localStorage.removeItem('zora_user')
+          localStorage.removeItem('zora_bots')
+        } catch (e) {}
         location.replace('/login')
       }
     }
@@ -145,6 +150,9 @@
     var data = await api('/bots')
     state.bots = data.bots || []
     state.limits = data.limits || null
+    try {
+      localStorage.setItem('zora_bots', JSON.stringify({ bots: state.bots, limits: state.limits }))
+    } catch (e) {}
     return state.bots
   }
 
@@ -159,66 +167,48 @@
     if (cur) sel.value = cur
   }
 
+  /**
+   * Fast boot: tampilkan UI langsung (pakai cache), refresh data di background.
+   * Tidak menunggu network untuk hide loading.
+   */
   async function bootPage(pageInit) {
-    // Safety: hide loading after 8s no matter what
-    var safety = setTimeout(function () {
-      showMainApp()
-    }, 4000)
+    bindShell()
 
+    if (!state.token) {
+      goToLogin('required')
+      return
+    }
+
+    // Langsung tampil — zero loading flash
+    showMainApp()
+
+    // pageInit segera (bisa pakai cache)
+    if (typeof pageInit === 'function') {
+      try { await pageInit() } catch (e) { console.warn('pageInit', e) }
+    }
+
+    // Refresh auth + bots di background
     try {
-      setLoading(true, '')
-      bindShell()
-
-      if (!state.token) {
-        clearTimeout(safety)
-        goToLogin('required')
+      var me = await api('/auth/me', { timeoutMs: 8000 })
+      state.user = me.user
+      try { localStorage.setItem('zora_user', JSON.stringify(me.user)) } catch (e) {}
+      var navAd = document.getElementById('nav-admin')
+      if (navAd && me.user && me.user.isAdmin) navAd.classList.remove('hidden')
+    } catch (e) {
+      if (e.status === 401) {
+        goToLogin('session')
         return
       }
+    }
 
-      /* skip text */
-      try {
-        var me = await api('/auth/me', { timeoutMs: 10000 })
-        state.user = me.user
-        var navAd = document.getElementById('nav-admin')
-        if (navAd && me.user && me.user.isAdmin) navAd.classList.remove('hidden')
-      } catch (e) {
-        if (e.status === 401) {
-          clearTimeout(safety)
-          goToLogin('session')
-          return
-        }
-        console.warn('auth/me', e)
-      }
-
-      /* skip text */
-      try {
-        await loadBots()
-      } catch (e) {
-        if (e.status === 401) {
-          clearTimeout(safety)
-          goToLogin('session')
-          return
-        }
-        console.warn('bots', e)
-        state.bots = []
-      }
-
-      showMainApp()
-      clearTimeout(safety)
-
-      if (typeof pageInit === 'function') {
-        try { await pageInit() } catch (e) { console.warn('pageInit', e) }
-      }
+    try {
+      await loadBots()
     } catch (e) {
-      console.error('bootPage', e)
-      showMainApp()
-    } finally {
-      clearTimeout(safety)
-      showMainApp()
+      if (e.status === 401) goToLogin('session')
     }
   }
 
-    async function restartBot(botId) {
+  async function restartBot(botId) {
     if (!botId) throw new Error('Pilih bot dulu')
     return api('/bots/' + botId + '/restart', { method: 'POST', body: {}, timeoutMs: 30000 })
   }

@@ -630,3 +630,25 @@ code {
   padding-top: 12px !important;
   border-top: 1px dashed var(--border) !important;
 }
+
+.pay-x-circle { width: 88px; height: 88px; margin: 0 auto 14px; }
+.pay-x-bg {
+  stroke: #ef4444;
+  stroke-width: 2.5;
+  stroke-dasharray: 160;
+  stroke-dashoffset: 160;
+  animation: pay-circle 0.45s ease forwards;
+}
+.pay-x-mark {
+  stroke: #ef4444;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: pay-mark 0.3s 0.35s ease forwards;
+}
+.pay-x-title {
+  font-size: 1.05rem; font-weight: 700; color: #dc2626; margin: 0;
+}
+/* Fast paint: loading view default hidden if main exists */
+#loading-view.hidden { display: none !important; }

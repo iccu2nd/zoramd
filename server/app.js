@@ -36,8 +36,9 @@ export function createApp() {
     app.use('/api', apiRouter)
 
     // Assets: css, js, images
-    app.use('/css', express.static(path.join(publicDir, 'css')))
-    app.use('/js', express.static(path.join(publicDir, 'js')))
+    app.use('/css', express.static(path.join(publicDir, 'css'), { maxAge: '7d', etag: true }))
+    app.use('/js', express.static(path.join(publicDir, 'js'), { maxAge: '7d', etag: true }))
+    app.use(express.static(publicDir, { maxAge: '1d', etag: true }))
 
     // Clean page routes (no .html in URL)
     for (const [route, file] of Object.entries(PAGE_MAP)) {
