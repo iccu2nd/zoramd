@@ -29,6 +29,7 @@
           '<button type="button" data-act="restart">Restart</button>' +
           '<button type="button" data-act="power">' + (b.enabled !== false ? 'Matikan' : 'Nyalakan') + '</button>' +
           '<button type="button" class="danger" data-act="disconnect">Putuskan Koneksi</button>' +
+          '<button type="button" class="danger" data-act="delete">Hapus Bot</button>' +
         '</div>' +
         '<div><h3>' + Z.escapeHtml(b.botName) +
         '</h3><div class="bot-meta">' + Z.escapeHtml(b.sessionId) +
@@ -62,6 +63,9 @@
           } else if (act === 'disconnect') {
             if (!confirm('Putuskan koneksi bot ini?')) return
             await Z.api('/bots/' + botId + '/disconnect', { method: 'POST' })
+          } else if (act === 'delete') {
+            if (!confirm('Hapus bot ini? Semua data, sesi, dan pengaturan bot akan hilang permanen.')) return
+            await Z.api('/bots/' + botId, { method: 'DELETE' })
           }
           var data = await Z.api('/bots')
           Z.state.bots = data.bots || []

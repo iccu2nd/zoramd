@@ -242,6 +242,18 @@ router.post('/bots/:botId/disconnect', authMiddleware, loadAccount, async (req, 
     }
 })
 
+router.delete('/bots/:botId', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const bot = await findOwnedBot(req.params.botId, req.account._id)
+        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        await botManager.stopBot(bot.sessionId, { clearSession: true })
+        await deleteBotById(req.params.botId)
+        res.json({ ok: true })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
 router.get('/bots/:botId/status', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)

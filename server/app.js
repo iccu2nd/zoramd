@@ -15,6 +15,7 @@ const PAGE_MAP = {
     '/connect': 'connect.html',
     '/bot-settings': 'bot-settings.html',
     '/feature-settings': 'feature-settings.html',
+    '/chatlog': 'chatlog.html',
     '/upgrade': 'upgrade.html',
     '/account': 'account.html',
     '/database': 'database.html',
