@@ -138,6 +138,16 @@
     return (document.getElementById('pay-method') && document.getElementById('pay-method').value) || 'qris'
   }
 
+  var PLAN_PRICES = { '7d': { price: 10000, label: '7 hari' }, '30d': { price: 25000, label: '30 hari' } }
+  function planDuration() {
+    return (document.getElementById('plan-duration') && document.getElementById('plan-duration').value) || '30d'
+  }
+  function updatePlanPrice() {
+    var p = PLAN_PRICES[planDuration()] || PLAN_PRICES['30d']
+    var el = document.getElementById('plan-price')
+    if (el) el.innerHTML = 'Rp' + p.price.toLocaleString('id-ID') + ' <span>/ ' + p.label + '</span>'
+  }
+
   function renderPayment(data) {
     var info = document.getElementById('payment-info')
     if (!info) return
@@ -275,6 +285,9 @@
   }
 
   Z.bootPage(function () {
+    updatePlanPrice()
+    var dur = Z.$('#plan-duration')
+    if (dur) dur.onchange = updatePlanPrice
     loadPremium().then(function () {
       restorePending()
     })
@@ -295,7 +308,7 @@
       try {
         var data = await Z.api('/premium/order', {
           method: 'POST',
-          body: { method: payMethod() },
+          body: { method: payMethod(), duration: planDuration() },
           timeoutMs: 45000
         })
         currentOrder = data

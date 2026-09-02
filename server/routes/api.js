@@ -24,6 +24,8 @@ router.get('/health', (req, res) => {
 
 
 const PREMIUM_PRICE = 25000
+const PREMIUM_PLANS = { '7d': { days: 7, price: 10000, label: '7 Hari' }, '30d': { months: 1, price: 25000, label: '30 Hari' } }
+function resolvePlan(duration) { return PREMIUM_PLANS[duration] || PREMIUM_PLANS['30d'] }
 
 /** Normalize & validate international WhatsApp number (e.g. 628xxx). Returns digits-only or null. */
 function normalizePhone(raw) {
@@ -416,6 +418,7 @@ router.get('/premium', authMiddleware, loadAccount, async (req, res) => {
             subscription: sub,
             isPremium: await isAccountPremium(req.account._id.toString()),
             price: PREMIUM_PRICE,
+            plans: PREMIUM_PLANS,
             orders: orders.slice(0, 10)
         })
     } catch (e) {
@@ -425,11 +428,12 @@ router.get('/premium', authMiddleware, loadAccount, async (req, res) => {
 
 router.post('/premium/order', authMiddleware, loadAccount, async (req, res) => {
     try {
-        const { method = 'qris', name } = req.body || {}
-        const payment = await sociabuzz.createPayment(PREMIUM_PRICE, {
+        const { method = 'qris', name, duration } = req.body || {}
+        const plan = resolvePlan(duration)
+        const payment = await sociabuzz.createPayment(plan.price, {
             name: name || req.account.name || 'ZoraBot User',
             method,
-            message: `ZoraBot Premium Account - ${req.account.email || req.account._id}`
+            message: `ZoraBot Premium ${plan.label} Account - ${req.account.email || req.account._id}`
         })
         const orderId = payment.id || payment.trxId || ('ORD-' + Date.now())
         const expiresAt = payment.expired_at || new Date(Date.now() + 30 * 60 * 1000).toISOString()
@@ -450,14 +454,16 @@ router.post('/premium/order', authMiddleware, loadAccount, async (req, res) => {
             accountId: req.account._id.toString(),
             botId: null,
             orderId,
-            amount: payment.total_amount || PREMIUM_PRICE,
+            amount: payment.total_amount || plan.price,
+            duration: duration || '30d',
             paymentInfo,
             expiresAt
         })
         res.json({
             orderId,
-            amount: payment.total_amount || PREMIUM_PRICE,
-            baseAmount: PREMIUM_PRICE,
+            amount: payment.total_amount || plan.price,
+            baseAmount: plan.price,
+            duration: duration || '30d',
             expiresAt,
             payment: paymentInfo
         })
@@ -499,7 +505,8 @@ router.post('/premium/check', authMiddleware, loadAccount, async (req, res) => {
         }
         if (paid) {
             await markOrderChecked(orderId, 'paid')
-            await activateAccountPremium(req.account._id.toString(), { months: 1 })
+            const plan = resolvePlan(order.duration)
+            await activateAccountPremium(req.account._id.toString(), { months: plan.months, days: plan.days })
             return res.json({ status: 'paid', activated: true })
         }
         await markOrderChecked(orderId, 'pending')
