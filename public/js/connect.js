@@ -147,6 +147,17 @@
     }
 
     // Bersihkan poll saat keluar halaman
+    var rs = document.getElementById('restart-bot-btn')
+    if (rs) rs.onclick = async function () {
+      var botId = Z.$('#connect-bot-select') && Z.$('#connect-bot-select').value
+      if (!botId) return alert('Pilih bot')
+      if (!confirm('Restart bot?')) return
+      try {
+        await Z.restartBot(botId)
+        var box = Z.$('#connect-status')
+        if (box) box.textContent = 'Bot di-restart'
+      } catch (e) { alert(e.message) }
+    }
     window.addEventListener('beforeunload', stopPoll)
   })
 })()

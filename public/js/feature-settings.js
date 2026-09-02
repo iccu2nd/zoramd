@@ -100,6 +100,13 @@
   Z.bootPage(function () {
     Z.fillBotSelect('feature-bot-select')
     loadFeatures()
+    var rs = document.getElementById('restart-bot-btn')
+    if (rs) rs.onclick = async function () {
+      var botId = document.getElementById('feature-bot-select') && document.getElementById('feature-bot-select').value
+      if (!botId) return alert('Pilih bot')
+      if (!confirm('Restart bot agar pengaturan fitur diterapkan?')) return
+      try { await Z.restartBot(botId); alert('Bot di-restart') } catch (e) { alert(e.message) }
+    }
     var sel = Z.$('#feature-bot-select')
     if (sel) sel.onchange = loadFeatures
   })

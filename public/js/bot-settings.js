@@ -2,6 +2,14 @@
   'use strict'
   if (!window.Zora) return
   var Z = window.Zora
+  async function doRestart(botId) {
+    if (!botId) return alert('Pilih bot')
+    if (!confirm('Restart bot agar pengaturan diterapkan?')) return
+    try {
+      await Z.restartBot(botId)
+      alert('Bot di-restart')
+    } catch (e) { alert(e.message) }
+  }
 
   async function loadSettings() {
     var botId = Z.$('#settings-bot-select') && Z.$('#settings-bot-select').value
@@ -39,6 +47,11 @@
     var sel = Z.$('#settings-bot-select')
     if (sel) sel.onchange = loadSettings
     var save = Z.$('#save-settings-btn')
+    var rs = Z.$('#restart-bot-btn')
+    if (rs) rs.onclick = function () {
+      var botId = Z.$('#settings-bot-select') && Z.$('#settings-bot-select').value
+      doRestart(botId)
+    }
     if (save) save.onclick = async function () {
       var botId = Z.$('#settings-bot-select') && Z.$('#settings-bot-select').value
       if (!botId) return

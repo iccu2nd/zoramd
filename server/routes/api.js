@@ -8,7 +8,7 @@ import {
 } from '../../lib/db/accounts.js'
 import { getSubscription, isBotPremium, activatePremium } from '../../lib/db/subscription.js'
 import { getAllFeatureSettings, setFeatureSetting, getFeatureSetting, ACCESS_RULES } from '../../lib/db/featureSettings.js'
-import { createOrder, findOrder, findOrdersByAccount, markOrderChecked } from '../../lib/db/orders.js'
+import { createOrder, findOrder, findOrdersByAccount, markOrderChecked, cancelOrder, isOrderExpired } from '../../lib/db/orders.js'
 import { getMongoDb } from '../../lib/db/mongo.js'
 import { COLLECTIONS } from '../../lib/db/schema.js'
 import botManager from '../../lib/botManager.js'
@@ -421,26 +421,42 @@ router.post('/bots/:botId/premium/order', authMiddleware, loadAccount, async (re
         if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
         const { method = 'qris', name } = req.body || {}
 
-        // Create payment via existing SociaBuzz helper
         const payment = await sociabuzz.createPayment(PREMIUM_PRICE, {
             name: name || req.account.name || 'ZoraBot User',
             method,
-            note: `ZoraBot Premium - ${bot.sessionId}`
+            message: `ZoraBot Premium - ${bot.sessionId}`
         })
 
-        const orderId = payment.trxId || payment.id || ('ORD-' + Date.now())
+        const orderId = payment.id || payment.trxId || ('ORD-' + Date.now())
+        const expiresAt = payment.expired_at || new Date(Date.now() + 30 * 60 * 1000).toISOString()
+        const pi = payment.payment_info || payment.paymentInfo || {}
+        // Flatten useful fields for frontend
+        const paymentInfo = {
+            ...payment,
+            ...pi,
+            qr_string: pi.qr_string || payment.qr_string || null,
+            pending_url: pi.pending_url || payment.pending_url || null,
+            method: pi.method || method
+        }
+        if (paymentInfo.qr_string) {
+            paymentInfo.qr_image = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=' + encodeURIComponent(paymentInfo.qr_string)
+        }
+
         await createOrder({
             accountId: req.account._id.toString(),
             botId: bot._id.toString(),
             orderId,
-            amount: PREMIUM_PRICE,
-            paymentInfo: payment
+            amount: payment.total_amount || PREMIUM_PRICE,
+            paymentInfo,
+            expiresAt
         })
 
         res.json({
             orderId,
-            amount: PREMIUM_PRICE,
-            payment
+            amount: payment.total_amount || PREMIUM_PRICE,
+            baseAmount: PREMIUM_PRICE,
+            expiresAt,
+            payment: paymentInfo
         })
     } catch (e) {
         res.status(500).json({ error: e.message || 'Gagal membuat order' })
@@ -460,6 +476,13 @@ router.post('/bots/:botId/premium/check', authMiddleware, loadAccount, async (re
         }
         if (order.status === 'paid') {
             return res.json({ status: 'paid', already: true })
+        }
+        if (order.status === 'cancelled') {
+            return res.json({ status: 'cancelled' })
+        }
+        if (isOrderExpired(order)) {
+            await markOrderChecked(orderId, 'expired')
+            return res.json({ status: 'expired', message: 'Order kedaluwarsa (max 30 menit). Buat order baru.' })
         }
 
         // Manual check against SociaBuzz (no automatic polling)
@@ -513,6 +536,36 @@ router.get('/bots/:botId/premium', authMiddleware, loadAccount, async (req, res)
 })
 
 
+
+
+router.post('/bots/:botId/premium/cancel', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const bot = await findOwnedBot(req.params.botId, req.account._id)
+        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        const { orderId } = req.body || {}
+        if (!orderId) return res.status(400).json({ error: 'orderId wajib' })
+        const result = await cancelOrder(orderId, req.account._id.toString())
+        if (!result.ok) return res.status(400).json({ error: result.error })
+        res.json({ ok: true, status: 'cancelled' })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+// Restart bot runtime (apply settings / reconnect)
+router.post('/bots/:botId/restart', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const bot = await findOwnedBot(req.params.botId, req.account._id)
+        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        await botManager.stopBot(bot.sessionId, { clearSession: false })
+        // short delay then start with existing session
+        await new Promise(r => setTimeout(r, 800))
+        const state = await botManager.startBot(bot.sessionId, bot, { isRestart: true })
+        res.json({ ok: true, state })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
 
 // ---------- Database export / import (database.json) ----------
 router.get('/bots/:botId/database', authMiddleware, loadAccount, async (req, res) => {

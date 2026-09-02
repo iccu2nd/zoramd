@@ -218,8 +218,13 @@
     }
   }
 
+    async function restartBot(botId) {
+    if (!botId) throw new Error('Pilih bot dulu')
+    return api('/bots/' + botId + '/restart', { method: 'POST', body: {}, timeoutMs: 30000 })
+  }
+
   global.Zora = {
     $, $$, show, hide, escapeHtml, state, api, goToLogin,
-    setLoading, showMainApp, bindShell, loadBots, fillBotSelect, bootPage
+    setLoading, showMainApp, bindShell, loadBots, fillBotSelect, bootPage, restartBot
   }
 })(window)
