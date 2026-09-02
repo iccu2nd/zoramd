@@ -12,7 +12,6 @@ import { createOrder, findOrder, findOrdersByAccount, markOrderChecked, cancelOr
 import { getMongoDb } from '../../lib/db/mongo.js'
 import { COLLECTIONS } from '../../lib/db/schema.js'
 import botManager from '../../lib/botManager.js'
-import { getChatLog } from '../../lib/liveChatlog.js'
 import * as sociabuzz from '../../lib/sociabuzz.js'
 
 const router = Router()
@@ -560,16 +559,6 @@ router.post('/bots/:botId/premium/cancel', authMiddleware, loadAccount, async (r
 // Restart bot runtime (apply settings / reconnect)
 
 
-router.get('/bots/:botId/chatlog', authMiddleware, loadAccount, async (req, res) => {
-    try {
-        const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
-        const logs = getChatLog(bot.sessionId)
-        res.json({ logs, limit: 8 })
-    } catch (e) {
-        res.status(500).json({ error: e.message })
-    }
-})
 
 router.post('/bots/:botId/power', authMiddleware, loadAccount, async (req, res) => {
     try {

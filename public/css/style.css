@@ -538,3 +538,42 @@ code {
 .chatlog-where { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
 .chatlog-text { margin-top: 6px; font-size: 0.9rem; color: var(--text-2); word-break: break-word; white-space: pre-wrap; }
 .chatlog-plugin { margin-top: 4px; font-size: 0.72rem; color: var(--purple); }
+
+/* Payment success animation */
+.pay-success {
+  text-align: center;
+  padding: 28px 16px;
+  animation: fadeUp 0.35s var(--ease);
+}
+.pay-check-circle {
+  width: 88px; height: 88px; margin: 0 auto 14px;
+}
+.pay-check-svg { width: 88px; height: 88px; display: block; }
+.pay-check-bg {
+  stroke: #22c55e;
+  stroke-width: 2.5;
+  stroke-dasharray: 160;
+  stroke-dashoffset: 160;
+  animation: pay-circle 0.55s ease forwards;
+}
+.pay-check-mark {
+  stroke: #22c55e;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 50;
+  stroke-dashoffset: 50;
+  animation: pay-mark 0.35s 0.4s ease forwards;
+}
+@keyframes pay-circle {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes pay-mark {
+  to { stroke-dashoffset: 0; }
+}
+.pay-success-title {
+  font-size: 1.15rem; font-weight: 700; color: #16a34a; margin: 0;
+}
+.pay-success-sub {
+  font-size: 0.88rem; color: var(--muted); margin-top: 4px;
+}
