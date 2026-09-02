@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order Plan Premium — ZoraBot</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body data-page="upgrade">
+  <div id="loading-view" class="loading-wrap">
+    <div class="loading-card">
+      <div class="loading-logo">ZoraBot</div>
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <p class="loading-text" id="loading-text">Memuat...</p>
+    </div>
+  </div>
+
+  <div id="main-view" class="hidden">
+    <header class="topbar">
+      <button id="menu-btn" class="icon-btn" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="brand">ZoraBot</div>
+      <div class="user-chip" id="user-chip"></div>
+    </header>
+
+    <aside id="sidebar" class="sidebar">
+            <nav>
+        <div class="nav-label">Menu</div>
+        <a href="/dashboard" class="nav-item">Dashboard</a>
+        <a href="/connect" class="nav-item">Connect Bot</a>
+        <a href="/bot-settings" class="nav-item">Bot Settings</a>
+        <a href="/feature-settings" class="nav-item">Feature Settings</a>
+        <a href="/database" class="nav-item">Database</a>
+        <div class="nav-label">Premium</div>
+        <a href="/upgrade" class="nav-item active">Order Plan Premium</a>
+        <div class="nav-label">Akun</div>
+        <a href="/account" class="nav-item">Account</a>
+        <a href="/admin" class="nav-item nav-admin hidden" id="nav-admin">Admin Panel</a>
+      </nav>
+      <button id="logout-btn" class="btn outline logout">Keluar</button>
+    </aside>
+    <div id="sidebar-overlay" class="overlay"></div>
+
+    <main class="content">
+      <h2>Order Plan Premium</h2>
+      <div class="field">
+        <label>Pilih Bot</label>
+        <select id="upgrade-bot-select"></select>
+      </div>
+      <div class="plan-card">
+        <h3>Premium</h3>
+        <p class="price">Rp25.000 <span>/ bulan</span></p>
+        <ul>
+          <li>Custom owner &amp; nama bot</li>
+          <li>Custom identitas, channel, grup</li>
+          <li>Feature settings lengkap</li>
+          <li>Custom response &amp; command</li>
+          <li>Access rules (Owner / Group / Public)</li>
+        </ul>
+        <div class="field">
+          <label>Metode Pembayaran</label>
+          <select id="pay-method">
+            <option value="qris">QRIS</option>
+            <option value="gopay">GoPay</option>
+            <option value="dana">DANA</option>
+            <option value="ovo">OVO</option>
+            <option value="bca">BCA</option>
+            <option value="mandiri">Mandiri</option>
+          </select>
+        </div>
+        <button id="order-premium-btn" class="btn primary">Order Premium — Rp25.000</button>
+        <div id="payment-info" class="payment-info hidden"></div>
+        <p class="hint" style="margin-top:14px">Setelah bayar, masukkan Order ID lalu cek status secara manual.</p>
+        <div class="row gap">
+          <input type="text" id="check-order-id" placeholder="Order ID" />
+          <button id="check-payment-btn" class="btn outline">Cek Status Pembayaran</button>
+        </div>
+        <p id="upgrade-msg" class="msg"></p>
+        <div id="sub-status" class="status-box"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/bg-pattern.js?v=7"></script>
+  <script src="/js/common.js?v=7"></script>
+  <script src="/js/upgrade.js?v=7"></script>
+
+  <script>
+  // Safety net: jangan pernah stuck loading > 6 detik
+  setTimeout(function () {
+    var lv = document.getElementById('loading-view');
+    var mv = document.getElementById('main-view');
+    if (lv && !lv.classList.contains('hidden') && getComputedStyle(lv).display !== 'none') {
+      lv.classList.add('hidden');
+      lv.style.display = 'none';
+      if (mv) { mv.classList.remove('hidden'); mv.style.display = ''; }
+    }
+  }, 6000);
+  </script>
+</body>
+</html>

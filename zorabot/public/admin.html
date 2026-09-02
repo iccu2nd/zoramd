@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Panel — ZoraBot</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body data-page="admin">
+  <div id="loading-view" class="loading-wrap">
+    <div class="loading-card">
+      <div class="loading-logo">ZoraBot</div>
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <p class="loading-text" id="loading-text">Memuat...</p>
+    </div>
+  </div>
+
+  <div id="main-view" class="hidden">
+    <header class="topbar">
+      <button id="menu-btn" class="icon-btn" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="brand">ZoraBot</div>
+      <div class="user-chip" id="user-chip"></div>
+    </header>
+
+    <aside id="sidebar" class="sidebar">
+      <nav>
+        <div class="nav-label">Menu</div>
+        <a href="/dashboard" class="nav-item">Dashboard</a>
+        <a href="/connect" class="nav-item">Connect Bot</a>
+        <a href="/bot-settings" class="nav-item">Bot Settings</a>
+        <a href="/feature-settings" class="nav-item">Feature Settings</a>
+        <a href="/database" class="nav-item">Database</a>
+        <div class="nav-label">Premium</div>
+        <a href="/upgrade" class="nav-item">Order Plan Premium</a>
+        <div class="nav-label">Akun</div>
+        <a href="/account" class="nav-item">Account</a>
+        <a href="/admin" class="nav-item nav-admin hidden active" id="nav-admin">Admin Panel</a>
+      </nav>
+      <button id="logout-btn" class="btn outline logout">Keluar</button>
+    </aside>
+    <div id="sidebar-overlay" class="overlay"></div>
+
+    <main class="content">
+      <h2>Admin Panel</h2>
+      <p class="hint">Kelola seluruh user, bot, premium, dan order. Hanya akun admin.</p>
+      <div id="admin-stats" class="limits-bar" style="margin-bottom:16px"></div>
+
+      <div class="plan-card" style="margin-bottom:16px">
+        <h3>Users</h3>
+        <div id="admin-users" class="bots-list" style="margin-top:12px"></div>
+      </div>
+
+      <div class="plan-card" style="margin-bottom:16px">
+        <h3>Bots</h3>
+        <div id="admin-bots" class="bots-list" style="margin-top:12px"></div>
+      </div>
+
+      <div class="plan-card">
+        <h3>Orders</h3>
+        <div id="admin-orders" class="bots-list" style="margin-top:12px"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/bg-pattern.js?v=7"></script>
+  <script src="/js/common.js?v=7"></script>
+  <script src="/js/admin.js?v=7"></script>
+  <script>
+  setTimeout(function () {
+    var lv = document.getElementById('loading-view');
+    var mv = document.getElementById('main-view');
+    if (lv && getComputedStyle(lv).display !== 'none') {
+      lv.classList.add('hidden'); lv.style.display = 'none';
+      if (mv) { mv.classList.remove('hidden'); mv.style.display = ''; }
+    }
+  }, 6000);
+  </script>
+</body>
+</html>

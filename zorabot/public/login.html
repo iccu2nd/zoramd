@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Masuk — ZoraBot</title>
-  <link rel="stylesheet" href="/css/minecraft.css?v=1" />
+  <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
   <div id="loading-view" class="loading-wrap">
@@ -18,7 +18,7 @@
   <div id="auth-view" class="auth-wrap hidden">
     <div class="auth-card">
       <h1>ZoraBot</h1>
-      <p class="subtitle" style="margin-bottom:18px">WhatsApp JadiBot Platform</p>
+      <p class="subtitle">WhatsApp JadiBot Platform</p>
       <p id="auth-notice" class="auth-notice hidden"></p>
       <div class="tabs">
         <button type="button" id="tab-login" class="tab active">Masuk</button>
@@ -29,7 +29,7 @@
         <input type="email" id="login-email" required autocomplete="email" />
         <label>Password</label>
         <input type="password" id="login-password" required minlength="6" autocomplete="current-password" />
-        <button type="submit" class="btn primary block" id="login-submit" style="margin-top:18px">Masuk</button>
+        <button type="submit" class="btn primary" id="login-submit">Masuk</button>
         <p id="login-error" class="error"></p>
       </form>
       <form id="register-form" class="auth-form hidden">
@@ -39,12 +39,13 @@
         <input type="email" id="reg-email" required autocomplete="email" />
         <label>Password</label>
         <input type="password" id="reg-password" required minlength="6" autocomplete="new-password" />
-        <button type="submit" class="btn primary block" id="reg-submit" style="margin-top:18px">Daftar</button>
+        <button type="submit" class="btn primary" id="reg-submit">Daftar</button>
         <p id="reg-error" class="error"></p>
       </form>
     </div>
   </div>
 
-  <script src="/js/login.js?v=8"></script>
+  <script src="/js/bg-pattern.js?v=7"></script>
+  <script src="/js/login.js?v=7"></script>
 </body>
 </html>
