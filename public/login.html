@@ -75,13 +75,14 @@
       <form id="otp-form" class="auth-form hidden">
         <h2 style="margin:0 0 6px;font-size:1.25rem">Verifikasi email</h2>
         <p class="subtitle" id="otp-hint">Masukkan 6 digit kode yang dikirim ke emailmu.</p>
+        <p class="subtitle" id="otp-timer" style="margin-top:-8px"></p>
         <div class="otp-boxes" id="otp-boxes">
           <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="one-time-code" />
-          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
-          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
-          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
-          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
-          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="one-time-code" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="one-time-code" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="one-time-code" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="one-time-code" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="one-time-code" />
         </div>
         <button type="submit" class="btn primary" id="otp-submit">Verifikasi &amp; Buat Akun</button>
         <button type="button" class="btn outline" id="otp-resend" style="margin-top:8px;width:100%">Kirim ulang kode</button>

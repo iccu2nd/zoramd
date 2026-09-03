@@ -90,6 +90,22 @@ function showNoticeFromQuery() {
 }
 
 let pendingReg = null // { name, email, password }
+let otpTimerInterval = null
+
+function startOtpCountdown() {
+  if (otpTimerInterval) clearInterval(otpTimerInterval)
+  const expiresAt = Date.now() + 10 * 60 * 1000
+  const el = $('#otp-timer')
+  const tick = () => {
+    const left = Math.max(0, expiresAt - Date.now())
+    const m = Math.floor(left / 60000)
+    const s = Math.floor((left % 60000) / 1000)
+    if (el) el.textContent = left > 0 ? `Kode berlaku ${m}:${String(s).padStart(2, '0')} lagi` : 'Kode sudah kadaluarsa, klik "Kirim ulang kode"'
+    if (left <= 0) clearInterval(otpTimerInterval)
+  }
+  tick()
+  otpTimerInterval = setInterval(tick, 1000)
+}
 
 function showForm(id) {
   ;['login-form', 'register-form', 'otp-form'].forEach(fid => {
@@ -110,12 +126,21 @@ function clearOtpBoxes() {
   if (first) first.focus()
 }
 
+function fillOtpBoxes(boxes, text) {
+  const digits = text.replace(/\D/g, '').slice(0, 6)
+  digits.split('').forEach((ch, i) => { if (boxes[i]) boxes[i].value = ch })
+  if (digits.length === 6) { if ($('#otp-form')) $('#otp-form').requestSubmit() }
+  else if (boxes[Math.min(digits.length, boxes.length - 1)]) boxes[Math.min(digits.length, boxes.length - 1)].focus()
+}
+
 function bindOtpBoxes() {
   const boxes = Array.from(document.querySelectorAll('.otp-digit'))
   if (!boxes.length) return
   boxes.forEach((box, idx) => {
     box.addEventListener('input', () => {
-      box.value = box.value.replace(/\D/g, '').slice(0, 1)
+      const raw = box.value.replace(/\D/g, '')
+      if (raw.length > 1) { fillOtpBoxes(boxes, raw); return }
+      box.value = raw.slice(0, 1)
       if (box.value && idx < boxes.length - 1) boxes[idx + 1].focus()
       if (getOtpCode().length === 6) {
         const form = $('#otp-form')
@@ -127,10 +152,7 @@ function bindOtpBoxes() {
     })
     box.addEventListener('paste', (e) => {
       e.preventDefault()
-      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6)
-      text.split('').forEach((ch, i) => { if (boxes[i]) boxes[i].value = ch })
-      if (text.length === 6 && $('#otp-form')) $('#otp-form').requestSubmit()
-      else if (boxes[Math.min(text.length, boxes.length - 1)]) boxes[Math.min(text.length, boxes.length - 1)].focus()
+      fillOtpBoxes(boxes, (e.clipboardData || window.clipboardData).getData('text'))
     })
   })
 }
@@ -209,6 +231,7 @@ $('#register-form').onsubmit = async (e) => {
     const hint = $('#otp-hint')
     if (hint) hint.textContent = 'Kode 6 digit dikirim ke ' + email
     clearOtpBoxes()
+    startOtpCountdown()
     showForm('otp-form')
   } catch (err) {
     $('#reg-error').textContent = err.message
@@ -242,11 +265,12 @@ if (otpForm) {
       })
       localStorage.setItem('token', data.token)
       pendingReg = null
+      if (otpTimerInterval) clearInterval(otpTimerInterval)
       setLoading(true, 'Akun dibuat...')
       await new Promise(r => setTimeout(r, 400))
       redirectToApp()
     } catch (err) {
-      if (errEl) errEl.textContent = err.message
+      if (errEl) errEl.textContent = err.message === 'Kode salah' ? 'Kode salah. Pastikan pakai kode dari email TERBARU — kode lama otomatis tidak berlaku kalau kamu minta kirim ulang.' : err.message
       if (btn) btn.disabled = false
     }
   }
@@ -267,8 +291,9 @@ if (otpResend) {
         method: 'POST',
         body: JSON.stringify(pendingReg)
       })
-      if (errEl) { errEl.textContent = 'Kode baru dikirim.'; errEl.style.color = '#166534' }
+      if (errEl) { errEl.textContent = 'Kode baru dikirim, kode lama sudah tidak berlaku.'; errEl.style.color = '#166534' }
       clearOtpBoxes()
+      startOtpCountdown()
     } catch (err) {
       if (errEl) { errEl.textContent = err.message; errEl.style.color = '' }
     } finally {
