@@ -49,9 +49,17 @@
   function startLive() {
     if (timer) clearInterval(timer)
     loadLogs()
-    // Refresh ringan tiap 4 detik — hanya halaman ini
-    timer = setInterval(loadLogs, 4000)
+    // Refresh ringan tiap 4 detik — hanya halaman ini, dan hanya kalau tab aktif
+    // (dulu ini jalan terus walau tab di-background, boros request ke server tanpa guna).
+    timer = setInterval(function () {
+      if (document.hidden) return
+      loadLogs()
+    }, 4000)
   }
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && timer) loadLogs()
+  })
 
   Z.bootPage(function () {
     Z.fillBotSelect('chatlog-bot-select')

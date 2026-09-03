@@ -87,7 +87,7 @@ function normalizePhone(raw) {
 
 
 
-function isAdminAccount(account) {
+export function isAdminAccount(account) {
     if (!account) return false
     if (account.role === 'admin') return true
     const allow = (process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
