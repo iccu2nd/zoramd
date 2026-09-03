@@ -139,7 +139,7 @@ export async function handleMessage(sock, config, { messages, type }) {
             if (fKey) {
                 const feat = await resolveFeature(botIdForGate, fKey)
                 if (!feat.enabled) continue
-                if (!checkAccessRule(feat.accessRule, m)) continue
+                if (!checkAccessRule(feat.accessRules || feat.accessRule, m)) continue
             }
             const isHandled = await handler.onMessage(m, { sock, config })
             if (isHandled) return
@@ -193,7 +193,7 @@ export async function handleMessage(sock, config, { messages, type }) {
     const featureKey = (plugin.cmd && plugin.cmd[0]) || cmd
     const feat = await resolveFeature(botId, featureKey)
     if (!feat.enabled) return
-    if (!checkAccessRule(feat.accessRule, m)) return
+    if (!checkAccessRule(feat.accessRules || feat.accessRule, m)) return
 
     try {
         const textWithoutCmd = afterPrefix.slice(cmd.length).trim()

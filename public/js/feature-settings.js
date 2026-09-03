@@ -19,22 +19,35 @@
 
   function featureRow(f, isPremium) {
     var key = f.featureKey
-    var rules = [['owner','Owner Only'],['group','Group Only'],['owner_group','Owner + Group'],['public','Public']]
+    var flags = [
+      ['owner', 'Owner'],
+      ['admin', 'Admin grup'],
+      ['group', 'Group only'],
+      ['private', 'Private chat only']
+    ]
+    var selected = Array.isArray(f.accessRules) ? f.accessRules.slice() : []
+    if (!selected.length && f.accessRule && f.accessRule !== 'public') {
+      if (f.accessRule === 'owner_group') selected = ['owner', 'group']
+      else if (String(f.accessRule).indexOf('+') >= 0) selected = String(f.accessRule).split('+')
+      else selected = [f.accessRule]
+    }
     var aliases = (f.aliases && f.aliases.length) ? f.aliases : [key]
     var hasCustomResp = !!(f.customResponse && String(f.customResponse).trim())
     var hasCustomCmd = !!(f.customCommand && String(f.customCommand).trim())
+    var checks = flags.map(function (r) {
+      var on = selected.indexOf(r[0]) >= 0
+      return '<label class="access-check"><input type="checkbox" class="feat-access-flag" value="' + r[0] + '"' +
+        (on ? ' checked' : '') + (isPremium ? '' : ' disabled') + '/> ' + r[1] + '</label>'
+    }).join('')
     return '<div class="feature-item" data-key="' + Z.escapeHtml(key) + '">' +
       '<div class="feature-row"><div class="feature-info"><span class="name">' + Z.escapeHtml(key) + '</span>' +
       (f.description ? '<span class="desc">' + Z.escapeHtml(String(f.description).slice(0, 80)) + '</span>' : '') +
       '</div><label class="switch"><input type="checkbox" class="feat-enabled" ' +
       (f.enabled !== false ? 'checked' : '') + '/><span class="slider"></span></label></div>' +
       '<div class="feature-detail">' +
-      '<div class="field"><label>Access Rule</label><select class="feat-access" ' +
-      (isPremium ? '' : 'disabled') + '>' +
-      rules.map(function (r) {
-        return '<option value="' + r[0] + '"' + (f.accessRule === r[0] ? ' selected' : '') + '>' + r[1] + '</option>'
-      }).join('') +
-      '</select></div>' +
+      '<div class="field"><label>Access Rule</label>' +
+      '<div class="access-checks">' + checks + '</div>' +
+      '<span class="field-hint">Centang satu atau lebih. Kosong = semua boleh. Lebih dari satu = yang cocok salah satu boleh pakai.</span></div>' +
       '<div class="field"><label>Custom Response <span class="opt-tag">' + (hasCustomResp ? 'aktif' : 'opsional') + '</span></label>' +
       '<input class="feat-response" type="text" value="' + Z.escapeHtml(f.customResponse || '') + '" ' +
       (isPremium ? '' : 'disabled') + ' placeholder="Biarkan kosong = pakai response bawaan plugin"/>' +
@@ -106,7 +119,7 @@
               method: 'PUT',
               body: {
                 enabled: item.querySelector('.feat-enabled').checked,
-                accessRule: (item.querySelector('.feat-access') || {}).value || 'public',
+                accessRules: Array.prototype.map.call(item.querySelectorAll('.feat-access-flag:checked'), function (c) { return c.value }),
                 customResponse: (item.querySelector('.feat-response') || {}).value || null,
                 customCommand: (item.querySelector('.feat-command') || {}).value || null
               }

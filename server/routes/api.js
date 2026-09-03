@@ -11,7 +11,7 @@ import {
     listAllAccounts, listAllBots, setAccountRole, deleteBotById, updateAccount, findAccountById
 } from '../../lib/db/accounts.js'
 import { getSubscription, isBotPremium, activatePremium, isAccountPremium, activateAccountPremium, getAccountSubscription } from '../../lib/db/subscription.js'
-import { getAllFeatureSettings, setFeatureSetting, getFeatureSetting, ACCESS_RULES } from '../../lib/db/featureSettings.js'
+import { getAllFeatureSettings, setFeatureSetting, getFeatureSetting, ACCESS_FLAGS } from '../../lib/db/featureSettings.js'
 import { createOrder, findOrder, findOrdersByAccount, markOrderChecked, cancelOrder, isOrderExpired } from '../../lib/db/orders.js'
 import { getMongoDb } from '../../lib/db/mongo.js'
 import { COLLECTIONS } from '../../lib/db/schema.js'
@@ -522,7 +522,8 @@ router.get('/bots/:botId/features', authMiddleware, loadAccount, async (req, res
                 enabled: s.enabled !== false,
                 customResponse: s.customResponse || null,
                 customCommand: s.customCommand || null,
-                accessRule: s.accessRule || 'public'
+                accessRule: s.accessRule || 'public',
+                accessRules: Array.isArray(s.accessRules) ? s.accessRules : []
             })
         }
         // sort keys in each group
@@ -534,7 +535,7 @@ router.get('/bots/:botId/features', authMiddleware, loadAccount, async (req, res
             groups,
             categories: Object.keys(groups).sort(),
             isPremium: premium,
-            accessRules: ACCESS_RULES
+            accessRules: ACCESS_FLAGS
         })
     } catch (e) {
         res.status(500).json({ error: e.message })
@@ -555,13 +556,13 @@ router.put('/bots/:botId/features/:featureKey', authMiddleware, loadAccount, asy
         if (premium) {
             if (body.customResponse !== undefined) patch.customResponse = body.customResponse
             if (body.customCommand !== undefined) patch.customCommand = body.customCommand
-            if (body.accessRule !== undefined) {
-                if (!ACCESS_RULES.includes(body.accessRule)) {
-                    return res.status(400).json({ error: 'accessRule tidak valid' })
-                }
-                patch.accessRule = body.accessRule
+            if (body.accessRules !== undefined || body.accessRule !== undefined) {
+                const rules = body.accessRules !== undefined
+                    ? (Array.isArray(body.accessRules) ? body.accessRules : [])
+                    : body.accessRule
+                patch.accessRules = rules
             }
-        } else if (body.customResponse || body.customCommand || body.accessRule) {
+        } else if (body.customResponse || body.customCommand || body.accessRule || body.accessRules) {
             return res.status(403).json({ error: 'Custom response/command/access rule hanya Premium' })
         }
 
