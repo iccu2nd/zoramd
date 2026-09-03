@@ -3,7 +3,6 @@ import dns from 'dns'
 import chalk from 'chalk'
 import { ensureIndexes } from './lib/db/schema.js'
 import { loadPlugins } from './lib/plugins.js'
-import { loadAllCustomPlugins } from './lib/customPlugins.js'
 import { createApp } from './server/app.js'
 import botManager from './lib/botManager.js'
 import { startAdsScheduler } from './lib/adsScheduler.js'
@@ -50,7 +49,6 @@ async function main() {
     )
 
     await loadPlugins()
-    await loadAllCustomPlugins()
 
     // Start HTTP server (dashboard + API)
     const app = createApp()

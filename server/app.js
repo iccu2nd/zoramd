@@ -18,17 +18,16 @@ const PAGE_MAP = {
     '/connect': 'connect.html',
     '/bot-settings': 'bot-settings.html',
     '/feature-settings': 'feature-settings.html',
-    '/extensions': 'extensions.html',
     // legacy
     '/chatlog': 'chatlog.html',
     '/upgrade': 'upgrade.html',
+    '/orders': 'orders.html',
     '/account': 'account.html',
     '/database': 'database.html',
     '/admin': 'admin.html',
     '/admin/users': 'admin-users.html',
     '/admin/bots': 'admin-bots.html',
     '/admin/ads': 'admin-ads.html',
-    '/admin/extensions': 'admin-extensions.html',
     '/terms': 'terms.html',
     '/privacy': 'privacy.html'
 }
@@ -77,8 +76,6 @@ export function createApp() {
         message: 'Terlalu banyak request. Coba lagi sebentar.'
     }))
 
-    app.get('/free-features', (req, res) => res.redirect(301, '/extensions'))
-    app.get('/admin/features', (req, res) => res.redirect(301, '/admin/extensions'))
 
     app.use('/api', apiRouter)
 

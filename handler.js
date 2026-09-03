@@ -16,6 +16,7 @@ import { resolveFeature, checkAccessRule, getCustomCommandMap } from './lib/feat
 import { runWithFreeQueue } from './lib/freeQueue.js'
 import { isAccountPremium } from './lib/db/subscription.js'
 import { resolveBotConfig } from './lib/botConfig.js'
+import { logCommandError } from './lib/commandErrors.js'
 
 const prefixes = ['.', '/', '#', '!']
 
@@ -191,8 +192,6 @@ export async function handleMessage(sock, config, { messages, type }) {
     const botId = config.botId || sock.sessionId || 'default'
     const featureKey = (plugin.cmd && plugin.cmd[0]) || cmd
     const feat = await resolveFeature(botId, featureKey)
-    // Ekstensi (upload admin): hanya jalan jika user sudah pasang di bot ini
-    if (plugin._custom && feat.sharedInstalled !== true) return
     if (!feat.enabled) return
     if (!checkAccessRule(feat.accessRule, m)) return
 
@@ -240,6 +239,13 @@ export async function handleMessage(sock, config, { messages, type }) {
         if (settings.autotyping) sock.sendPresenceUpdate('paused', m.from).catch(() => {})
     } catch (e) {
         console.error(chalk.redBright(e))
+        logCommandError({
+            botId: config.botId || sock.sessionId,
+            sessionId: sock.sessionId,
+            cmd,
+            message: e?.message || String(e),
+            stack: e?.stack
+        }).catch(() => {})
         if (settings.errorReport) reportPluginError({ sock, config, m, cmd, prefix: prefix || '', text: afterPrefix.slice(cmd.length).trim(), e })
     }
 }

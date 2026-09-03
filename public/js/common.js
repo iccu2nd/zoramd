@@ -124,13 +124,76 @@
         '<a href="/privacy" target="_blank" rel="noopener">Kebijakan Privasi</a>' +
         '<span class="site-footer-sep">|</span>' +
         '<a href="/upgrade">Premium</a>' +
-        '<span class="site-footer-sep">|</span>' +
-        '<a href="/extensions">Ekstensi</a>' +
       '</div>' +
       '<p class="site-footer-copy">&copy; ' + year + ' ZoraBot. All rights reserved.</p>'
     // Tempel di #main-view agar sticky di bawah viewport
     var root = document.getElementById('main-view') || document.body
     root.appendChild(foot)
+  }
+
+
+  function setupNotifications() {
+    var chip = document.getElementById('user-chip')
+    var top = document.querySelector('.topbar')
+    if (!top || document.getElementById('notif-wrap')) return
+    var wrap = document.createElement('div')
+    wrap.className = 'notif-wrap'
+    wrap.id = 'notif-wrap'
+    wrap.innerHTML =
+      '<button type="button" class="notif-btn" id="notif-btn" aria-label="Notifikasi">' +
+      '<i class="fa-regular fa-bell"></i><span class="notif-dot" id="notif-dot"></span></button>' +
+      '<div class="notif-panel hidden" id="notif-panel"><div class="notif-empty">Memuat...</div></div>'
+    // place before user-chip
+    if (chip && chip.parentNode) chip.parentNode.insertBefore(wrap, chip)
+    else top.appendChild(wrap)
+
+    var btn = document.getElementById('notif-btn')
+    var panel = document.getElementById('notif-panel')
+    var dot = document.getElementById('notif-dot')
+
+    async function refresh() {
+      try {
+        var data = await api('/notifications', { timeoutMs: 8000 })
+        var items = data.notifications || []
+        if (dot) {
+          if (data.unread > 0) dot.classList.add('show')
+          else dot.classList.remove('show')
+        }
+        if (!panel) return
+        if (!items.length) {
+          panel.innerHTML = '<div class="notif-empty">Tidak ada notifikasi</div>'
+          return
+        }
+        panel.innerHTML = items.map(function (n) {
+          return '<div class="notif-item' + (n.read ? '' : ' unread') + '" data-id="' + escapeHtml(n.id) + '" data-link="' + escapeHtml(n.link || '') + '">' +
+            '<strong>' + escapeHtml(n.title || '') + '</strong>' +
+            '<span>' + escapeHtml(n.body || '') + '</span></div>'
+        }).join('')
+        panel.querySelectorAll('.notif-item').forEach(function (el) {
+          el.onclick = async function () {
+            try { await api('/notifications/read', { method: 'POST', body: { ids: [el.dataset.id] } }) } catch (e) {}
+            if (el.dataset.link) location.href = el.dataset.link
+            else refresh()
+          }
+        })
+      } catch (e) {
+        if (panel) panel.innerHTML = '<div class="notif-empty">Gagal memuat</div>'
+      }
+    }
+
+    if (btn && panel) {
+      btn.onclick = function (e) {
+        e.stopPropagation()
+        panel.classList.toggle('hidden')
+        if (!panel.classList.contains('hidden')) refresh()
+      }
+      document.addEventListener('click', function () { panel.classList.add('hidden') })
+      panel.addEventListener('click', function (e) { e.stopPropagation() })
+      // initial badge
+      api('/notifications', { timeoutMs: 8000 }).then(function (data) {
+        if (dot && data.unread > 0) dot.classList.add('show')
+      }).catch(function () {})
+    }
   }
 
   function bindShell() {
@@ -198,6 +261,7 @@
   async function bootPage(pageInit) {
     bindShell()
     ensureSiteFooter()
+    try { setupNotifications() } catch (e) {}
 
     if (!state.token) {
       goToLogin('required')

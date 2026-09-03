@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ekstensi — ZoraBot</title>
+  <title>Riwayat Order — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=19" />
+  <link rel="stylesheet" href="/css/style.css?v=20" />
 </head>
-<body data-page="extensions">
+<body data-page="orders">
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
     <div class="loading-card">
       <div class="loading-logo">ZoraBot</div>
@@ -35,11 +35,11 @@
         <a href="/connect" class="nav-item"><i class="fa-solid fa-qrcode"></i><span>Connect Bot</span></a>
         <a href="/bot-settings" class="nav-item"><i class="fa-solid fa-sliders"></i><span>Bot Settings</span></a>
         <a href="/feature-settings" class="nav-item"><i class="fa-solid fa-puzzle-piece"></i><span>Feature Settings</span></a>
-        <a href="/extensions" class="nav-item active"><i class="fa-solid fa-puzzle-piece"></i><span>Ekstensi</span></a>
         <a href="/database" class="nav-item"><i class="fa-solid fa-database"></i><span>Database</span></a>
         <a href="/chatlog" class="nav-item"><i class="fa-solid fa-comments"></i><span>Live Chatlog</span></a>
         <div class="nav-label">Premium</div>
         <a href="/upgrade" class="nav-item"><i class="fa-solid fa-crown"></i><span>Order Plan Premium</span></a>
+        <a href="/orders" class="nav-item active"><i class="fa-solid fa-receipt"></i><span>Riwayat Order</span></a>
         <div class="nav-label">Akun</div>
         <a href="/account" class="nav-item"><i class="fa-solid fa-user"></i><span>Account</span></a>
         <a href="/admin" class="nav-item nav-admin hidden" id="nav-admin"><i class="fa-solid fa-shield-halved"></i><span>Admin Panel</span></a>
@@ -49,21 +49,14 @@
     <div id="sidebar-overlay" class="overlay"></div>
 
     <main class="content">
-      <h2>Ekstensi</h2>
-      <p class="hint">Pasang plugin tambahan yang dipublikasikan platform ke bot kamu. Hanya ekstensi yang terpasang yang aktif.</p>
-
-      <div class="field">
-        <label>Pilih Bot</label>
-        <select id="ext-bot-select"></select>
-      </div>
-
-      <div id="ext-list" class="features-list" style="margin-top:12px"></div>
-      <p id="ext-msg" class="msg"></p>
+      <h2>Riwayat Order</h2>
+      <p class="hint">Pembayaran Premium dan statusnya.</p>
+      <div id="orders-list" class="orders-list"></div>
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=19"></script>
-  <script src="/js/common.js?v=19"></script>
-  <script src="/js/extensions.js?v=19"></script>
+  <script src="/js/bg-pattern.js?v=20"></script>
+  <script src="/js/common.js?v=20"></script>
+  <script src="/js/orders.js?v=20"></script>
 </body>
 </html>

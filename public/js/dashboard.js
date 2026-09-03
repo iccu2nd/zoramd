@@ -13,9 +13,13 @@
     if (!list) return
     var bar = Z.$('#limits-bar')
     if (bar) {
-      bar.innerHTML = '<span>Plan: <strong>' + (limits.plan === 'premium' ? 'Premium' : 'Free') +
-        '</strong></span> <span>Bot: <strong>' + limits.used + '</strong> / ' + limits.max + '</span>' +
-        (limits.plan !== 'premium' ? ' <span style="color:#6b7280;font-size:0.85rem">Upgrade → max 3 bot</span>' : '')
+      var plan = limits.plan === 'premium' ? 'Premium' : 'Free'
+      var extras = limits.plan === 'premium'
+        ? ' · tanpa iklan · identity custom · max 3 bot'
+        : ' · max 1 bot · Upgrade untuk 3 bot & identity'
+      bar.innerHTML = '<span>Plan: <strong>' + plan + '</strong></span>' +
+        ' <span>Bot: <strong>' + limits.used + '</strong>/' + limits.max + '</span>' +
+        '<span class="limits-extra">' + extras + '</span>'
     }
     if (!Z.state.bots || !Z.state.bots.length) {
       list.innerHTML = '<p class="hint">Belum ada bot. Buat bot baru untuk memulai.</p>'
@@ -34,8 +38,10 @@
         '<div><h3>' + Z.escapeHtml(b.botName) +
         '</h3><div class="bot-meta">' + Z.escapeHtml(b.sessionId) +
         '</div></div><div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px">' +
-        '<span class="badge ' + Z.escapeHtml(b.status) + '">' + Z.escapeHtml(b.status) + '</span>' +
+        '<span class="badge ' + Z.escapeHtml(b.status) + '" title="' + Z.escapeHtml(b.lastError || '') + '">' +
+          Z.escapeHtml(b.statusLabel || b.status) + '</span>' +
         (b.plan === 'premium' ? '<span class="badge premium">Premium</span>' : '<span class="badge">Free</span>') +
+        (b.lastError ? '<div class="bot-error">' + Z.escapeHtml(b.lastError) + '</div>' : '') +
         '</div></div>'
     }).join('')
     closeAllMenus()
@@ -81,9 +87,49 @@
   }
   document.addEventListener('click', closeAllMenus)
 
+  function loadErrors() {
+    var sel = Z.$('#err-bot-select')
+    var list = Z.$('#err-list')
+    if (!sel || !list) return
+    var botId = sel.value
+    if (!botId) { list.innerHTML = '<p class="hint">Pilih bot</p>'; return }
+    list.innerHTML = '<p class="hint">Memuat...</p>'
+    Z.api('/bots/' + botId + '/errors', { timeoutMs: 10000 }).then(function (data) {
+      var items = data.errors || []
+      if (!items.length) { list.innerHTML = '<p class="hint">Belum ada error tercatat.</p>'; return }
+      list.innerHTML = items.map(function (e) {
+        var t = e.createdAt ? new Date(e.createdAt).toLocaleString('id-ID') : ''
+        return '<div class="err-item"><strong>.' + Z.escapeHtml(e.cmd || '?') + '</strong> · ' +
+          Z.escapeHtml(t) + '<div class="err-msg">' + Z.escapeHtml(e.message || '') + '</div></div>'
+      }).join('')
+    }).catch(function (e) {
+      list.innerHTML = '<p class="error">' + Z.escapeHtml(e.message) + '</p>'
+    })
+  }
+
+  function setupOnboarding() {
+    var box = Z.$('#onboarding')
+    if (!box) return
+    var bots = Z.state.bots || []
+    var anyConnected = bots.some(function (b) { return b.status === 'connected' })
+    var dismissed = localStorage.getItem('zora_onboard_v1') === '1'
+    if (!dismissed && !anyConnected) box.classList.remove('hidden')
+    else box.classList.add('hidden')
+    var btn = Z.$('#onboard-dismiss')
+    if (btn) btn.onclick = function () {
+      localStorage.setItem('zora_onboard_v1', '1')
+      box.classList.add('hidden')
+    }
+  }
+
   Z.bootPage(function () {
     if (Z.state.limits) limits = Z.state.limits
     renderBots()
+    setupOnboarding()
+    Z.fillBotSelect('err-bot-select')
+    loadErrors()
+    var es = Z.$('#err-bot-select')
+    if (es) es.onchange = loadErrors
     var btn = Z.$('#create-bot-btn')
     if (!btn) return
     btn.onclick = async function () {

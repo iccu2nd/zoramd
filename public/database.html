@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Database — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=17" />
+  <link rel="stylesheet" href="/css/style.css?v=20" />
 </head>
 <body data-page="database">
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
@@ -45,12 +45,11 @@
         <a href="/connect" class="nav-item"><i class="fa-solid fa-qrcode"></i><span>Connect Bot</span></a>
         <a href="/bot-settings" class="nav-item"><i class="fa-solid fa-sliders"></i><span>Bot Settings</span></a>
         <a href="/feature-settings" class="nav-item"><i class="fa-solid fa-puzzle-piece"></i><span>Feature Settings</span></a>
-        
-        <a href="/extensions" class="nav-item"><i class="fa-solid fa-gift"></i><span>Ekstensi</span></a>
 <a href="/database" class="nav-item active"><i class="fa-solid fa-database"></i><span>Database</span></a>
         <a href="/chatlog" class="nav-item"><i class="fa-solid fa-comments"></i><span>Live Chatlog</span></a>
         <div class="nav-label">Premium</div>
         <a href="/upgrade" class="nav-item"><i class="fa-solid fa-crown"></i><span>Order Plan Premium</span></a>
+        <a href="/orders" class="nav-item"><i class="fa-solid fa-receipt"></i><span>Riwayat Order</span></a>
         <div class="nav-label">Akun</div>
         <a href="/account" class="nav-item"><i class="fa-solid fa-user"></i><span>Account</span></a>
         <a href="/admin" class="nav-item nav-admin hidden" id="nav-admin"><i class="fa-solid fa-shield-halved"></i><span>Admin Panel</span></a>
@@ -73,7 +72,7 @@
         <label class="switch-label" style="margin:12px 0">
           <input type="checkbox" id="db-include-session" /> Sertakan session WhatsApp
         </label>
-        <button type="button" id="db-download-btn" class="btn primary">Download JSON</button>
+        <button type="button" id="db-download-btn" class="btn primary">Backup / Download</button>
       </div>
 
       <div class="plan-card">
@@ -89,9 +88,9 @@
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=17"></script>
-  <script src="/js/common.js?v=17"></script>
-  <script src="/js/database.js?v=17"></script>
+  <script src="/js/bg-pattern.js?v=20"></script>
+  <script src="/js/common.js?v=20"></script>
+  <script src="/js/database.js?v=20"></script>
   <script>
   setTimeout(function () {
     var lv = document.getElementById('loading-view');

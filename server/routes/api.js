@@ -18,14 +18,12 @@ import { COLLECTIONS } from '../../lib/db/schema.js'
 import botManager from '../../lib/botManager.js'
 import { getPlatformSettings, setPlatformSettings } from '../../lib/platformSettings.js'
 import { sendAdsManually } from '../../lib/adsScheduler.js'
-import {
-    listPublishedPlugins, getPublishedPlugin, publishPlugin, unpublishPlugin, loadAllCustomPlugins
-} from '../../lib/customPlugins.js'
-import { invalidateFeatureCache } from '../../lib/featureGate.js'
 import * as sociabuzz from '../../lib/sociabuzz.js'
 import { rateLimit, clientIp } from '../../lib/rateLimit.js'
 import { authCookieOptions, publicError } from '../../lib/security.js'
 import { getChatLog } from '../../lib/liveChatlog.js'
+import { pushNotification, listNotifications, markNotificationsRead, countUnread } from '../../lib/notifications.js'
+import { listCommandErrors } from '../../lib/commandErrors.js'
 
 const router = Router()
 
@@ -60,6 +58,18 @@ router.get('/health', (req, res) => {
 const PREMIUM_PRICE = 15000
 const PREMIUM_PLANS = { '7d': { days: 7, price: 5000, label: '7 Hari' }, '30d': { months: 1, price: 15000, label: '30 Hari' } }
 function resolvePlan(duration) { return PREMIUM_PLANS[duration] || PREMIUM_PLANS['30d'] }
+
+function statusLabel(s) {
+    const map = {
+        connected: 'Terhubung',
+        connecting: 'Menghubungkan...',
+        pairing: 'Menunggu pairing',
+        qr: 'Menunggu scan QR',
+        disconnected: 'Terputus',
+        logged_out: 'Logout dari WA'
+    }
+    return map[s] || s || 'Terputus'
+}
 
 /** Normalize & validate international WhatsApp number (e.g. 628xxx). Returns digits-only or null. */
 function normalizePhone(raw) {
@@ -196,13 +206,16 @@ router.get('/bots', authMiddleware, loadAccount, async (req, res) => {
         const enriched = await Promise.all(bots.map(async (b) => {
             const sub = await getSubscription(b._id.toString())
             const state = botManager.getState(b.sessionId)
+            const status = state.status || b.status || 'disconnected'
             return {
                 id: b._id.toString(),
                 sessionId: b.sessionId,
                 botName: b.botName,
                 ownerNumber: b.ownerNumber,
                 identity: b.identity,
-                status: state.status || b.status,
+                status,
+                statusLabel: statusLabel(status),
+                lastError: state.lastError || null,
                 enabled: b.enabled !== false,
                 waName: state.waName || null,
                 waNumber: state.waNumber || null,
@@ -633,6 +646,12 @@ router.post('/premium/check', authMiddleware, loadAccount, async (req, res) => {
             await markOrderChecked(orderId, 'paid')
             const plan = resolvePlan(order.duration)
             await activateAccountPremium(req.account._id.toString(), { months: plan.months, days: plan.days })
+            await pushNotification(req.account._id.toString(), {
+                type: 'success',
+                title: 'Premium aktif',
+                body: 'Pembayaran berhasil. Plan ' + (plan.label || 'Premium') + ' sudah aktif.',
+                link: '/upgrade'
+            })
             return res.json({ status: 'paid', activated: true })
         }
         await markOrderChecked(orderId, 'pending')
@@ -747,6 +766,12 @@ router.post('/bots/:botId/premium/check', authMiddleware, loadAccount, async (re
         if (paid) {
             await markOrderChecked(orderId, 'paid')
             await activateAccountPremium(req.account._id.toString(), { months: 1 })
+            await pushNotification(req.account._id.toString(), {
+                type: 'success',
+                title: 'Premium aktif',
+                body: 'Pembayaran berhasil. Premium 30 hari aktif.',
+                link: '/upgrade'
+            })
             return res.json({ status: 'paid', activated: true })
         }
 
@@ -1140,17 +1165,54 @@ router.post('/admin/bots/:id/status', authMiddleware, loadAccount, requireAdmin,
 
 
 
-// ---------- Plugin Hub / Ekstensi ----------
-router.get('/extensions', authMiddleware, loadAccount, async (req, res) => {
+
+
+// ---------- Notifications ----------
+router.get('/notifications', authMiddleware, loadAccount, async (req, res) => {
     try {
-        const items = await listPublishedPlugins({ activeOnly: true })
+        const items = await listNotifications(req.account._id.toString(), { limit: 30 })
+        const unread = await countUnread(req.account._id.toString())
         res.json({
-            plugins: items.map(i => ({
-                featureKey: i.featureKey,
-                title: i.title,
-                description: i.description,
-                category: i.category,
-                updatedAt: i.updatedAt
+            notifications: items.map(n => ({
+                id: n._id.toString(),
+                type: n.type,
+                title: n.title,
+                body: n.body,
+                link: n.link,
+                read: !!n.read,
+                createdAt: n.createdAt
+            })),
+            unread
+        })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.post('/notifications/read', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const ids = (req.body && req.body.ids) || null
+        await markNotificationsRead(req.account._id.toString(), ids)
+        res.json({ ok: true })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+// ---------- Orders history ----------
+router.get('/orders', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const list = await findOrdersByAccount(req.account._id.toString())
+        res.json({
+            orders: list.map(o => ({
+                orderId: o.orderId,
+                amount: o.amount,
+                duration: o.duration,
+                status: o.status,
+                createdAt: o.createdAt,
+                expiresAt: o.expiresAt,
+                checkedAt: o.checkedAt,
+                cancelledAt: o.cancelledAt
             }))
         })
     } catch (e) {
@@ -1158,100 +1220,19 @@ router.get('/extensions', authMiddleware, loadAccount, async (req, res) => {
     }
 })
 
-router.get('/bots/:botId/extensions', authMiddleware, loadAccount, async (req, res) => {
+// ---------- Command errors ----------
+router.get('/bots/:botId/errors', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
         if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
-        const catalog = await listPublishedPlugins({ activeOnly: true })
-        const saved = await getAllFeatureSettings(bot.sessionId)
-        const map = {}
-        for (const s of saved) map[s.featureKey] = s
-        const plugins = catalog.map(c => {
-            const s = map[c.featureKey] || {}
-            const installed = s.sharedInstalled === true
-            return {
-                featureKey: c.featureKey,
-                title: c.title,
-                description: c.description,
-                category: c.category,
-                installed,
-                enabled: installed && s.enabled !== false
-            }
-        })
-        res.json({ plugins, botId: bot._id.toString() })
-    } catch (e) {
-        res.status(500).json({ error: e.message })
-    }
-})
-
-router.post('/bots/:botId/extensions/:featureKey/install', authMiddleware, loadAccount, async (req, res) => {
-    try {
-        const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
-        const key = String(req.params.featureKey || '').trim().toLowerCase()
-        const pub = await getPublishedPlugin(key)
-        if (!pub || pub.active === false) return res.status(404).json({ error: 'Ekstensi tidak ditemukan' })
-        await setFeatureSetting(bot.sessionId, key, { enabled: true, sharedInstalled: true })
-        invalidateFeatureCache(bot.sessionId, key)
-        res.json({ ok: true, featureKey: key, installed: true })
-    } catch (e) {
-        res.status(500).json({ error: e.message })
-    }
-})
-
-router.post('/bots/:botId/extensions/:featureKey/uninstall', authMiddleware, loadAccount, async (req, res) => {
-    try {
-        const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
-        const key = String(req.params.featureKey || '').trim().toLowerCase()
-        await setFeatureSetting(bot.sessionId, key, { enabled: false, sharedInstalled: false })
-        invalidateFeatureCache(bot.sessionId, key)
-        res.json({ ok: true, featureKey: key, installed: false })
-    } catch (e) {
-        res.status(500).json({ error: e.message })
-    }
-})
-
-router.get('/admin/extensions', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
-    try {
-        const items = await listPublishedPlugins({ activeOnly: false })
-        res.json({ plugins: items })
-    } catch (e) {
-        res.status(500).json({ error: e.message })
-    }
-})
-
-router.post('/admin/extensions', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
-    try {
-        const body = req.body || {}
-        const doc = await publishPlugin({
-            featureKey: body.featureKey,
-            title: body.title,
-            description: body.description,
-            category: body.category,
-            code: body.code,
-            active: body.active !== false
-        })
+        const errors = await listCommandErrors(bot.sessionId, { limit: 25 })
         res.json({
-            ok: true,
-            plugin: {
-                featureKey: doc.featureKey,
-                title: doc.title,
-                description: doc.description,
-                category: doc.category,
-                active: doc.active,
-                updatedAt: doc.updatedAt
-            }
+            errors: errors.map(e => ({
+                cmd: e.cmd,
+                message: e.message,
+                createdAt: e.createdAt
+            }))
         })
-    } catch (e) {
-        res.status(400).json({ error: e.message })
-    }
-})
-
-router.delete('/admin/extensions/:featureKey', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
-    try {
-        await unpublishPlugin(req.params.featureKey)
-        res.json({ ok: true })
     } catch (e) {
         res.status(500).json({ error: e.message })
     }
