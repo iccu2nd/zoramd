@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { ObjectId } from 'mongodb'
 import { v4 as uuidv4 } from 'uuid'
 import {
-    authMiddleware, loadAccount, register, login,
+    authMiddleware, loadAccount, register, login, startRegister, completeRegister,
     requestEmailVerification, confirmEmailVerification,
     requestPasswordReset, resetPassword
 } from '../auth.js'
@@ -114,14 +114,40 @@ function safeObjectId(id) {
 router.post('/auth/register', authStrictLimit, async (req, res) => {
     try {
         const { email, password, name } = req.body || {}
-        const { account, token } = await register({ email, password, name })
+        const result = await startRegister({ email, password, name })
+        res.json({ pending: true, email: result.email, message: 'Kode OTP dikirim ke email' })
+    } catch (e) {
+        res.status(400).json({ error: publicError(e, 'Registrasi gagal') })
+    }
+})
+
+router.post('/auth/register/confirm', authStrictLimit, async (req, res) => {
+    try {
+        const { email, code } = req.body || {}
+        const { account, token } = await completeRegister({ email, code })
         res.cookie('token', token, authCookieOptions())
         res.json({
             token,
-            user: { id: account._id, email: account.email, name: account.name }
+            user: {
+                id: account._id,
+                email: account.email,
+                name: account.name,
+                emailVerified: true
+            }
         })
     } catch (e) {
-        res.status(400).json({ error: publicError(e, 'Registrasi gagal') })
+        res.status(400).json({ error: publicError(e, 'Verifikasi gagal') })
+    }
+})
+
+router.post('/auth/register/resend', authStrictLimit, async (req, res) => {
+    try {
+        const { email, password, name } = req.body || {}
+        // resend = start ulang (butuh password lagi dari form pending di client)
+        const result = await startRegister({ email, password, name })
+        res.json({ pending: true, email: result.email, message: 'Kode OTP dikirim ulang' })
+    } catch (e) {
+        res.status(400).json({ error: publicError(e, 'Gagal kirim ulang OTP') })
     }
 })
 

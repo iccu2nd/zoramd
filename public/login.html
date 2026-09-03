@@ -5,12 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Masuk — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=17" />
+  <link rel="stylesheet" href="/css/style.css?v=22" />
   <style>
     .terms-row{display:flex;align-items:flex-start;gap:8px;margin:14px 0;font-size:13px;line-height:1.5;color:#888;cursor:pointer}
     .terms-row input[type="checkbox"]{margin-top:4px;width:16px;height:16px;flex:none;cursor:pointer}
     .terms-row a{color:inherit;text-decoration:underline}
-  </style>
+  
+    .otp-boxes{display:flex;gap:8px;justify-content:center;margin:18px 0 16px}
+    .otp-digit{
+      width:44px;height:52px;text-align:center;font-size:1.35rem;font-weight:700;
+      border:1px solid #e5e7eb;border-radius:12px;background:#fff;color:#111;
+    }
+    .otp-digit:focus{outline:2px solid #7c3aed;border-color:#7c3aed}
+    </style>
 </head>
 <body>
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
@@ -64,11 +71,29 @@
         <p id="reg-error" class="error"></p>
         <p class="subtitle" style="margin-top:14px">Sudah punya akun? <a href="#" id="go-login">Masuk</a></p>
       </form>
+
+      <form id="otp-form" class="auth-form hidden">
+        <h2 style="margin:0 0 6px;font-size:1.25rem">Verifikasi email</h2>
+        <p class="subtitle" id="otp-hint">Masukkan 6 digit kode yang dikirim ke emailmu.</p>
+        <div class="otp-boxes" id="otp-boxes">
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="one-time-code" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
+        </div>
+        <button type="submit" class="btn primary" id="otp-submit">Verifikasi &amp; Buat Akun</button>
+        <button type="button" class="btn outline" id="otp-resend" style="margin-top:8px;width:100%">Kirim ulang kode</button>
+        <p id="otp-error" class="error"></p>
+        <p class="subtitle" style="margin-top:14px"><a href="#" id="otp-back">Kembali ke daftar</a></p>
+      </form>
+
     </div>
   </div>
 
-  <script src="/js/bg-pattern.js?v=17"></script>
-  <script src="/js/login.js?v=17"></script>
+  <script src="/js/bg-pattern.js?v=22"></script>
+  <script src="/js/login.js?v=22"></script>
 
 <footer id="site-footer" class="site-footer">
   <div class="site-footer-links">

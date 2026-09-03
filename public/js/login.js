@@ -89,18 +89,72 @@ function showNoticeFromQuery() {
   }
 }
 
+let pendingReg = null // { name, email, password }
+
+function showForm(id) {
+  ;['login-form', 'register-form', 'otp-form'].forEach(fid => {
+    const el = $('#' + fid)
+    if (!el) return
+    if (fid === id) show(el)
+    else hide(el)
+  })
+}
+
+function getOtpCode() {
+  return Array.from(document.querySelectorAll('.otp-digit')).map(i => i.value).join('')
+}
+
+function clearOtpBoxes() {
+  document.querySelectorAll('.otp-digit').forEach(i => { i.value = '' })
+  const first = document.querySelector('.otp-digit')
+  if (first) first.focus()
+}
+
+function bindOtpBoxes() {
+  const boxes = Array.from(document.querySelectorAll('.otp-digit'))
+  if (!boxes.length) return
+  boxes.forEach((box, idx) => {
+    box.addEventListener('input', () => {
+      box.value = box.value.replace(/\D/g, '').slice(0, 1)
+      if (box.value && idx < boxes.length - 1) boxes[idx + 1].focus()
+      if (getOtpCode().length === 6) {
+        const form = $('#otp-form')
+        if (form) form.requestSubmit()
+      }
+    })
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !box.value && idx > 0) boxes[idx - 1].focus()
+    })
+    box.addEventListener('paste', (e) => {
+      e.preventDefault()
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6)
+      text.split('').forEach((ch, i) => { if (boxes[i]) boxes[i].value = ch })
+      if (text.length === 6 && $('#otp-form')) $('#otp-form').requestSubmit()
+      else if (boxes[Math.min(text.length, boxes.length - 1)]) boxes[Math.min(text.length, boxes.length - 1)].focus()
+    })
+  })
+}
+
 $('#go-register').onclick = (e) => {
   e.preventDefault()
-  hide($('#login-form'))
-  show($('#register-form'))
+  showForm('register-form')
   $('#login-error').textContent = ''
 }
 
 $('#go-login').onclick = (e) => {
   e.preventDefault()
-  hide($('#register-form'))
-  show($('#login-form'))
+  showForm('login-form')
   $('#reg-error').textContent = ''
+  pendingReg = null
+}
+
+const otpBack = $('#otp-back')
+if (otpBack) {
+  otpBack.onclick = (e) => {
+    e.preventDefault()
+    showForm('register-form')
+    $('#otp-error').textContent = ''
+  }
 }
 
 $('#login-form').onsubmit = async (e) => {
@@ -137,26 +191,93 @@ $('#register-form').onsubmit = async (e) => {
     $('#reg-error').textContent = 'Kamu harus menyetujui Syarat & Ketentuan dulu'
     return
   }
+  const name = ($('#reg-name').value || '').trim()
+  const email = ($('#reg-email').value || '').trim()
+  const password = $('#reg-password').value
+  if (!name) {
+    $('#reg-error').textContent = 'Nama wajib diisi'
+    return
+  }
   const btn = $('#reg-submit')
   btn.disabled = true
   try {
-    const data = await api('/auth/register', {
+    await api('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({
-        name: $('#reg-name').value,
-        email: $('#reg-email').value,
-        password: $('#reg-password').value
-      })
+      body: JSON.stringify({ name, email, password })
     })
-    localStorage.setItem('token', data.token)
-    setLoading(true, 'Akun dibuat, mengalihkan...')
-    await new Promise(r => setTimeout(r, 400))
-    redirectToApp()
+    pendingReg = { name, email, password }
+    const hint = $('#otp-hint')
+    if (hint) hint.textContent = 'Kode 6 digit dikirim ke ' + email
+    clearOtpBoxes()
+    showForm('otp-form')
   } catch (err) {
     $('#reg-error').textContent = err.message
-    btn.disabled = false
+  } finally {
+    btn.disabled = !$('#reg-terms').checked
   }
 }
+
+const otpForm = $('#otp-form')
+if (otpForm) {
+  otpForm.onsubmit = async (e) => {
+    e.preventDefault()
+    const errEl = $('#otp-error')
+    if (errEl) errEl.textContent = ''
+    if (!pendingReg) {
+      if (errEl) errEl.textContent = 'Sesi daftar habis, isi form lagi'
+      showForm('register-form')
+      return
+    }
+    const code = getOtpCode()
+    if (code.length !== 6) {
+      if (errEl) errEl.textContent = 'Masukkan 6 digit kode'
+      return
+    }
+    const btn = $('#otp-submit')
+    if (btn) btn.disabled = true
+    try {
+      const data = await api('/auth/register/confirm', {
+        method: 'POST',
+        body: JSON.stringify({ email: pendingReg.email, code })
+      })
+      localStorage.setItem('token', data.token)
+      pendingReg = null
+      setLoading(true, 'Akun dibuat...')
+      await new Promise(r => setTimeout(r, 400))
+      redirectToApp()
+    } catch (err) {
+      if (errEl) errEl.textContent = err.message
+      if (btn) btn.disabled = false
+    }
+  }
+}
+
+const otpResend = $('#otp-resend')
+if (otpResend) {
+  otpResend.onclick = async () => {
+    const errEl = $('#otp-error')
+    if (!pendingReg) {
+      if (errEl) errEl.textContent = 'Sesi daftar habis, isi form lagi'
+      showForm('register-form')
+      return
+    }
+    otpResend.disabled = true
+    try {
+      await api('/auth/register/resend', {
+        method: 'POST',
+        body: JSON.stringify(pendingReg)
+      })
+      if (errEl) { errEl.textContent = 'Kode baru dikirim.'; errEl.style.color = '#166534' }
+      clearOtpBoxes()
+    } catch (err) {
+      if (errEl) { errEl.textContent = err.message; errEl.style.color = '' }
+    } finally {
+      setTimeout(() => { otpResend.disabled = false }, 60000)
+    }
+  }
+}
+
+bindOtpBoxes()
 
 checkExistingSession()
 

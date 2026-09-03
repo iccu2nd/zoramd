@@ -26,24 +26,47 @@ export function verifyToken(token) {
     }
 }
 
-export async function register({ email, password, name }) {
+/** Step 1: validasi + kirim OTP. Akun belum dibuat. */
+export async function startRegister({ email, password, name }) {
     email = (email || '').trim().toLowerCase()
+    name = (name || '').trim()
     if (!email || !password || password.length < 6) {
         throw new Error('Email dan password (min 6 karakter) wajib diisi')
     }
+    if (!name) throw new Error('Nama wajib diisi')
     const existing = await findAccountByEmail(email)
     if (existing) throw new Error('Email sudah terdaftar')
     const passwordHash = await bcrypt.hash(password, 10)
-    const account = await createAccount({ email, passwordHash, name: name || email.split('@')[0] })
-    // Kirim OTP verifikasi email di background -- kalau gagal, jangan gagalin registrasi
-    // (user masih bisa minta kirim ulang dari halaman account).
-    try {
-        const code = await issueOtp(email, 'verify')
-        await sendVerificationOtp(email, code)
-    } catch (e) {
-        console.error('[auth] gagal kirim email verifikasi:', e.message)
-    }
+    const code = await issueOtp(email, 'register', {
+        passwordHash,
+        name: name || email.split('@')[0]
+    })
+    await sendVerificationOtp(email, code)
+    return { email, pending: true }
+}
+
+/** Step 2: verifikasi OTP 6 digit → buat akun (emailVerified = true) + token */
+export async function completeRegister({ email, code }) {
+    email = (email || '').trim().toLowerCase()
+    if (!email || !code) throw new Error('Email dan kode OTP wajib diisi')
+    const existing = await findAccountByEmail(email)
+    if (existing) throw new Error('Email sudah terdaftar')
+    const payload = await verifyOtp(email, 'register', code)
+    if (!payload?.passwordHash) throw new Error('Sesi registrasi tidak valid, daftar ulang')
+    const account = await createAccount({
+        email,
+        passwordHash: payload.passwordHash,
+        name: payload.name || email.split('@')[0]
+    })
+    await updateAccount(account._id, { emailVerified: true })
+    account.emailVerified = true
     return { account, token: signToken(account) }
+}
+
+/** Legacy: tetap ada jika dipanggil, tapi alur utama pakai start+complete */
+export async function register({ email, password, name }) {
+    await startRegister({ email, password, name })
+    throw new Error('OTP telah dikirim. Masukkan kode 6 digit untuk menyelesaikan daftar.')
 }
 
 export async function login({ email, password }) {
