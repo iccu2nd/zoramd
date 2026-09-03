@@ -76,8 +76,15 @@ button, .btn, .icon-btn, .bot-menu-btn, .feat-group-head, .tab, select { touch-a
 }
 .app-background canvas { width: 100%; height: 100%; display: block; opacity: 0.45; }
 
-#loading-view, #main-view, .auth-wrap, .loading-wrap {
+#loading-view, .auth-wrap, .loading-wrap {
   position: relative; z-index: 1;
+}
+#main-view {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Typography */
@@ -321,10 +328,13 @@ code {
 .overlay.show { opacity: 1; pointer-events: auto; }
 
 .content {
-  padding: 28px 24px 48px;
+  padding: 28px 24px 24px;
   max-width: 900px;
   margin: 0 auto 0 calc(var(--sidebar-w) + 36px);
   animation: fadeUp 0.3s var(--ease);
+  flex: 1 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 .content > h2 {
   font-size: 1.75rem;
@@ -494,7 +504,7 @@ code {
     justify-content: flex-start; gap: 10px; border-radius: 12px;
   }
   .logout span { display: inline; }
-  .content { margin-left: 0; padding: 20px 16px 48px; max-width: 100%; }
+  .content { margin-left: 0; padding: 20px 16px 24px; max-width: 100%; }
 }
 
 @media (min-width: 900px) {
@@ -798,12 +808,16 @@ code {
 }
 .admin-subnav a:hover { opacity: 0.9; }
 
-/* Site footer — mirip footer website umum */
+/* Site footer — tempel di bawah halaman */
 .site-footer {
-  margin-top: 48px;
-  padding: 28px 20px 36px;
+  margin-top: auto;
+  flex-shrink: 0;
+  padding: 24px 20px 32px;
   border-top: 1px solid var(--border, #e5e7eb);
   text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
 }
 .site-footer-links {
   display: flex;

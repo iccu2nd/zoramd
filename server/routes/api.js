@@ -19,8 +19,8 @@ import botManager from '../../lib/botManager.js'
 import { getPlatformSettings, setPlatformSettings } from '../../lib/platformSettings.js'
 import { sendAdsManually } from '../../lib/adsScheduler.js'
 import {
-    listSharedFeatures, upsertSharedFeature, removeSharedFeature, getSharedFeature
-} from '../../lib/db/sharedFeatures.js'
+    listPublishedPlugins, getPublishedPlugin, publishPlugin, unpublishPlugin, loadAllCustomPlugins
+} from '../../lib/customPlugins.js'
 import { invalidateFeatureCache } from '../../lib/featureGate.js'
 import * as sociabuzz from '../../lib/sociabuzz.js'
 import { rateLimit, clientIp } from '../../lib/rateLimit.js'
@@ -1139,124 +1139,118 @@ router.post('/admin/bots/:id/status', authMiddleware, loadAccount, requireAdmin,
 
 
 
-// ---------- Shared Free Features (katalog fitur gratis) ----------
-router.get('/shared-features', authMiddleware, loadAccount, async (req, res) => {
+
+// ---------- Plugin Hub / Ekstensi ----------
+router.get('/extensions', authMiddleware, loadAccount, async (req, res) => {
     try {
-        const items = await listSharedFeatures()
-        const active = items.filter(i => i.active !== false)
-        res.json({ features: active })
+        const items = await listPublishedPlugins({ activeOnly: true })
+        res.json({
+            plugins: items.map(i => ({
+                featureKey: i.featureKey,
+                title: i.title,
+                description: i.description,
+                category: i.category,
+                updatedAt: i.updatedAt
+            }))
+        })
     } catch (e) {
         res.status(500).json({ error: e.message })
     }
 })
 
-router.get('/bots/:botId/shared-features', authMiddleware, loadAccount, async (req, res) => {
+router.get('/bots/:botId/extensions', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
         if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
-        const catalog = (await listSharedFeatures()).filter(i => i.active !== false)
+        const catalog = await listPublishedPlugins({ activeOnly: true })
         const saved = await getAllFeatureSettings(bot.sessionId)
         const map = {}
         for (const s of saved) map[s.featureKey] = s
-        const features = catalog.map(c => {
+        const plugins = catalog.map(c => {
             const s = map[c.featureKey] || {}
-            const installed = s.sharedInstalled === true || (s.sharedInstalled == null && s.enabled !== false && s._fromShared)
-            // installed = user explicitly added (sharedInstalled true)
-            const isAdded = s.sharedInstalled === true
+            const installed = s.sharedInstalled === true
             return {
                 featureKey: c.featureKey,
                 title: c.title,
                 description: c.description,
                 category: c.category,
-                added: isAdded,
-                enabled: s.enabled !== false && isAdded
+                installed,
+                enabled: installed && s.enabled !== false
             }
         })
-        res.json({ features, botId: bot._id.toString(), sessionId: bot.sessionId })
+        res.json({ plugins, botId: bot._id.toString() })
     } catch (e) {
         res.status(500).json({ error: e.message })
     }
 })
 
-router.post('/bots/:botId/shared-features/:featureKey/add', authMiddleware, loadAccount, async (req, res) => {
+router.post('/bots/:botId/extensions/:featureKey/install', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
         if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
         const key = String(req.params.featureKey || '').trim().toLowerCase()
-        const shared = await getSharedFeature(key)
-        if (!shared || shared.active === false) {
-            return res.status(404).json({ error: 'Fitur tidak ada di katalog gratis' })
-        }
-        await setFeatureSetting(bot.sessionId, key, {
-            enabled: true,
-            sharedInstalled: true
-        })
+        const pub = await getPublishedPlugin(key)
+        if (!pub || pub.active === false) return res.status(404).json({ error: 'Ekstensi tidak ditemukan' })
+        await setFeatureSetting(bot.sessionId, key, { enabled: true, sharedInstalled: true })
         invalidateFeatureCache(bot.sessionId, key)
-        res.json({ ok: true, featureKey: key, added: true })
+        res.json({ ok: true, featureKey: key, installed: true })
     } catch (e) {
         res.status(500).json({ error: e.message })
     }
 })
 
-router.post('/bots/:botId/shared-features/:featureKey/remove', authMiddleware, loadAccount, async (req, res) => {
+router.post('/bots/:botId/extensions/:featureKey/uninstall', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
         if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
         const key = String(req.params.featureKey || '').trim().toLowerCase()
-        await setFeatureSetting(bot.sessionId, key, {
-            enabled: false,
-            sharedInstalled: false
-        })
+        await setFeatureSetting(bot.sessionId, key, { enabled: false, sharedInstalled: false })
         invalidateFeatureCache(bot.sessionId, key)
-        res.json({ ok: true, featureKey: key, added: false })
+        res.json({ ok: true, featureKey: key, installed: false })
     } catch (e) {
         res.status(500).json({ error: e.message })
     }
 })
 
-// Admin: kelola katalog
-router.get('/admin/shared-features', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+router.get('/admin/extensions', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
     try {
-        const items = await listSharedFeatures()
-        // daftar plugin yang tersedia untuk di-share
-        const { plugins } = await import('../../lib/plugins.js')
-        const pluginList = []
-        for (const [, plugin] of plugins) {
-            const cmds = plugin.cmd || []
-            if (!cmds.length) continue
-            pluginList.push({
-                featureKey: cmds[0],
-                aliases: cmds,
-                description: plugin.description || plugin.help || '',
-                category: (plugin.category || 'others').toLowerCase()
-            })
-        }
-        pluginList.sort((a, b) => a.featureKey.localeCompare(b.featureKey))
-        res.json({ shared: items, plugins: pluginList })
+        const items = await listPublishedPlugins({ activeOnly: false })
+        res.json({ plugins: items })
     } catch (e) {
         res.status(500).json({ error: e.message })
     }
 })
 
-router.post('/admin/shared-features', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+router.post('/admin/extensions', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
     try {
         const body = req.body || {}
-        const doc = await upsertSharedFeature({
+        const doc = await publishPlugin({
             featureKey: body.featureKey,
             title: body.title,
             description: body.description,
             category: body.category,
+            code: body.code,
             active: body.active !== false
         })
-        res.json({ ok: true, feature: doc })
+        res.json({
+            ok: true,
+            plugin: {
+                featureKey: doc.featureKey,
+                title: doc.title,
+                description: doc.description,
+                category: doc.category,
+                active: doc.active,
+                updatedAt: doc.updatedAt
+            }
+        })
     } catch (e) {
         res.status(400).json({ error: e.message })
     }
 })
 
-router.delete('/admin/shared-features/:featureKey', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+router.delete('/admin/extensions/:featureKey', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
     try {
-        await removeSharedFeature(req.params.featureKey)
+        await unpublishPlugin(req.params.featureKey)
         res.json({ ok: true })
     } catch (e) {
         res.status(500).json({ error: e.message })

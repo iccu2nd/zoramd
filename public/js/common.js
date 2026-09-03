@@ -119,19 +119,18 @@
     foot.className = 'site-footer'
     foot.innerHTML =
       '<div class="site-footer-links">' +
-        '<a href="/upgrade">Premium</a><span class="site-footer-sep">|</span>' +
-        '<a href="/account">Account</a><span class="site-footer-sep">|</span>' +
-        '<a href="/terms" target="_blank" rel="noopener">Syarat &amp; Ketentuan</a><span class="site-footer-sep">|</span>' +
+        '<a href="/terms" target="_blank" rel="noopener">Syarat &amp; Ketentuan</a>' +
+        '<span class="site-footer-sep">|</span>' +
         '<a href="/privacy" target="_blank" rel="noopener">Kebijakan Privasi</a>' +
-      '</div>' +
-      '<div class="site-footer-links" style="margin-top:4px">' +
-        '<a href="/dashboard">Dashboard</a><span class="site-footer-sep">|</span>' +
-        '<a href="/connect">Connect Bot</a><span class="site-footer-sep">|</span>' +
-        '<a href="/free-features">Fitur Gratis</a>' +
+        '<span class="site-footer-sep">|</span>' +
+        '<a href="/upgrade">Premium</a>' +
+        '<span class="site-footer-sep">|</span>' +
+        '<a href="/extensions">Ekstensi</a>' +
       '</div>' +
       '<p class="site-footer-copy">&copy; ' + year + ' ZoraBot. All rights reserved.</p>'
-    var main = document.querySelector('main.content') || document.getElementById('main-view') || document.body
-    main.appendChild(foot)
+    // Tempel di #main-view agar sticky di bawah viewport
+    var root = document.getElementById('main-view') || document.body
+    root.appendChild(foot)
   }
 
   function bindShell() {

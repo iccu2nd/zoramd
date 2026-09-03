@@ -178,6 +178,7 @@
         '</div>'
     }
 
+    html += '<p class="hint" style="margin:10px 0 0;font-weight:600">Jumlah: Rp' + Number(data.baseAmount || data.amount || 0).toLocaleString('id-ID') + '</p>'
     html += '<div class="payment-actions">'
     if (p.qr_string || p.qr_image) {
       var qrSrc2 = p.qr_image || ('https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=' + encodeURIComponent(p.qr_string))
