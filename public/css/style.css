@@ -218,13 +218,13 @@ code {
 .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
 
 .btn.primary {
-  background: linear-gradient(180deg, #8b7cf6 0%, var(--purple-2) 100%);
+  background: var(--purple-2);
   color: #fff; border: none;
-  box-shadow: 0 4px 14px rgba(109, 94, 245, 0.35), 0 1px 0 rgba(255,255,255,0.2) inset;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 2px rgba(30,27,75,0.2);
 }
 .btn.primary:hover {
-  box-shadow: 0 6px 20px rgba(109, 94, 245, 0.45);
-  filter: brightness(1.03);
+  background: #5b4de0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 3px 8px rgba(30,27,75,0.24);
 }
 .btn.outline {
   background: var(--surface); border: 1.5px solid var(--border-strong); color: var(--text-2);
@@ -697,47 +697,38 @@ code {
 #loading-view.hidden { display: none !important; }
 
 
-/* Uiverse spinner — mrhyddenn */
+/* ZoraBot signal spinner — a pulsing connection ping, not a stock activity indicator.
+   Ties into what the product actually does (pairing/connecting a bot), single element,
+   no child nodes needed. */
 .spinner {
   font-size: 28px;
   position: relative;
   display: inline-block;
   width: 1em;
   height: 1em;
+  background: radial-gradient(circle, var(--purple-2) 0 21%, transparent 22%);
 }
 .spinner.center {
   position: relative;
   margin: 0 auto 12px;
   left: auto; right: auto; top: auto; bottom: auto;
 }
-.spinner .spinner-blade {
+.spinner::before,
+.spinner::after {
+  content: '';
   position: absolute;
-  left: 0.4629em;
-  bottom: 0;
-  width: 0.074em;
-  height: 0.2777em;
-  border-radius: 0.0555em;
-  background-color: transparent;
-  transform-origin: center -0.2222em;
-  animation: spinner-fade9234 1s infinite linear;
+  inset: 0;
+  border-radius: 50%;
+  border: 0.075em solid var(--purple-2);
+  animation: spinner-ping 1.5s var(--ease) infinite;
+  opacity: 0;
 }
-.spinner .spinner-blade:nth-child(1) { animation-delay: 0s; transform: rotate(0deg); }
-.spinner .spinner-blade:nth-child(2) { animation-delay: 0.083s; transform: rotate(30deg); }
-.spinner .spinner-blade:nth-child(3) { animation-delay: 0.166s; transform: rotate(60deg); }
-.spinner .spinner-blade:nth-child(4) { animation-delay: 0.249s; transform: rotate(90deg); }
-.spinner .spinner-blade:nth-child(5) { animation-delay: 0.332s; transform: rotate(120deg); }
-.spinner .spinner-blade:nth-child(6) { animation-delay: 0.415s; transform: rotate(150deg); }
-.spinner .spinner-blade:nth-child(7) { animation-delay: 0.498s; transform: rotate(180deg); }
-.spinner .spinner-blade:nth-child(8) { animation-delay: 0.581s; transform: rotate(210deg); }
-.spinner .spinner-blade:nth-child(9) { animation-delay: 0.664s; transform: rotate(240deg); }
-.spinner .spinner-blade:nth-child(10) { animation-delay: 0.747s; transform: rotate(270deg); }
-.spinner .spinner-blade:nth-child(11) { animation-delay: 0.83s; transform: rotate(300deg); }
-.spinner .spinner-blade:nth-child(12) { animation-delay: 0.913s; transform: rotate(330deg); }
-@keyframes spinner-fade9234 {
-  0% { background-color: #69717d; }
-  100% { background-color: transparent; }
+.spinner::after { animation-delay: 0.5s; }
+@keyframes spinner-ping {
+  0% { transform: scale(0.35); opacity: 0.65; }
+  75%, 100% { transform: scale(1); opacity: 0; }
 }
-/* Overlay check spinner uses same blades when needed */
+/* Overlay check spinner reuses the same ping */
 .pay-check-spinner.spinner {
   font-size: 32px;
   margin: 0 auto;
