@@ -239,7 +239,7 @@ const convertVideoToWebp = async (buffer) => {
 export default {
     cmd: ['smeme'],
     category: 'tools',
-    run: async (m, { sock, text, prefix, cmd }) => {
+    run: async (m, { sock, config, text, prefix, cmd }) => {
         let url = ''
         let rest = text || ''
 
@@ -299,7 +299,7 @@ export default {
                     .webp({ quality: 80, pageHeight: height, loop: 0 })
                     .toBuffer()
 
-                await sock.sendSticker(m.from, composed, m)
+                await sock.sendSticker(m.from, composed, m, { packname: config.packname || config.botName, author: config.author || config.botName })
             } else {
                 let width = meta.width
                 let height = meta.height
@@ -313,7 +313,7 @@ export default {
                 const overlayBuffer = await renderOverlay(width, height, top, bottom)
                 const composed = await sharp(resized).composite([{ input: overlayBuffer, top: 0, left: 0 }]).webp({ quality: 90 }).toBuffer()
 
-                await sock.sendSticker(m.from, composed, m)
+                await sock.sendSticker(m.from, composed, m, { packname: config.packname || config.botName, author: config.author || config.botName })
             }
 
             await m.react('✅')

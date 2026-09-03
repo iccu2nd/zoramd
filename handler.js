@@ -15,6 +15,7 @@ import { setBotStatus } from './lib/db/accounts.js'
 import { resolveFeature, checkAccessRule, getCustomCommandMap } from './lib/featureGate.js'
 import { runWithFreeQueue } from './lib/freeQueue.js'
 import { isAccountPremium } from './lib/db/subscription.js'
+import { resolveBotConfig } from './lib/botConfig.js'
 
 const prefixes = ['.', '/', '#', '!']
 
@@ -64,6 +65,8 @@ async function antiDelete(sock, raw) {
 }
 
 export async function handleMessage(sock, config, { messages, type }) {
+    // Selalu pakai identity live dari sock.botConfig (Bot Settings premium)
+    config = resolveBotConfig(sock, config || {})
     if (type !== 'notify') return
     const raw = messages[0]
     if (!raw?.message) return
@@ -271,6 +274,7 @@ export async function onGroupsUpdate(sock, [event]) {
 }
 
 export async function onParticipantsUpdate(sock, config, { id, participants, action }) {
+    config = resolveBotConfig(sock, config || {})
     let metadata = null
     try {
         metadata = await sock.groupMetadata(id)

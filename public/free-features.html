@@ -3,28 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Live Chatlog — ZoraBot</title>
+  <title>Fitur Gratis — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=17" />
+  <link rel="stylesheet" href="/css/style.css?v=18" />
 </head>
-<body data-page="chatlog">
-  <div id="loading-view" class="loading-wrap">
+<body data-page="free-features">
+  <div id="loading-view" class="loading-wrap hidden" style="display:none">
     <div class="loading-card">
       <div class="loading-logo">ZoraBot</div>
       <div class="spinner center" aria-hidden="true">
-        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
-        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
-        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
       </div>
-      <p class="loading-text" id="loading-text">Memuat...</p>
+      <p class="loading-text">Memuat...</p>
     </div>
   </div>
 
-  <div id="main-view" class="hidden">
+  <div id="main-view">
     <header class="topbar">
-      <button id="menu-btn" class="icon-btn" aria-label="Menu">
-        <span></span><span></span><span></span>
-      </button>
+      <button id="menu-btn" class="icon-btn" aria-label="Menu"><span></span><span></span><span></span></button>
       <div class="brand">ZoraBot</div>
       <div class="user-chip" id="user-chip"></div>
     </header>
@@ -36,10 +35,9 @@
         <a href="/connect" class="nav-item"><i class="fa-solid fa-qrcode"></i><span>Connect Bot</span></a>
         <a href="/bot-settings" class="nav-item"><i class="fa-solid fa-sliders"></i><span>Bot Settings</span></a>
         <a href="/feature-settings" class="nav-item"><i class="fa-solid fa-puzzle-piece"></i><span>Feature Settings</span></a>
-        
-        <a href="/free-features" class="nav-item"><i class="fa-solid fa-gift"></i><span>Fitur Gratis</span></a>
-<a href="/database" class="nav-item"><i class="fa-solid fa-database"></i><span>Database</span></a>
-        <a href="/chatlog" class="nav-item active"><i class="fa-solid fa-comments"></i><span>Live Chatlog</span></a>
+        <a href="/free-features" class="nav-item active"><i class="fa-solid fa-gift"></i><span>Fitur Gratis</span></a>
+        <a href="/database" class="nav-item"><i class="fa-solid fa-database"></i><span>Database</span></a>
+        <a href="/chatlog" class="nav-item"><i class="fa-solid fa-comments"></i><span>Live Chatlog</span></a>
         <div class="nav-label">Premium</div>
         <a href="/upgrade" class="nav-item"><i class="fa-solid fa-crown"></i><span>Order Plan Premium</span></a>
         <div class="nav-label">Akun</div>
@@ -51,28 +49,21 @@
     <div id="sidebar-overlay" class="overlay"></div>
 
     <main class="content">
-      <h2>Live Chatlog</h2>
-      <p class="hint">8 pesan WhatsApp terbaru. Tidak disimpan permanen.</p>
+      <h2>Fitur Gratis</h2>
+      <p class="hint">Katalog fitur yang dishare owner platform. Pilih bot, lalu <strong>Tambah</strong> ke bot kamu — atau <strong>Lepas</strong> jika tidak dipakai.</p>
+
       <div class="field">
         <label>Pilih Bot</label>
-        <select id="chatlog-bot-select"></select>
+        <select id="ff-bot-select"></select>
       </div>
-      <div id="chatlog-list" class="chatlog-list"></div>
+
+      <div id="ff-list" class="features-list" style="margin-top:12px"></div>
+      <p id="ff-msg" class="msg"></p>
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=11"></script>
-  <script src="/js/common.js?v=11"></script>
-  <script src="/js/chatlog.js?v=11"></script>
-  <script>
-  setTimeout(function () {
-    var lv = document.getElementById('loading-view');
-    var mv = document.getElementById('main-view');
-    if (lv && getComputedStyle(lv).display !== 'none') {
-      lv.classList.add('hidden'); lv.style.display = 'none';
-      if (mv) { mv.classList.remove('hidden'); mv.style.display = ''; }
-    }
-  }, 3500);
-  </script>
+  <script src="/js/bg-pattern.js?v=18"></script>
+  <script src="/js/common.js?v=18"></script>
+  <script src="/js/free-features.js?v=18"></script>
 </body>
 </html>

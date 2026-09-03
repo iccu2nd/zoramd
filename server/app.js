@@ -18,6 +18,7 @@ const PAGE_MAP = {
     '/connect': 'connect.html',
     '/bot-settings': 'bot-settings.html',
     '/feature-settings': 'feature-settings.html',
+    '/free-features': 'free-features.html',
     '/chatlog': 'chatlog.html',
     '/upgrade': 'upgrade.html',
     '/account': 'account.html',
@@ -26,6 +27,7 @@ const PAGE_MAP = {
     '/admin/users': 'admin-users.html',
     '/admin/bots': 'admin-bots.html',
     '/admin/ads': 'admin-ads.html',
+    '/admin/features': 'admin-features.html',
     '/terms': 'terms.html',
     '/privacy': 'privacy.html'
 }

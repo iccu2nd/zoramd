@@ -27,7 +27,7 @@ export default {
 
         try {
             await sock.sendSticker(m.from, gifBuffer, m, {
-                packname: config.packname,
+                packname: config.packname || config.botName || 'ZoraBot',
                 author: config.author
             })
             await m.reply(caption, { mentions })

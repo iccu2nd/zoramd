@@ -14,8 +14,8 @@ export default {
             const buf = Buffer.from(res.data)
 
             await sock.sendSticker(m.from, buf, m, {
-                packname: config.packname,
-                author: config.author,
+                packname: config.packname || config.botName || 'ZoraBot',
+                author: config.author || config.botName || 'ZoraBot',
                 isAnimated: false
             })
 

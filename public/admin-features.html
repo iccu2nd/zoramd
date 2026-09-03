@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin Users — ZoraBot</title>
+  <title>Admin Fitur Gratis — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=17" />
+  <link rel="stylesheet" href="/css/style.css?v=18" />
 </head>
-<body data-page="admin-users">
+<body data-page="admin-features">
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
     <div class="loading-card">
       <div class="loading-logo">ZoraBot</div>
@@ -17,15 +17,13 @@
         <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
         <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
       </div>
-      <p class="loading-text" id="loading-text">Memuat...</p>
+      <p class="loading-text">Memuat...</p>
     </div>
   </div>
 
   <div id="main-view">
     <header class="topbar">
-      <button id="menu-btn" class="icon-btn" aria-label="Menu">
-        <span></span><span></span><span></span>
-      </button>
+      <button id="menu-btn" class="icon-btn" aria-label="Menu"><span></span><span></span><span></span></button>
       <div class="brand">ZoraBot</div>
       <div class="user-chip" id="user-chip"></div>
     </header>
@@ -34,10 +32,10 @@
       <nav>
         <div class="nav-label">Admin</div>
         <a href="/admin" class="nav-item"><i class="fa-solid fa-gauge-high"></i><span>Overview</span></a>
-        <a href="/admin/users" class="nav-item active"><i class="fa-solid fa-users"></i><span>Users</span></a>
+        <a href="/admin/users" class="nav-item"><i class="fa-solid fa-users"></i><span>Users</span></a>
         <a href="/admin/bots" class="nav-item"><i class="fa-solid fa-robot"></i><span>Bots</span></a>
-        <a href="/admin/features" class="nav-item"><i class="fa-solid fa-gift"></i><span>Fitur Gratis</span></a>
         <a href="/admin/ads" class="nav-item"><i class="fa-solid fa-bullhorn"></i><span>Ads / Iklan</span></a>
+        <a href="/admin/features" class="nav-item active"><i class="fa-solid fa-gift"></i><span>Fitur Gratis</span></a>
         <div class="nav-label">Kembali</div>
         <a href="/dashboard" class="nav-item"><i class="fa-solid fa-arrow-left"></i><span>Dashboard</span></a>
         <a href="/account" class="nav-item"><i class="fa-solid fa-user"></i><span>Account</span></a>
@@ -47,27 +45,36 @@
     <div id="sidebar-overlay" class="overlay"></div>
 
     <main class="content">
-      <h2>Users</h2>
-      <p class="hint">Kelola role akun (admin / user).</p>
-      <div id="admin-stats" class="limits-bar" style="margin-bottom:16px"></div>
+      <h2>Share Fitur Gratis</h2>
+      <p class="hint">Pilih plugin/command yang mau dishare ke semua user. User bisa <strong>Tambah</strong> ke bot mereka dari menu Fitur Gratis.</p>
+
+      <div class="info-card" style="margin-bottom:16px">
+        <h3 style="margin-bottom:10px">Tambah ke katalog</h3>
+        <div class="field">
+          <label>Plugin / command</label>
+          <select id="sf-plugin"></select>
+        </div>
+        <div class="field">
+          <label>Judul tampilan</label>
+          <input type="text" id="sf-title" placeholder="Contoh: Sticker Maker" />
+        </div>
+        <div class="field">
+          <label>Deskripsi singkat</label>
+          <input type="text" id="sf-desc" placeholder="Opsional" />
+        </div>
+        <button type="button" id="sf-add" class="btn primary">Share ke katalog</button>
+        <p id="sf-msg" class="msg"></p>
+      </div>
+
       <div class="plan-card">
-        <div id="admin-users" class="bots-list" style="margin-top:4px"></div>
+        <h3>Katalog aktif</h3>
+        <div id="sf-list" class="bots-list" style="margin-top:12px"></div>
       </div>
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=17"></script>
-  <script src="/js/common.js?v=17"></script>
-  <script src="/js/admin.js?v=17"></script>
-  <script>
-  setTimeout(function () {
-    var lv = document.getElementById('loading-view');
-    var mv = document.getElementById('main-view');
-    if (lv && getComputedStyle(lv).display !== 'none') {
-      lv.classList.add('hidden'); lv.style.display = 'none';
-      if (mv) { mv.classList.remove('hidden'); mv.style.display = ''; }
-    }
-  }, 1500);
-  </script>
+  <script src="/js/bg-pattern.js?v=18"></script>
+  <script src="/js/common.js?v=18"></script>
+  <script src="/js/admin-features.js?v=18"></script>
 </body>
 </html>

@@ -18,6 +18,10 @@ import { COLLECTIONS } from '../../lib/db/schema.js'
 import botManager from '../../lib/botManager.js'
 import { getPlatformSettings, setPlatformSettings } from '../../lib/platformSettings.js'
 import { sendAdsManually } from '../../lib/adsScheduler.js'
+import {
+    listSharedFeatures, upsertSharedFeature, removeSharedFeature, getSharedFeature
+} from '../../lib/db/sharedFeatures.js'
+import { invalidateFeatureCache } from '../../lib/featureGate.js'
 import * as sociabuzz from '../../lib/sociabuzz.js'
 import { rateLimit, clientIp } from '../../lib/rateLimit.js'
 import { authCookieOptions, publicError } from '../../lib/security.js'
@@ -53,8 +57,8 @@ router.get('/health', (req, res) => {
 })
 
 
-const PREMIUM_PRICE = 10000
-const PREMIUM_PLANS = { '7d': { days: 7, price: 5000, label: '7 Hari' }, '30d': { months: 1, price: 10000, label: '30 Hari' } }
+const PREMIUM_PRICE = 15000
+const PREMIUM_PLANS = { '7d': { days: 7, price: 5000, label: '7 Hari' }, '30d': { months: 1, price: 15000, label: '30 Hari' } }
 function resolvePlan(duration) { return PREMIUM_PLANS[duration] || PREMIUM_PLANS['30d'] }
 
 /** Normalize & validate international WhatsApp number (e.g. 628xxx). Returns digits-only or null. */
@@ -422,6 +426,26 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
                 { $set: { ...patchSettings, updatedAt: new Date() } },
                 { upsert: true }
             )
+        }
+
+        // Refresh identity/config di instance yang sedang running agar sticker & plugin
+        // langsung ikut Bot Settings tanpa wajib restart manual.
+        try {
+            const fresh = await findOwnedBot(req.params.botId, req.account._id)
+            if (fresh) {
+                const inst = botManager.get(fresh.sessionId)
+                if (inst) {
+                    inst.botDoc = fresh
+                    if (inst.sock) {
+                        const cfg = inst.buildConfig()
+                        cfg.ownerAccountId = fresh.ownerId?.toString?.() || fresh.ownerId || null
+                        inst.sock.botConfig = cfg
+                        inst.sock.sessionId = fresh.sessionId
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('[settings] refresh botConfig:', e.message)
         }
 
         res.json({ ok: true })
@@ -1110,6 +1134,132 @@ router.post('/admin/bots/:id/status', authMiddleware, loadAccount, requireAdmin,
         res.json({ ok: true, state: botManager.getState(bot.sessionId) })
     } catch (e) {
         res.status(500).json({ error: publicError(e) })
+    }
+})
+
+
+
+// ---------- Shared Free Features (katalog fitur gratis) ----------
+router.get('/shared-features', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const items = await listSharedFeatures()
+        const active = items.filter(i => i.active !== false)
+        res.json({ features: active })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.get('/bots/:botId/shared-features', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const bot = await findOwnedBot(req.params.botId, req.account._id)
+        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        const catalog = (await listSharedFeatures()).filter(i => i.active !== false)
+        const saved = await getAllFeatureSettings(bot.sessionId)
+        const map = {}
+        for (const s of saved) map[s.featureKey] = s
+        const features = catalog.map(c => {
+            const s = map[c.featureKey] || {}
+            const installed = s.sharedInstalled === true || (s.sharedInstalled == null && s.enabled !== false && s._fromShared)
+            // installed = user explicitly added (sharedInstalled true)
+            const isAdded = s.sharedInstalled === true
+            return {
+                featureKey: c.featureKey,
+                title: c.title,
+                description: c.description,
+                category: c.category,
+                added: isAdded,
+                enabled: s.enabled !== false && isAdded
+            }
+        })
+        res.json({ features, botId: bot._id.toString(), sessionId: bot.sessionId })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.post('/bots/:botId/shared-features/:featureKey/add', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const bot = await findOwnedBot(req.params.botId, req.account._id)
+        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        const key = String(req.params.featureKey || '').trim().toLowerCase()
+        const shared = await getSharedFeature(key)
+        if (!shared || shared.active === false) {
+            return res.status(404).json({ error: 'Fitur tidak ada di katalog gratis' })
+        }
+        await setFeatureSetting(bot.sessionId, key, {
+            enabled: true,
+            sharedInstalled: true
+        })
+        invalidateFeatureCache(bot.sessionId, key)
+        res.json({ ok: true, featureKey: key, added: true })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.post('/bots/:botId/shared-features/:featureKey/remove', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const bot = await findOwnedBot(req.params.botId, req.account._id)
+        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        const key = String(req.params.featureKey || '').trim().toLowerCase()
+        await setFeatureSetting(bot.sessionId, key, {
+            enabled: false,
+            sharedInstalled: false
+        })
+        invalidateFeatureCache(bot.sessionId, key)
+        res.json({ ok: true, featureKey: key, added: false })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+// Admin: kelola katalog
+router.get('/admin/shared-features', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        const items = await listSharedFeatures()
+        // daftar plugin yang tersedia untuk di-share
+        const { plugins } = await import('../../lib/plugins.js')
+        const pluginList = []
+        for (const [, plugin] of plugins) {
+            const cmds = plugin.cmd || []
+            if (!cmds.length) continue
+            pluginList.push({
+                featureKey: cmds[0],
+                aliases: cmds,
+                description: plugin.description || plugin.help || '',
+                category: (plugin.category || 'others').toLowerCase()
+            })
+        }
+        pluginList.sort((a, b) => a.featureKey.localeCompare(b.featureKey))
+        res.json({ shared: items, plugins: pluginList })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.post('/admin/shared-features', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        const body = req.body || {}
+        const doc = await upsertSharedFeature({
+            featureKey: body.featureKey,
+            title: body.title,
+            description: body.description,
+            category: body.category,
+            active: body.active !== false
+        })
+        res.json({ ok: true, feature: doc })
+    } catch (e) {
+        res.status(400).json({ error: e.message })
+    }
+})
+
+router.delete('/admin/shared-features/:featureKey', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        await removeSharedFeature(req.params.featureKey)
+        res.json({ ok: true })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
     }
 })
 

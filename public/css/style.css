@@ -797,3 +797,41 @@ code {
   color: var(--purple-2);
 }
 .admin-subnav a:hover { opacity: 0.9; }
+
+/* Site footer — mirip footer website umum */
+.site-footer {
+  margin-top: 48px;
+  padding: 28px 20px 36px;
+  border-top: 1px solid var(--border, #e5e7eb);
+  text-align: center;
+}
+.site-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px 0;
+  font-size: 0.875rem;
+  color: var(--text, #1f2937);
+  line-height: 1.8;
+}
+.site-footer-links a {
+  color: inherit;
+  text-decoration: none;
+  padding: 0 10px;
+  font-weight: 500;
+}
+.site-footer-links a:hover {
+  color: var(--purple-2, #7c3aed);
+  text-decoration: underline;
+}
+.site-footer-sep {
+  color: var(--muted, #9ca3af);
+  user-select: none;
+  font-weight: 300;
+}
+.site-footer-copy {
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: var(--muted, #9ca3af);
+}

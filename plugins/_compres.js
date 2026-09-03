@@ -63,7 +63,7 @@ const compressAudio = (inPath, outPath, bitrate) => new Promise((resolve, reject
 export default {
     cmd: ['compress', 'kompres'],
     category: 'tools',
-    run: async (m, { sock, prefix, cmd, text }) => {
+    run: async (m, { sock, config, prefix, cmd, text }) => {
         if (!m.quoted) {
             return m.reply(
                 `📦 *Kompres Media*\n\n` +
@@ -91,7 +91,7 @@ export default {
                 const quality = clamp(level, 15, 90)
                 const result = await compressWebp(buffer, quality, animated)
                 const pct = (100 - (result.length / originalSize * 100)).toFixed(1)
-                await sock.sendSticker(m.from, result, m, { isAnimated: animated })
+                await sock.sendSticker(m.from, result, m, { isAnimated: animated, packname: config.packname || config.botName, author: config.author || config.botName })
                 await m.reply(`${fmtSize(originalSize)} → ${fmtSize(result.length)} (hemat ${pct}%)`)
 
             } else if (/^image\//.test(mimetype)) {

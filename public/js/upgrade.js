@@ -149,7 +149,7 @@
     return 'qris'
   }
 
-  var PLAN_PRICES = { '7d': { price: 5000, label: '7 hari' }, '30d': { price: 10000, label: '30 hari' } }
+  var PLAN_PRICES = { '7d': { price: 5000, label: '7 hari' }, '30d': { price: 15000, label: '30 hari' } }
   function planDuration() {
     return (document.getElementById('plan-duration') && document.getElementById('plan-duration').value) || '30d'
   }

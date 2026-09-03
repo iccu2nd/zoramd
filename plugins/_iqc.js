@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import os from 'node:os'
 
-const BASE = join(os.homedir(), '.rezora-iqc')
+const BASE = join(os.homedir(), '.zorabot-iqc')
 const FONT_DIR = join(BASE, 'fonts')
 const FONT_PATH = join(FONT_DIR, 'Inter-Regular.ttf')
 const BG_PATH = join(BASE, 'iqc-hytam.png')
@@ -691,7 +691,7 @@ export default {
 
             output = join(
                 os.tmpdir(),
-                `rezora-iqc-${Date.now()}.png`
+                `zorabot-iqc-${Date.now()}.png`
             )
 
             await writeFile(
@@ -700,7 +700,7 @@ export default {
             )
 
             /*
-             * Kirim melalui socket utama Rezora
+             * Kirim melalui socket utama ZoraBot
              */
 
             await sock.sendMessage(

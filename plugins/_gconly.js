@@ -1,5 +1,4 @@
 import { settings } from '../lib/database.js'
-import config from '../config.js'
 
 const STATUS_LABEL = {
     false: 'OFF',
@@ -16,7 +15,8 @@ export default {
     category: 'owner',
     description: 'Batasi private chat: ditutup total, atau wajib join grup dulu',
 
-    run: async (m, { sock, isOwner, text, prefix, cmd }) => {
+    run: async (m, { sock, config, isOwner, text, prefix, cmd }) => {
+        const cfg = config || sock?.botConfig || {}
         if (!isOwner) return m.reply('Fitur ini khusus untuk owner.')
 
         if (sock.isJadibotSession) return m.reply('Fitur ini cuma bisa dipakai di bot utama.')
@@ -29,15 +29,15 @@ export default {
 
         if (!sub) {
             return m.reply(
-                `*roup-Only Mode*\n\n` +
+                `*Group-Only Mode*\n\n` +
                 `› Status saat ini : *${STATUS_LABEL[String(settings.gconly)]}${premiumSuffix()}*\n\n` +
                 `*${prefix}${cmd} on*                    -> private chat ditutup total, tidak diproses & TANPA notif\n` +
                 `*${prefix}${cmd} on --join*             -> private chat wajib join grup dulu, notif reminder 1x aja\n` +
                 `*${prefix}${cmd} on --premium*          -> tambahan: member premium bebas akses private chat, tidak perlu join\n` +
                 `*(bisa digabung, misal: ${prefix}${cmd} on --join --premium)*\n` +
                 `*${prefix}${cmd} off*                   -> nonaktif, private chat normal lagi\n\n` +
-                `Grup   : ${config.groupUrl}\n` +
-                `Saluran: ${config.channelUrl}`
+                `Grup   : ${cfg.groupUrl}\n` +
+                `Saluran: ${cfg.channelUrl}`
             )
         }
 
@@ -64,8 +64,8 @@ export default {
 
             return m.reply(
                 `✅ Group-only mode diaktifkan (mode *join*).\n\n` +
-                `Private chat cuma bisa dipakai kalau user sudah join grup:\n${config.groupUrl}\n\n` +
-                `dan follow saluran:\n${config.channelUrl}\n\n` +
+                `Private chat cuma bisa dipakai kalau user sudah join grup:\n${cfg.groupUrl}\n\n` +
+                `dan follow saluran:\n${cfg.channelUrl}\n\n` +
                 `User yang belum join bakal didiemin (tidak diproses) dan cuma dikasih reminder join 1x, tidak akan diulang-ulang.${premiumNote}`
             )
         }

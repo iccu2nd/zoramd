@@ -13,8 +13,8 @@ export default {
 
         try {
             await sock.sendSticker(m.from, buffer, m, {
-                packname: config.packname,
-                author: config.author,
+                packname: config.packname || config.botName || 'ZoraBot',
+                author: config.author || config.botName || 'ZoraBot',
                 isAnimated: /video|gif/.test(buffer.mimetype),
                 crop
             })

@@ -150,7 +150,7 @@ export default {
 
             const imageUrl = await pone(
                 image,
-                `rezora-edit-${Date.now()}.jpg`
+                `zorabot-edit-${Date.now()}.jpg`
             )
 
             if (!imageUrl) {

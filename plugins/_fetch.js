@@ -65,8 +65,8 @@ export default {
 
             if (isWebpBuf(buf) || /\.webp$/i.test(filename)) {
                 await sock.sendSticker(m.from, buf, m, {
-                    packname: 'Nerd Bot',
-                    author: 'fetch',
+                    packname: config.packname || config.botName || 'ZoraBot',
+                    author: config.author || config.botName || 'ZoraBot',
                     isAnimated: false
                 })
             } else if (/^image\//.test(contentType)) {

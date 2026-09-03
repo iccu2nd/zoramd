@@ -110,6 +110,30 @@
     setLoading(false)
   }
 
+
+  function ensureSiteFooter() {
+    if (document.getElementById('site-footer')) return
+    var year = new Date().getFullYear()
+    var foot = document.createElement('footer')
+    foot.id = 'site-footer'
+    foot.className = 'site-footer'
+    foot.innerHTML =
+      '<div class="site-footer-links">' +
+        '<a href="/upgrade">Premium</a><span class="site-footer-sep">|</span>' +
+        '<a href="/account">Account</a><span class="site-footer-sep">|</span>' +
+        '<a href="/terms" target="_blank" rel="noopener">Syarat &amp; Ketentuan</a><span class="site-footer-sep">|</span>' +
+        '<a href="/privacy" target="_blank" rel="noopener">Kebijakan Privasi</a>' +
+      '</div>' +
+      '<div class="site-footer-links" style="margin-top:4px">' +
+        '<a href="/dashboard">Dashboard</a><span class="site-footer-sep">|</span>' +
+        '<a href="/connect">Connect Bot</a><span class="site-footer-sep">|</span>' +
+        '<a href="/free-features">Fitur Gratis</a>' +
+      '</div>' +
+      '<p class="site-footer-copy">&copy; ' + year + ' ZoraBot. All rights reserved.</p>'
+    var main = document.querySelector('main.content') || document.getElementById('main-view') || document.body
+    main.appendChild(foot)
+  }
+
   function bindShell() {
     var menuBtn = document.getElementById('menu-btn')
     var sidebar = document.getElementById('sidebar')
@@ -174,6 +198,7 @@
    */
   async function bootPage(pageInit) {
     bindShell()
+    ensureSiteFooter()
 
     if (!state.token) {
       goToLogin('required')
@@ -216,6 +241,6 @@
 
   global.Zora = {
     $, $$, show, hide, escapeHtml, state, api, goToLogin,
-    setLoading, showMainApp, bindShell, loadBots, fillBotSelect, bootPage, restartBot
+    setLoading, showMainApp, bindShell, ensureSiteFooter, loadBots, fillBotSelect, bootPage, restartBot
   }
 })(window)
