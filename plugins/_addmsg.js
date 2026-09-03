@@ -6,7 +6,6 @@ export default {
     description: 'Simpan pesan (teks/stiker/gambar/video/audio) yang dibalas dengan nama tertentu',
 
     run: async (m, { text, cmd }) => {
-        if (!m.isOwner) return m.reply('Perintah ini hanya untuk owner bot.')
 
         if (!m.quoted) return m.reply(`Balas pesan yang mau disimpan dengan perintah *.${cmd} <nama>*`)
 

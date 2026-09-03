@@ -2,7 +2,6 @@ export default {
     cmd: ['upch', 'uploadch'],
     category: 'owner',
     run: async (m, { sock, text, config }) => {
-        if (!m.isOwner) return m.reply('Hanya owner bot yang dapat menggunakan perintah ini.')
         if (!config.idch) return m.reply('config.idch belum diset.')
 
         if (m.quoted) {

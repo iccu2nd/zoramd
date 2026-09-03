@@ -5,7 +5,6 @@ export default {
     category: 'tools',
     run: async (m, { sock, isAdmin }) => {
         if (!m.isGroup) return m.reply("Khusus di dalam grup!")
-        if (!isAdmin) return m.reply("Hanya admin grup yang bisa menggunakan perintah ini!")
 
         const colorMap = { 'biru': '0xff26c4dc', 'merah': '0xffff0000', 'hijau': '0xff00ff00', 'kuning': '0xffffff00', 'hitam': '0xff000000' }
         let bgColor = colorMap['biru']

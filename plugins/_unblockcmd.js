@@ -5,7 +5,6 @@ export default {
     cmd: ['unblockcmd'],
     category: 'owner',
     run: async (m, { text, prefix, cmd }) => {
-        if (!m.isOwner) return m.reply('Fitur ini khusus untuk owner.')
         const target = text.trim().toLowerCase()
         if (!target) return m.reply(`Mau buka blokir perintah apa? Contoh: ${prefix + cmd} hunt`)
         const plugin = getPlugin(target)

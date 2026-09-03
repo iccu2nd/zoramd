@@ -2,7 +2,6 @@ export default {
     cmd: ['listgc', 'listgroup'],
     category: 'owner',
     run: async (m, { sock, isOwner }) => {
-        if (!isOwner) return m.reply('Fitur ini khusus untuk owner.')
 
         const groups = await sock.groupFetchAllParticipating()
         const list = Object.values(groups)

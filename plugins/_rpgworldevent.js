@@ -78,7 +78,6 @@ export default {
 
     run: async (m, { text, isAdmin }) => {
         if (!m.isGroup) return m.reply('Fitur ini hanya bisa diatur di dalam grup.')
-        if (!isAdmin) return m.reply('Hanya admin grup yang bisa mengatur fitur ini.')
 
         const chat = global.db.data.chats[m.from]
         const action = text.toLowerCase().trim()

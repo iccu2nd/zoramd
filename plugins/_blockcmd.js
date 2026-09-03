@@ -5,7 +5,6 @@ export default {
     cmd: ['blockcmd'],
     category: 'owner',
     run: async (m, { text, prefix, cmd }) => {
-        if (!m.isOwner) return m.reply('Fitur ini khusus untuk owner.')
         const target = text.trim().toLowerCase()
         if (!target) {
             if (!settings.blockedCmds.length) return m.reply(`Belum ada fitur yang diblokir.\n\nKetik ${prefix + cmd} <nama perintah> buat blokir.`)

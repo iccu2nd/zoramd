@@ -7,7 +7,6 @@ export default {
     category: 'group',
     run: async (m, { sock, text, isAdmin, isBotAdmin, config, prefix, cmd }) => {
         if (!m.isGroup) return m.reply('Fitur ini hanya dapat digunakan di dalam grup.')
-        if (!isAdmin) return m.reply('Hanya admin grup yang dapat menggunakan perintah ini.')
         if (!isBotAdmin) return m.reply('Bot harus menjadi admin untuk menurunkan jabatan admin.')
 
         const targets = m.mentionedJid?.length ? m.mentionedJid

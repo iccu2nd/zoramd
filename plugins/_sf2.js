@@ -5,7 +5,6 @@ export default {
   cmd: ['sf2'],
   category: 'owner',
   run: async (m, { text, isOwner }) => {
-    if (!isOwner) return m.reply('Owner only.')
     const base = path.resolve('.')
 
     if (!text) return m.reply('Usage: .sf2 path/to/file.js code | reply code')

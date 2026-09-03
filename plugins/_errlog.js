@@ -4,7 +4,6 @@ export default {
     cmd: ['err', 'errlog'],
     category: 'owner',
     run: async (m, { isOwner, prefix, cmd, text }) => {
-        if (!isOwner) return m.reply('Fitur ini khusus untuk owner.')
 
         const current = settings.errorReport
         const input = text?.trim().toLowerCase()

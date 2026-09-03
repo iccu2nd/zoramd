@@ -12,7 +12,7 @@ import { checkGconlyAccess, notifyGconlyOnce } from './lib/gconly.js'
 import { hasActiveMenfesSession } from './plugins/_menfes.js'
 import { isPremiumActive } from './lib/plugins.js'
 import { setBotStatus } from './lib/db/accounts.js'
-import { resolveFeature, checkAccessRule, getCustomCommandMap } from './lib/featureGate.js'
+import { resolveFeature, checkAccessRule, getCustomCommandMap, parseCustomCommands } from './lib/featureGate.js'
 import { runWithFreeQueue } from './lib/freeQueue.js'
 import { isAccountPremium } from './lib/db/subscription.js'
 import { resolveBotConfig } from './lib/botConfig.js'
@@ -123,10 +123,13 @@ export async function handleMessage(sock, config, { messages, type }) {
 
     // Custom Command (Feature Settings): command hasil ganti nama MENGGANTI command
     // asli -- command lama otomatis berhenti berfungsi begitu diganti (bukan alias tambahan).
+    // Bisa lebih dari 1 command custom sekaligus (dipisah koma), buat plugin yang aslinya
+    // punya 2+ alias (mis. "donate, donasi").
     if (plugin) {
         const featKey = (plugin.cmd && plugin.cmd[0]) || cmd
         const feat = await resolveFeature(botIdForGate, featKey)
-        if (feat.customCommand && feat.customCommand.trim().toLowerCase() !== cmd) {
+        const customList = parseCustomCommands(feat.customCommand)
+        if (customList.length && !customList.includes(cmd)) {
             plugin = null
         }
     }

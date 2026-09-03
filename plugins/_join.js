@@ -4,7 +4,6 @@ export default {
     cmd: ['join'],
     category: 'owner',
     run: async (m, { sock, isOwner, prefix, cmd, text }) => {
-        if (!isOwner) return m.reply('Fitur ini khusus untuk owner.')
 
         const [link, daysRaw] = text.trim().split(/\s+/)
         if (!link) return m.reply(`Format: ${prefix}${cmd} <link_grup> <hari>\nContoh: ${prefix}${cmd} https://chat.whatsapp.com/xxxxx 1`)

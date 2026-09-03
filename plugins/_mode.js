@@ -4,7 +4,6 @@ export default {
     cmd: ['mode', 'setmode'],
     category: 'owner',
     run: async (m, { isOwner, prefix, cmd }) => {
-        if (!isOwner) return m.reply('Fitur ini khusus untuk owner.')
 
         const current = settings.mode
 

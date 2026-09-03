@@ -4,7 +4,6 @@ export default {
     cmd: ['addowner', 'delowner'],
     category: 'owner',
     run: async (m, { sock, text, cmd }) => {
-        if (!m.isOwner) return m.reply('Hanya owner bot yang dapat menggunakan perintah ini.')
 
         const target = m.mentionedJid?.[0] || m.quoted?.sender || (text?.replace(/[^0-9]/g, '').length >= 10 ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null)
         if (!target) return m.reply(`Tag, reply, atau masukan nomor.\nContoh: .${cmd} @user\natau: .${cmd} 628xxxx`)

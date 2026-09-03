@@ -44,7 +44,6 @@ export default {
     cmd: ['owoboost'],
     category: 'owo',
     run: async (m, { text, sock, isOwner, prefix, cmd }) => {
-        if (!isOwner) return m.reply('Fitur ini khusus untuk owner bot.')
         if (!m.isGroup) return m.reply('⚠️ Boost hanya bisa diaktifkan di dalam grup, karena efeknya khusus untuk grup itu saja.')
 
         const chat = getChatData(m.from)

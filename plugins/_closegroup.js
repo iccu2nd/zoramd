@@ -3,7 +3,6 @@ export default {
     category: 'group',
     run: async (m, { sock, isAdmin, isBotAdmin }) => {
         if (!m.isGroup) return m.reply("Fitur ini hanya dapat digunakan di dalam grup.")
-        if (!isAdmin) return m.reply("Hanya admin grup yang dapat menggunakan perintah ini.")
         if (!isBotAdmin) return m.reply("Bot harus menjadi admin untuk mengubah setelan grup.")
         try {
             await sock.groupSettingUpdate(m.from, 'announcement')

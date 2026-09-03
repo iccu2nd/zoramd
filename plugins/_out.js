@@ -4,7 +4,6 @@ export default {
     cmd: ['out'],
     category: 'owner',
     run: async (m, { sock, isOwner, text, prefix }) => {
-        if (!isOwner) return m.reply('Fitur ini khusus untuk owner.')
 
         if (m.isGroup) {
             try {

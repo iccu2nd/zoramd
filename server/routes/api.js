@@ -12,6 +12,7 @@ import {
 } from '../../lib/db/accounts.js'
 import { getSubscription, isBotPremium, activatePremium, isAccountPremium, activateAccountPremium, getAccountSubscription } from '../../lib/db/subscription.js'
 import { getAllFeatureSettings, setFeatureSetting, getFeatureSetting, ACCESS_FLAGS } from '../../lib/db/featureSettings.js'
+import { DEFAULT_ACCESS_RULES } from '../../lib/db/defaultAccessRules.js'
 import { createOrder, findOrder, findOrdersByAccount, markOrderChecked, cancelOrder, isOrderExpired } from '../../lib/db/orders.js'
 import { getMongoDb } from '../../lib/db/mongo.js'
 import { COLLECTIONS } from '../../lib/db/schema.js'
@@ -515,6 +516,10 @@ router.get('/bots/:botId/features', authMiddleware, loadAccount, async (req, res
             // hindari duplikat key dalam group
             if (groups[cat].some(f => f.featureKey === key)) continue
             const s = savedMap[key] || {}
+            const hasExplicitRules = s.accessRules != null || s.accessRule != null
+            const accessRules = hasExplicitRules
+                ? (Array.isArray(s.accessRules) ? s.accessRules : [])
+                : (DEFAULT_ACCESS_RULES[key] || [])
             groups[cat].push({
                 featureKey: key,
                 aliases: cmds,
@@ -522,8 +527,8 @@ router.get('/bots/:botId/features', authMiddleware, loadAccount, async (req, res
                 enabled: s.enabled !== false,
                 customResponse: s.customResponse || null,
                 customCommand: s.customCommand || null,
-                accessRule: s.accessRule || 'public',
-                accessRules: Array.isArray(s.accessRules) ? s.accessRules : []
+                accessRule: accessRules.length ? accessRules.join('+') : 'public',
+                accessRules
             })
         }
         // sort keys in each group

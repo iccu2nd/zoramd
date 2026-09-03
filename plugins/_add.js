@@ -7,7 +7,6 @@ export default {
     category: 'group',
     run: async (m, { sock, text, isAdmin, isBotAdmin, config, prefix, cmd }) => {
         if (!m.isGroup) return m.reply('Fitur ini hanya bisa digunakan di dalam grup.')
-        if (!isAdmin && !m.isOwner) return m.reply('Hanya admin grup yang bisa menggunakan perintah ini.')
         if (!isBotAdmin) return m.reply('Bot harus jadi admin untuk menambahkan member.')
 
         if (!text && !m.quoted) return m.reply(

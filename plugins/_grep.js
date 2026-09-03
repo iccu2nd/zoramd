@@ -24,7 +24,6 @@ export default {
     cmd: ['grepplugin', 'grep'],
     category: 'owner',
     run: async (m, { text, isOwner, prefix, cmd }) => {
-        if (!isOwner) return m.reply('Fitur ini khusus untuk owner.')
         if (!text) return m.reply(`Masukin keyword.\nContoh: *${prefix + cmd} conn*`)
 
         await m.react('⏳')

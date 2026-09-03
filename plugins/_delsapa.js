@@ -5,7 +5,6 @@ export default {
     category: 'owner',
     description: 'Hapus user dari daftar sapa',
     run: async (m, { sock, text }) => {
-        if (!m.isOwner) return m.reply('Hanya owner bot yang dapat menggunakan perintah ini.')
 
         let target = m.mentionedJid?.[0] || m.quoted?.sender
 

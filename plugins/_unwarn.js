@@ -9,7 +9,6 @@ export default {
     category: 'group',
     run: async (m, { cmd, isAdmin }) => {
         if (!m.isGroup) return m.reply('Fitur ini hanya dapat digunakan di dalam grup.')
-        if (!isAdmin) return m.reply('Hanya admin grup yang dapat menggunakan perintah ini.')
 
         const chat = global.db.data.chats[m.from]
         const maxWarn = chat.maxWarn || 3

@@ -16,7 +16,6 @@ export default {
   cmd: ['gp'],
   category: 'owner',
   run: async (m, { text, isOwner }) => {
-    if (!isOwner) return m.reply('Owner only.')
     const base = path.resolve('./plugins')
 
     if (!text) {

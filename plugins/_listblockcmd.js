@@ -5,7 +5,6 @@ export default {
     category: 'owner',
     description: 'Lihat daftar perintah yang diblokir',
     run: async (m, { config, prefix, isOwner }) => {
-        if (!isOwner) return m.reply('Hanya owner bot yang dapat menggunakan perintah ini.')
 
         if (!settings.blockedCmds.length) {
             return m.reply(`Belum ada perintah yang diblokir.\n\nKetik ${prefix}blockcmd <nama perintah> buat blokir.\n> *${config.botName}*`)

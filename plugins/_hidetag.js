@@ -3,7 +3,6 @@ export default {
     category: 'group',
     run: async (m, { sock, text, isAdmin }) => {
         if (!m.isGroup) return m.reply('Fitur ini hanya dapat digunakan di dalam grup.')
-        if (!isAdmin) return m.reply('Hanya admin grup yang dapat menggunakan perintah ini.')
 
         const metadata = await sock.groupMetadata(m.from)
         const participants = metadata.participants.map(p => p.id)

@@ -4,7 +4,6 @@ export default {
     description: 'Hapus pesan tersimpan berdasarkan nama',
 
     run: async (m, { text }) => {
-        if (!m.isOwner) return m.reply('Perintah ini hanya untuk owner bot.')
 
         const nama = text?.trim()
         if (!nama) return m.reply('Penggunaan: .delmsg <nama>\n\nContoh:\n.delmsg halo')

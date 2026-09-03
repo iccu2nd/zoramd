@@ -5,7 +5,6 @@ export default {
     cmd: ['cheat'],
     category: 'owner',
     run: async (m, { sock, text, prefix, cmd }) => {
-        if (!m.isOwner) return m.reply('Hanya owner bot yang dapat menggunakan perintah ini.')
 
         const target = m.sender
         const args = text.trim().split(/ +/).filter(Boolean)

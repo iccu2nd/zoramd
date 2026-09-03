@@ -2,7 +2,6 @@ export default {
     cmd: ['addprem'],
     category: 'owner',
     run: async (m, { sock, text }) => {
-        if (!m.isOwner) return m.reply('Hanya owner bot yang dapat menggunakan perintah ini.')
 
         const target = m.mentionedJid?.[0] || m.quoted?.sender
         if (!target) return m.reply('Tag atau reply user.\nContoh: .addprem @user 7\natau reply pesan lalu: .addprem 7')

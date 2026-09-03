@@ -17,7 +17,6 @@ export default {
 
     run: async (m, { sock, config, isOwner, text, prefix, cmd }) => {
         const cfg = config || sock?.botConfig || {}
-        if (!isOwner) return m.reply('Fitur ini khusus untuk owner.')
 
         if (sock.isJadibotSession) return m.reply('Fitur ini cuma bisa dipakai di bot utama.')
 

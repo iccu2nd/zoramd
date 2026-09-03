@@ -4,7 +4,6 @@ export default {
     cmd: ['restart'],
     category: 'owner',
     run: async (m, { sock }) => {
-        if (!m.isOwner) return m.reply('Hanya owner bot yang dapat menggunakan perintah ini.')
 
         await m.reply('Merestart bot...')
 

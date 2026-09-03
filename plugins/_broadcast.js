@@ -2,7 +2,6 @@ export default {
     cmd: ['bc', 'broadcast'],
     category: 'owner',
     run: async (m, { sock, text }) => {
-        if (!m.isOwner) return m.reply('Hanya owner bot yang dapat menggunakan perintah ini.')
         if (!text) return m.reply('Masukan teks yang ingin di broadcast.\nContoh: .bc Halo semua!')
 
         const groupIds = Object.keys(global.db.data.chats).filter(jid => jid.endsWith('@g.us'))

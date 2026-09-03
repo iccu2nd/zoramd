@@ -54,10 +54,10 @@
       '<span class="field-hint">Plugin: <code>' + Z.escapeHtml(String(f.description || key).slice(0, 90)) + '</code>. Isi hanya jika ingin mengganti teks balasan plugin.</span>' +
       '</div>' +
       '<div class="field"><label>Custom Command <span class="opt-tag">' + (hasCustomCmd ? 'aktif' : 'opsional') + '</span></label>' +
-      '<input class="feat-command" type="text" value="' + Z.escapeHtml(f.customCommand || aliases[0] || key) + '" ' +
-      'data-default="' + Z.escapeHtml(aliases[0] || key) + '" ' +
+      '<input class="feat-command" type="text" value="' + Z.escapeHtml(f.customCommand || aliases.join(', ')) + '" ' +
+      'data-default="' + Z.escapeHtml(aliases.join(', ')) + '" ' +
       (isPremium ? '' : 'disabled') + ' placeholder="Command"/>' +
-      '<span class="field-hint">Command asli plugin: <code>' + Z.escapeHtml(aliases.join(', ')) + '</code>. Ubah langsung teksnya untuk mengganti command (command lama berhenti berfungsi).</span>' +
+      '<span class="field-hint">Command asli plugin: <code>' + Z.escapeHtml(aliases.join(', ')) + '</code>. Ubah langsung teksnya untuk mengganti command (command lama berhenti berfungsi). Kalau aslinya ada 2+ (mis. donate, donasi), pisahkan pakai koma buat ganti semuanya.</span>' +
       '</div>' +
       '<div class="row gap"><button type="button" class="btn outline feat-save">Simpan</button>' +
       '<span class="feat-saved msg ok"></span></div></div></div>'
@@ -116,12 +116,16 @@
         var save = item.querySelector('.feat-save')
         if (save) save.onclick = async function () {
           try {
+            function parseCmds(s) {
+              return (s || '').split(',').map(function (x) { return x.trim().toLowerCase() }).filter(Boolean).sort().join(',')
+            }
             var cmdInput = item.querySelector('.feat-command')
-            var cmdVal = cmdInput ? cmdInput.value.trim() : ''
+            var cmdRaw = cmdInput ? cmdInput.value.trim() : ''
             var cmdDefault = cmdInput ? (cmdInput.dataset.default || '') : ''
-            var customCommand = (cmdVal && cmdVal.toLowerCase() !== cmdDefault.toLowerCase()) ? cmdVal : null
+            var changed = parseCmds(cmdRaw) !== parseCmds(cmdDefault) && parseCmds(cmdRaw) !== ''
+            var customCommand = changed ? cmdRaw : null
             // Kalau dikosongin, balikin ke command asli di kotaknya (biar gak keliatan kosong)
-            if (cmdInput && !cmdVal) cmdInput.value = cmdDefault
+            if (cmdInput && !cmdRaw) cmdInput.value = cmdDefault
 
             await Z.api('/bots/' + botId + '/features/' + item.dataset.key, {
               method: 'PUT',

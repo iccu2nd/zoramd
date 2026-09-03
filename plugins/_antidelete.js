@@ -3,7 +3,6 @@ export default {
     category: 'group',
     run: async (m, { text, isAdmin }) => {
         if (!m.isGroup) return m.reply('Khusus Grup!')
-        if (!isAdmin) return m.reply('Khusus Admin Grup!')
 
         const chat = global.db.data.chats[m.from]
         const action = text.split(' ')[0]?.toLowerCase()

@@ -5,7 +5,6 @@ export default {
 
     run: async (m, { sock, config, isAdmin, isBotAdmin, prefix }) => {
         if (!m.isGroup) return m.reply('Fitur ini hanya bisa digunakan di grup.')
-        if (!isAdmin && !m.isOwner) return m.reply('Hanya admin yang bisa menggunakan perintah ini.')
         if (!isBotAdmin) return m.reply('Bot harus jadi admin dulu agar bisa hapus pesan.')
 
         const chat = global.db.data.chats[m.from]

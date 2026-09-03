@@ -14,7 +14,6 @@ export default {
     category: 'group',
     run: async (m, { text }) => {
         if (!m.isGroup) return m.reply('Fitur ini hanya dapat digunakan di dalam grup.')
-        if (!m.isAdmin && !m.isOwner) return m.reply('Hanya admin grup yang dapat menggunakan perintah ini.')
 
         const chat = global.db.data.chats[m.from]
         const args = text.trim().split(/ +/)

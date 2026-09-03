@@ -3,7 +3,6 @@ export default {
     category: 'group',
     run: async (m, { text, isAdmin, prefix, cmd }) => {
         if (!m.isGroup) return m.reply('Perintah ini hanya bisa dipakai di dalam grup.')
-        if (!isAdmin) return m.reply('Hanya admin grup yang dapat menggunakan perintah ini.')
 
         const chat = global.db.data.chats[m.from]
         const action = text.toLowerCase().trim()

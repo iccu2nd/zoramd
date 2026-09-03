@@ -6,7 +6,6 @@ export default {
   cmd: ['df'],
   category: 'owner',
   run: async (m, { text, isOwner }) => {
-    if (!isOwner) return m.reply('Owner only.')
     const base = path.resolve('./plugins')
 
     if (!text) return m.reply('Usage: .df name')
