@@ -36,6 +36,7 @@
   function setOrderBtnVisible(show) {
     var btn = document.getElementById('order-premium-btn')
     var details = document.getElementById('plan-details')
+    var benefits = document.getElementById('premium-benefits')
     if (btn) {
       if (show) {
         btn.classList.remove('hidden')
@@ -46,6 +47,7 @@
       }
     }
     if (details) details.style.display = show ? '' : 'none'
+    if (benefits) benefits.style.display = show ? '' : 'none'
   }
 
   function fmtTime(ms) {
@@ -55,12 +57,20 @@
     return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s
   }
 
+  function fmtClock(d) {
+    var hh = d.getHours()
+    var mm = d.getMinutes()
+    return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm
+  }
+
   function startExpiryCountdown(expiresAt) {
     if (expiryTimer) clearInterval(expiryTimer)
     var el = document.getElementById('order-expiry')
     if (!el || !expiresAt) return
+    var deadline = new Date(expiresAt)
+    var deadlineStr = fmtClock(deadline)
     function tick() {
-      var left = new Date(expiresAt).getTime() - Date.now()
+      var left = deadline.getTime() - Date.now()
       if (left <= 0) {
         el.textContent = 'Order kedaluwarsa. Buat order baru.'
         clearInterval(expiryTimer)
@@ -68,7 +78,7 @@
         setOrderBtnVisible(true)
         return
       }
-      el.textContent = 'Berlaku sisa ' + fmtTime(left) + ' (max 30 menit)'
+      el.textContent = 'Bayar sebelum jam ' + deadlineStr + ' (sisa ' + fmtTime(left) + ')'
     }
     tick()
     expiryTimer = setInterval(tick, 1000)

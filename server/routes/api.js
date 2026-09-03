@@ -346,7 +346,7 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
         const body = req.body || {}
 
         // Free users: limited settings only
-        const allowedFree = ['mode', 'autoread', 'autotyping', 'noprefix', 'gconly', 'enabled']
+        const allowedFree = ['mode', 'autoread', 'autotyping', 'noprefix', 'gconly', 'fastrespon', 'enabled']
         const patchSettings = {}
         for (const k of allowedFree) {
             if (body[k] !== undefined) patchSettings[k] = body[k]

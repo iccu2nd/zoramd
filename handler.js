@@ -188,14 +188,17 @@ export async function handleMessage(sock, config, { messages, type }) {
         if (settings.autotyping) sock.sendPresenceUpdate('composing', m.from).catch(() => {})
         if (feat.customResponse) m._customResponse = feat.customResponse
 
-        // Premium: langsung. Free: antrian global (satu proses fitur per waktu).
+        // Premium: langsung. Free: antrian global (satu proses fitur per waktu),
+        // kecuali Fast Respon diaktifkan manual di Bot Settings -> bypass antrian juga.
         let premiumUser = false
         try {
             const ownerId = sock.botConfig?.ownerAccountId || config.ownerAccountId
             if (ownerId) premiumUser = await isAccountPremium(String(ownerId))
         } catch {}
 
-        await runWithFreeQueue(premiumUser, async () => {
+        const skipQueue = premiumUser || !!settings.fastrespon
+
+        await runWithFreeQueue(skipQueue, async () => {
             await plugin.run(m, {
                 sock,
                 config,

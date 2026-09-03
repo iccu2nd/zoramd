@@ -32,6 +32,7 @@
       if (Z.$('#set-enabled')) Z.$('#set-enabled').checked = data.enabled !== false
       if (Z.$('#set-autoread')) Z.$('#set-autoread').checked = !!s.autoread
       if (Z.$('#set-autotyping')) Z.$('#set-autotyping').checked = !!s.autotyping
+      if (Z.$('#set-fastrespon')) Z.$('#set-fastrespon').checked = !!s.fastrespon
       if (Z.$('#set-noprefix')) Z.$('#set-noprefix').checked = !!s.noprefix
       if (Z.$('#set-gconly')) Z.$('#set-gconly').checked = !!(s.gconly === true || s.gconly === 'join' || s.gconly === 'closed')
       if (Z.$('#set-botname')) Z.$('#set-botname').value = data.botName || ''
@@ -104,6 +105,7 @@
             mode: Z.$('#set-mode') && Z.$('#set-mode').value,
             autoread: Z.$('#set-autoread') && Z.$('#set-autoread').checked,
             autotyping: Z.$('#set-autotyping') && Z.$('#set-autotyping').checked,
+            fastrespon: Z.$('#set-fastrespon') && Z.$('#set-fastrespon').checked,
             noprefix: Z.$('#set-noprefix') && Z.$('#set-noprefix').checked,
             gconly: gconlyOn ? 'join' : false,
             botName: Z.$('#set-botname') && Z.$('#set-botname').value,
