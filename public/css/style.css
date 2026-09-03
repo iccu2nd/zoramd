@@ -731,3 +731,69 @@ code {
   font-size: 32px;
   margin: 0 auto;
 }
+
+/* Feature settings optional tags */
+.opt-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--muted);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.feature-item .field-hint code {
+  font-size: 0.8em;
+  background: var(--bg-soft);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--text);
+}
+
+/* Admin progress bar */
+.ads-progress {
+  margin: 12px 0;
+  display: none;
+}
+.ads-progress.show { display: block; }
+.ads-progress-bar {
+  height: 10px;
+  background: var(--bg-soft);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.ads-progress-bar > span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--purple), var(--purple-2, #7c3aed));
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+.ads-progress-text {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.admin-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.admin-subnav a {
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--bg-soft);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.admin-subnav a.active {
+  background: var(--purple-soft);
+  color: var(--purple-2);
+}
+.admin-subnav a:hover { opacity: 0.9; }

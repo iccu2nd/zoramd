@@ -19,8 +19,33 @@ import botManager from '../../lib/botManager.js'
 import { getPlatformSettings, setPlatformSettings } from '../../lib/platformSettings.js'
 import { sendAdsManually } from '../../lib/adsScheduler.js'
 import * as sociabuzz from '../../lib/sociabuzz.js'
+import { rateLimit, clientIp } from '../../lib/rateLimit.js'
+import { authCookieOptions, publicError } from '../../lib/security.js'
+import { getChatLog } from '../../lib/liveChatlog.js'
 
 const router = Router()
+
+// Auth endpoints: ketat (anti brute-force)
+const authStrictLimit = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    blockMs: 15 * 60 * 1000,
+    keyFn: (req) => 'auth:' + clientIp(req),
+    message: 'Terlalu banyak percobaan login/register. Coba lagi dalam 15 menit.'
+})
+const otpLimit = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    blockMs: 30 * 60 * 1000,
+    keyFn: (req) => 'otp:' + clientIp(req),
+    message: 'Terlalu banyak permintaan OTP. Coba lagi nanti.'
+})
+const adsSendLimit = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 10,
+    keyFn: (req) => 'ads:' + (req.user?.sub || clientIp(req)),
+    message: 'Terlalu sering kirim iklan. Tunggu beberapa menit.'
+})
 
 // Health (no secrets)
 router.get('/health', (req, res) => {
@@ -62,37 +87,46 @@ function requireAdmin(req, res, next) {
     next()
 }
 
+function safeObjectId(id) {
+    try {
+        if (!id || !ObjectId.isValid(id)) return null
+        return new ObjectId(id)
+    } catch {
+        return null
+    }
+}
+
 // ---------- Auth ----------
-router.post('/auth/register', async (req, res) => {
+router.post('/auth/register', authStrictLimit, async (req, res) => {
     try {
         const { email, password, name } = req.body || {}
         const { account, token } = await register({ email, password, name })
-        res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 7 * 24 * 3600 * 1000 })
+        res.cookie('token', token, authCookieOptions())
         res.json({
             token,
             user: { id: account._id, email: account.email, name: account.name }
         })
     } catch (e) {
-        res.status(400).json({ error: e.message })
+        res.status(400).json({ error: publicError(e, 'Registrasi gagal') })
     }
 })
 
-router.post('/auth/login', async (req, res) => {
+router.post('/auth/login', authStrictLimit, async (req, res) => {
     try {
         const { email, password } = req.body || {}
         const { account, token } = await login({ email, password })
-        res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 7 * 24 * 3600 * 1000 })
+        res.cookie('token', token, authCookieOptions())
         res.json({
             token,
             user: { id: account._id, email: account.email, name: account.name }
         })
     } catch (e) {
-        res.status(400).json({ error: e.message })
+        res.status(400).json({ error: publicError(e, 'Login gagal') })
     }
 })
 
 router.post('/auth/logout', (req, res) => {
-    res.clearCookie('token')
+    res.clearCookie('token', { ...authCookieOptions(), maxAge: 0 })
     res.json({ ok: true })
 })
 
@@ -110,28 +144,28 @@ router.get('/auth/me', authMiddleware, loadAccount, (req, res) => {
 })
 
 // ---------- Verifikasi email (OTP) ----------
-router.post('/auth/verify-email/request', authMiddleware, loadAccount, async (req, res) => {
+router.post('/auth/verify-email/request', authMiddleware, loadAccount, otpLimit, async (req, res) => {
     try {
         if (req.account.emailVerified) return res.json({ ok: true, alreadyVerified: true })
         await requestEmailVerification(req.account.email)
         res.json({ ok: true })
     } catch (e) {
-        res.status(400).json({ error: e.message })
+        res.status(400).json({ error: publicError(e, 'Gagal kirim OTP') })
     }
 })
 
-router.post('/auth/verify-email/confirm', authMiddleware, loadAccount, async (req, res) => {
+router.post('/auth/verify-email/confirm', authMiddleware, loadAccount, otpLimit, async (req, res) => {
     try {
         const { code } = req.body || {}
         await confirmEmailVerification(req.account.email, code)
         res.json({ ok: true })
     } catch (e) {
-        res.status(400).json({ error: e.message })
+        res.status(400).json({ error: publicError(e, 'Verifikasi gagal') })
     }
 })
 
 // ---------- Reset password (OTP, tanpa login) ----------
-router.post('/auth/password/forgot', async (req, res) => {
+router.post('/auth/password/forgot', otpLimit, async (req, res) => {
     try {
         await requestPasswordReset((req.body || {}).email)
     } catch (e) {
@@ -141,13 +175,13 @@ router.post('/auth/password/forgot', async (req, res) => {
     res.json({ ok: true, note: 'Kalau email terdaftar, kode reset sudah dikirim.' })
 })
 
-router.post('/auth/password/reset', async (req, res) => {
+router.post('/auth/password/reset', otpLimit, async (req, res) => {
     try {
         const { email, code, newPassword } = req.body || {}
         await resetPassword({ email, code, newPassword })
         res.json({ ok: true })
     } catch (e) {
-        res.status(400).json({ error: e.message })
+        res.status(400).json({ error: publicError(e, 'Reset password gagal') })
     }
 })
 
@@ -773,6 +807,18 @@ router.post('/bots/:botId/restart', authMiddleware, loadAccount, async (req, res
     }
 })
 
+// ---------- Live chatlog (ring buffer in-memory, owned bot only) ----------
+router.get('/bots/:botId/chatlog', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const bot = await findOwnedBot(req.params.botId, req.account._id)
+        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        const logs = getChatLog(bot.sessionId)
+        res.json({ logs })
+    } catch (e) {
+        res.status(500).json({ error: publicError(e) })
+    }
+})
+
 // ---------- Database export / import (database.json) ----------
 router.get('/bots/:botId/database', authMiddleware, loadAccount, async (req, res) => {
     try {
@@ -938,12 +984,13 @@ router.put('/admin/platform', authMiddleware, loadAccount, requireAdmin, async (
     }
 })
 
-router.post('/admin/ads/send', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+router.post('/admin/ads/send', authMiddleware, loadAccount, requireAdmin, adsSendLimit, async (req, res) => {
     try {
         const body = req.body || {}
         const target = body.target || 'all' // 'all' atau sessionId bot tertentu
         const text = (body.text || '').trim()
         if (!text) return res.status(400).json({ error: 'Teks iklan tidak boleh kosong' })
+        if (text.length > 4000) return res.status(400).json({ error: 'Teks iklan terlalu panjang (max 4000)' })
 
         const results = await sendAdsManually({
             target,
@@ -1009,52 +1056,60 @@ router.get('/admin/overview', authMiddleware, loadAccount, requireAdmin, async (
 
 router.post('/admin/accounts/:id/role', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
     try {
+        if (!safeObjectId(req.params.id)) return res.status(400).json({ error: 'ID tidak valid' })
         const role = req.body?.role === 'admin' ? 'admin' : 'user'
         await setAccountRole(req.params.id, role)
         res.json({ ok: true, role })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e) })
     }
 })
 
 router.post('/admin/bots/:id/premium', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
     try {
-        const months = Number(req.body?.months) || 1
+        if (!safeObjectId(req.params.id)) return res.status(400).json({ error: 'ID tidak valid' })
+        const months = Math.min(24, Math.max(1, Number(req.body?.months) || 1))
         await activatePremium(req.params.id, { months })
         res.json({ ok: true })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e) })
     }
 })
 
 router.delete('/admin/bots/:id', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
     try {
+        const oid = safeObjectId(req.params.id)
+        if (!oid) return res.status(400).json({ error: 'ID tidak valid' })
         const db = await getMongoDb()
-        const bot = await db.collection(COLLECTIONS.BOTS).findOne({ _id: new ObjectId(req.params.id) })
+        const bot = await db.collection(COLLECTIONS.BOTS).findOne({ _id: oid })
         if (bot?.sessionId) {
             try { await botManager.stopBot(bot.sessionId, { clearSession: true }) } catch {}
         }
         await deleteBotById(req.params.id)
         res.json({ ok: true })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e) })
     }
 })
 
 router.post('/admin/bots/:id/status', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
     try {
+        const oid = safeObjectId(req.params.id)
+        if (!oid) return res.status(400).json({ error: 'ID tidak valid' })
         const db = await getMongoDb()
-        const bot = await db.collection(COLLECTIONS.BOTS).findOne({ _id: new ObjectId(req.params.id) })
+        const bot = await db.collection(COLLECTIONS.BOTS).findOne({ _id: oid })
         if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
         const action = req.body?.action
         if (action === 'stop') {
             await botManager.stopBot(bot.sessionId, { clearSession: !!req.body.clearSession })
         } else if (action === 'start') {
             await botManager.startBot(bot.sessionId, bot, {})
+        } else {
+            return res.status(400).json({ error: 'action harus stop atau start' })
         }
         res.json({ ok: true, state: botManager.getState(bot.sessionId) })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e) })
     }
 })
 

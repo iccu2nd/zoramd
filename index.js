@@ -14,6 +14,24 @@ process.on('uncaughtException', (err) => console.error(chalk.redBright.bold('ERR
 process.on('unhandledRejection', (err) => console.error(chalk.redBright.bold('ERROR'), err))
 
 const PORT = Number(process.env.PORT) || 3000
+let httpServer = null
+
+async function shutdown(signal) {
+    console.log(chalk.yellowBright(`\n  ${signal} — graceful shutdown...`))
+    try {
+        if (httpServer) {
+            await new Promise((resolve) => httpServer.close(() => resolve()))
+        }
+    } catch {}
+    try {
+        const { closeMongo } = await import('./lib/db/mongo.js')
+        await closeMongo()
+    } catch {}
+    process.exit(0)
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))
 
 async function main() {
     console.log()
@@ -34,7 +52,7 @@ async function main() {
 
     // Start HTTP server (dashboard + API)
     const app = createApp()
-    app.listen(PORT, () => {
+    httpServer = app.listen(PORT, () => {
         console.log(chalk.greenBright(`  Dashboard & API  →  http://localhost:${PORT}`))
         console.log()
     })

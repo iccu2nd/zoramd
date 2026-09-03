@@ -3,6 +3,9 @@ import bcrypt from 'bcryptjs'
 import { findAccountByEmail, findAccountById, createAccount, updateAccount } from '../lib/db/accounts.js'
 import { issueOtp, verifyOtp } from '../lib/db/emailTokens.js'
 import { sendVerificationOtp, sendPasswordResetOtp } from '../lib/email.js'
+import { assertJwtSecret } from '../lib/security.js'
+
+assertJwtSecret()
 
 const JWT_SECRET = process.env.JWT_SECRET || 'zorabot-dev-secret-change-me'
 const TOKEN_TTL = '7d'

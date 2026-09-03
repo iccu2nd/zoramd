@@ -20,25 +20,30 @@
   function featureRow(f, isPremium) {
     var key = f.featureKey
     var rules = [['owner','Owner Only'],['group','Group Only'],['owner_group','Owner + Group'],['public','Public']]
+    var aliases = (f.aliases && f.aliases.length) ? f.aliases : [key]
+    var hasCustomResp = !!(f.customResponse && String(f.customResponse).trim())
+    var hasCustomCmd = !!(f.customCommand && String(f.customCommand).trim())
     return '<div class="feature-item" data-key="' + Z.escapeHtml(key) + '">' +
       '<div class="feature-row"><div class="feature-info"><span class="name">' + Z.escapeHtml(key) + '</span>' +
       (f.description ? '<span class="desc">' + Z.escapeHtml(String(f.description).slice(0, 80)) + '</span>' : '') +
       '</div><label class="switch"><input type="checkbox" class="feat-enabled" ' +
       (f.enabled !== false ? 'checked' : '') + '/><span class="slider"></span></label></div>' +
-      '<div class="feature-detail"><div class="field"><label>Access Rule</label><select class="feat-access" ' +
+      '<div class="feature-detail">' +
+      '<div class="field"><label>Access Rule</label><select class="feat-access" ' +
       (isPremium ? '' : 'disabled') + '>' +
       rules.map(function (r) {
         return '<option value="' + r[0] + '"' + (f.accessRule === r[0] ? ' selected' : '') + '>' + r[1] + '</option>'
       }).join('') +
-      '</select></div><div class="field"><label>Custom Response</label>' +
+      '</select></div>' +
+      '<div class="field"><label>Custom Response <span class="opt-tag">' + (hasCustomResp ? 'aktif' : 'opsional') + '</span></label>' +
       '<input class="feat-response" type="text" value="' + Z.escapeHtml(f.customResponse || '') + '" ' +
-      (isPremium ? '' : 'disabled') + ' placeholder="Kosongkan = default"/>' +
-      (f.description ? '<span class="field-hint">Isi plugin: ' + Z.escapeHtml(String(f.description).slice(0, 100)) + '</span>' : '') +
+      (isPremium ? '' : 'disabled') + ' placeholder="Biarkan kosong = pakai response bawaan plugin"/>' +
+      '<span class="field-hint">Plugin: <code>' + Z.escapeHtml(String(f.description || key).slice(0, 90)) + '</code>. Isi hanya jika ingin mengganti teks balasan plugin.</span>' +
       '</div>' +
-      '<div class="field"><label>Custom Command</label>' +
+      '<div class="field"><label>Custom Command <span class="opt-tag">' + (hasCustomCmd ? 'aktif' : 'opsional') + '</span></label>' +
       '<input class="feat-command" type="text" value="' + Z.escapeHtml(f.customCommand || '') + '" ' +
-      (isPremium ? '' : 'disabled') + ' placeholder="Kosongkan = default"/>' +
-      '<span class="field-hint">Command asli: ' + Z.escapeHtml((f.aliases && f.aliases.length ? f.aliases : [key]).join(', ')) + ' (custom command jadi alias tambahan)</span>' +
+      (isPremium ? '' : 'disabled') + ' placeholder="Biarkan kosong = pakai command asli"/>' +
+      '<span class="field-hint">Command asli plugin: <code>' + Z.escapeHtml(aliases.join(', ')) + '</code>. Custom jadi alias tambahan (tidak mengganti yang asli).</span>' +
       '</div>' +
       '<div class="row gap"><button type="button" class="btn outline feat-save">Simpan</button>' +
       '<span class="feat-saved msg ok"></span></div></div></div>'

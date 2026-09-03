@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Ads — ZoraBot</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="/css/style.css?v=17" />
+</head>
+<body data-page="admin-ads">
+  <div id="loading-view" class="loading-wrap hidden" style="display:none">
+    <div class="loading-card">
+      <div class="loading-logo">ZoraBot</div>
+      <div class="spinner center" aria-hidden="true">
+        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+      </div>
+      <p class="loading-text" id="loading-text">Memuat...</p>
+    </div>
+  </div>
+
+  <div id="main-view">
+    <header class="topbar">
+      <button id="menu-btn" class="icon-btn" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="brand">ZoraBot</div>
+      <div class="user-chip" id="user-chip"></div>
+    </header>
+
+    <aside id="sidebar" class="sidebar">
+      <nav>
+        <div class="nav-label">Admin</div>
+        <a href="/admin" class="nav-item"><i class="fa-solid fa-gauge-high"></i><span>Overview</span></a>
+        <a href="/admin/users" class="nav-item"><i class="fa-solid fa-users"></i><span>Users</span></a>
+        <a href="/admin/bots" class="nav-item"><i class="fa-solid fa-robot"></i><span>Bots</span></a>
+        <a href="/admin/ads" class="nav-item active"><i class="fa-solid fa-bullhorn"></i><span>Ads / Iklan</span></a>
+        <div class="nav-label">Kembali</div>
+        <a href="/dashboard" class="nav-item"><i class="fa-solid fa-arrow-left"></i><span>Dashboard</span></a>
+        <a href="/account" class="nav-item"><i class="fa-solid fa-user"></i><span>Account</span></a>
+      </nav>
+      <button id="logout-btn" class="btn outline logout"><i class="fa-solid fa-right-from-bracket"></i><span>Keluar</span></button>
+    </aside>
+    <div id="sidebar-overlay" class="overlay"></div>
+
+    <main class="content">
+      <h2>Ads / Iklan</h2>
+      <p class="hint">Atur iklan otomatis free user &amp; kirim manual ke bot yang terhubung.</p>
+
+      <div class="info-card" style="margin-bottom:16px">
+        <h3 style="margin-bottom:10px">Iklan Otomatis (Free User)</h3>
+        <p class="hint">Kirim otomatis ke semua grup bot Free (max 3x/hari). Premium tidak kena.</p>
+        <div class="toggle-row" style="border:none;padding:8px 0">
+          <div class="toggle-meta">
+            <strong>Auto Ads Free</strong>
+            <span>On/Off global</span>
+          </div>
+          <label class="switch"><input type="checkbox" id="admin-free-ads" checked /><span class="slider"></span></label>
+        </div>
+        <div class="field" style="margin-top:8px">
+          <label>Teks iklan default</label>
+          <textarea id="admin-ads-text" rows="3"></textarea>
+        </div>
+        <button type="button" id="admin-ads-save" class="btn primary">Simpan</button>
+        <p id="admin-ads-msg" class="msg"></p>
+      </div>
+
+      <div class="info-card" style="margin-bottom:16px">
+        <h3 style="margin-bottom:10px">Kirim Iklan Manual</h3>
+        <p class="hint">Kirim sekarang tanpa nunggu jadwal. Progress real-time per bot.</p>
+        <div class="field" style="margin-top:8px">
+          <label>Kirim ke</label>
+          <select id="admin-ads-target">
+            <option value="all">Semua Bot (connected)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Teks iklan manual</label>
+          <textarea id="admin-ads-manual-text" rows="3" placeholder="Kosongkan = pakai teks default di atas"></textarea>
+          <span class="field-hint">Kosongkan untuk pakai teks iklan default.</span>
+        </div>
+        <div class="toggle-row" style="border:none;padding:8px 0">
+          <div class="toggle-meta">
+            <strong>Lewati bot Premium</strong>
+            <span>Owner Premium tidak dikirimi</span>
+          </div>
+          <label class="switch"><input type="checkbox" id="admin-ads-skip-premium" checked /><span class="slider"></span></label>
+        </div>
+        <button type="button" id="admin-ads-send" class="btn primary">Kirim Sekarang</button>
+        <div class="ads-progress" id="admin-ads-progress">
+          <div class="ads-progress-bar"><span id="admin-ads-progress-bar"></span></div>
+          <p class="ads-progress-text" id="admin-ads-progress-text">0 / 0 bot</p>
+        </div>
+        <p id="admin-ads-send-msg" class="msg"></p>
+        <div id="admin-ads-send-result" class="bots-list" style="margin-top:10px"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/bg-pattern.js?v=17"></script>
+  <script src="/js/common.js?v=17"></script>
+  <script src="/js/admin.js?v=17"></script>
+  <script>
+  setTimeout(function () {
+    var lv = document.getElementById('loading-view');
+    var mv = document.getElementById('main-view');
+    if (lv && getComputedStyle(lv).display !== 'none') {
+      lv.classList.add('hidden'); lv.style.display = 'none';
+      if (mv) { mv.classList.remove('hidden'); mv.style.display = ''; }
+    }
+  }, 1500);
+  </script>
+</body>
+</html>
