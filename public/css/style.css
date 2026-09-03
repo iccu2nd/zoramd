@@ -397,10 +397,9 @@ code {
 .price span { font-size: 0.9rem; font-weight: 400; color: var(--muted); }
 .plan-card ul { margin: 0 0 16px 18px; color: var(--muted); font-size: 0.9rem; }
 .plan-card li { margin-bottom: 5px; }
-.benefit-list { list-style: none; margin: 0; padding: 0; color: var(--text); font-size: 0.92rem; }
-.benefit-list li { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.plan-card .benefit-list, .benefit-list { list-style: none; margin: 8px 0 16px; padding: 0; color: var(--muted); font-size: 0.85rem; font-weight: 400; }
+.plan-card .benefit-list li, .benefit-list li { margin-bottom: 7px; line-height: 1.4; }
 .benefit-list li:last-child { margin-bottom: 0; }
-.benefit-list i { color: var(--purple-2); width: 18px; text-align: center; flex-shrink: 0; }
 
 .qr-wrap, .pairing-wrap, .qris-box { text-align: center; margin-top: 16px; }
 .qr-wrap img, .qris-box img {

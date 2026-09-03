@@ -36,7 +36,6 @@
   function setOrderBtnVisible(show) {
     var btn = document.getElementById('order-premium-btn')
     var details = document.getElementById('plan-details')
-    var benefits = document.getElementById('premium-benefits')
     if (btn) {
       if (show) {
         btn.classList.remove('hidden')
@@ -47,7 +46,6 @@
       }
     }
     if (details) details.style.display = show ? '' : 'none'
-    if (benefits) benefits.style.display = show ? '' : 'none'
   }
 
   function fmtTime(ms) {
