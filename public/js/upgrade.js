@@ -24,13 +24,36 @@
       var raw = localStorage.getItem(STORAGE_KEY)
       if (!raw) return null
       var data = JSON.parse(raw)
-      if (!data || !data.orderId) return null
-      if (data.expiresAt && new Date(data.expiresAt).getTime() < Date.now()) {
+      if (!data || !data.orderId) {
         localStorage.removeItem(STORAGE_KEY)
         return null
       }
+      var now = Date.now()
+      var exp = data.expiresAt ? new Date(data.expiresAt).getTime() : 0
+      // expired by server deadline
+      if (exp && exp < now) {
+        localStorage.removeItem(STORAGE_KEY)
+        return null
+      }
+      // fallback: max 30 menit dari savedAt
+      var saved = data.savedAt || 0
+      if (saved && (now - saved) > 30 * 60 * 1000) {
+        localStorage.removeItem(STORAGE_KEY)
+        return null
+      }
+      // expiresAt invalid / missing → treat as expired if older than 30m, else keep with synthetic deadline
+      if (!exp || isNaN(exp)) {
+        if (saved && (now - saved) > 30 * 60 * 1000) {
+          localStorage.removeItem(STORAGE_KEY)
+          return null
+        }
+        data.expiresAt = new Date((saved || now) + 30 * 60 * 1000).toISOString()
+      }
       return data
-    } catch (e) { return null }
+    } catch (e) {
+      try { localStorage.removeItem(STORAGE_KEY) } catch (e2) {}
+      return null
+    }
   }
 
   function setOrderBtnVisible(show) {
@@ -73,7 +96,12 @@
         el.textContent = 'Order kedaluwarsa. Buat order baru.'
         clearInterval(expiryTimer)
         savePending(null)
+        currentOrder = null
+        var info = document.getElementById('payment-info')
+        if (info) { info.innerHTML = ''; Z.hide(info) }
         setOrderBtnVisible(true)
+        var msg = Z.$('#upgrade-msg')
+        if (msg) { msg.textContent = 'Order kedaluwarsa. Silakan buat order baru.'; msg.className = 'msg err' }
         return
       }
       el.textContent = 'Bayar sebelum jam ' + deadlineStr + ' (sisa ' + fmtTime(left) + ')'
@@ -178,7 +206,6 @@
         '</div>'
     }
 
-    html += '<p class="hint" style="margin:10px 0 0;font-weight:600">Jumlah: Rp' + Number(data.baseAmount || data.amount || 0).toLocaleString('id-ID') + '</p>'
     html += '<div class="payment-actions">'
     if (p.qr_string || p.qr_image) {
       var qrSrc2 = p.qr_image || ('https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=' + encodeURIComponent(p.qr_string))
@@ -199,7 +226,7 @@
         (p.bank ? ' (' + Z.escapeHtml(p.bank) + ')' : '') + '</p>'
     }
 
-    html += '<p class="hint" style="margin-top:10px;text-align:center">Total: Rp' + Number(data.amount || 0).toLocaleString('id-ID') + '</p>'
+    html += '<p class="hint" style="margin-top:10px;text-align:center;font-weight:600">Total bayar: Rp' + Number(data.amount || data.baseAmount || 0).toLocaleString('id-ID') + '</p>'
     html += '<p class="expiry-note" id="order-expiry"></p>'
     info.innerHTML = html
 
@@ -274,11 +301,45 @@
     }
   }
 
-  function restorePending() {
+  async function restorePending() {
     var pending = loadPending()
     if (!pending) {
       setOrderBtnVisible(true)
       return
+    }
+    // Pastikan order di server masih pending (bukan expired/cancelled/paid)
+    try {
+      var st = await Z.api('/premium/check', {
+        method: 'POST',
+        body: { orderId: pending.orderId },
+        timeoutMs: 15000
+      })
+      if (st.status === 'paid') {
+        savePending(null)
+        currentOrder = null
+        setOrderBtnVisible(false)
+        var msgOk = Z.$('#upgrade-msg')
+        if (msgOk) { msgOk.textContent = 'Premium sudah aktif.'; msgOk.className = 'msg ok' }
+        await loadPremium()
+        return
+      }
+      if (st.status === 'expired' || st.status === 'cancelled') {
+        savePending(null)
+        currentOrder = null
+        setOrderBtnVisible(true)
+        var info = document.getElementById('payment-info')
+        if (info) { info.innerHTML = ''; Z.hide(info) }
+        var msgE = Z.$('#upgrade-msg')
+        if (msgE) {
+          msgE.textContent = st.status === 'expired'
+            ? (st.message || 'Order sebelumnya sudah kedaluwarsa. Buat order baru.')
+            : 'Order sebelumnya dibatalkan. Buat order baru.'
+          msgE.className = 'msg err'
+        }
+        return
+      }
+    } catch (e) {
+      // network error: tetap tampilkan pending lokal jika belum lewat expiresAt
     }
     currentOrder = pending
     renderPayment(pending)

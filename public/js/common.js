@@ -124,6 +124,8 @@
         '<a href="/privacy" target="_blank" rel="noopener">Kebijakan Privasi</a>' +
         '<span class="site-footer-sep">|</span>' +
         '<a href="/upgrade">Premium</a>' +
+        '<span class="site-footer-sep">|</span>' +
+        '<a href="https://t.me/reyzxdv" target="_blank" rel="noopener">CS Telegram</a>' +
       '</div>' +
       '<p class="site-footer-copy">&copy; ' + year + ' ZoraBot. All rights reserved.</p>'
     // Tempel di #main-view agar sticky di bawah viewport
