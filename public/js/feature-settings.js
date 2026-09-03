@@ -54,9 +54,10 @@
       '<span class="field-hint">Plugin: <code>' + Z.escapeHtml(String(f.description || key).slice(0, 90)) + '</code>. Isi hanya jika ingin mengganti teks balasan plugin.</span>' +
       '</div>' +
       '<div class="field"><label>Custom Command <span class="opt-tag">' + (hasCustomCmd ? 'aktif' : 'opsional') + '</span></label>' +
-      '<input class="feat-command" type="text" value="' + Z.escapeHtml(f.customCommand || '') + '" ' +
-      (isPremium ? '' : 'disabled') + ' placeholder="Biarkan kosong = pakai command asli"/>' +
-      '<span class="field-hint">Command asli plugin: <code>' + Z.escapeHtml(aliases.join(', ')) + '</code>. Custom jadi alias tambahan (tidak mengganti yang asli).</span>' +
+      '<input class="feat-command" type="text" value="' + Z.escapeHtml(f.customCommand || aliases[0] || key) + '" ' +
+      'data-default="' + Z.escapeHtml(aliases[0] || key) + '" ' +
+      (isPremium ? '' : 'disabled') + ' placeholder="Command"/>' +
+      '<span class="field-hint">Command asli plugin: <code>' + Z.escapeHtml(aliases.join(', ')) + '</code>. Ubah langsung teksnya untuk mengganti command (command lama berhenti berfungsi).</span>' +
       '</div>' +
       '<div class="row gap"><button type="button" class="btn outline feat-save">Simpan</button>' +
       '<span class="feat-saved msg ok"></span></div></div></div>'
@@ -115,13 +116,20 @@
         var save = item.querySelector('.feat-save')
         if (save) save.onclick = async function () {
           try {
+            var cmdInput = item.querySelector('.feat-command')
+            var cmdVal = cmdInput ? cmdInput.value.trim() : ''
+            var cmdDefault = cmdInput ? (cmdInput.dataset.default || '') : ''
+            var customCommand = (cmdVal && cmdVal.toLowerCase() !== cmdDefault.toLowerCase()) ? cmdVal : null
+            // Kalau dikosongin, balikin ke command asli di kotaknya (biar gak keliatan kosong)
+            if (cmdInput && !cmdVal) cmdInput.value = cmdDefault
+
             await Z.api('/bots/' + botId + '/features/' + item.dataset.key, {
               method: 'PUT',
               body: {
                 enabled: item.querySelector('.feat-enabled').checked,
                 accessRules: Array.prototype.map.call(item.querySelectorAll('.feat-access-flag:checked'), function (c) { return c.value }),
                 customResponse: (item.querySelector('.feat-response') || {}).value || null,
-                customCommand: (item.querySelector('.feat-command') || {}).value || null
+                customCommand: customCommand
               }
             })
             var msg = item.querySelector('.feat-saved')

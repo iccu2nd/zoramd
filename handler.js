@@ -121,8 +121,15 @@ export async function handleMessage(sock, config, { messages, type }) {
         plugin = getPlugin(cmd)
     }
 
-    // Command hasil ganti nama di Feature Settings (Custom Command) ikut dikenali,
-    // di samping command default aslinya.
+    // Custom Command (Feature Settings): command hasil ganti nama MENGGANTI command
+    // asli -- command lama otomatis berhenti berfungsi begitu diganti (bukan alias tambahan).
+    if (plugin) {
+        const featKey = (plugin.cmd && plugin.cmd[0]) || cmd
+        const feat = await resolveFeature(botIdForGate, featKey)
+        if (feat.customCommand && feat.customCommand.trim().toLowerCase() !== cmd) {
+            plugin = null
+        }
+    }
     if (!plugin && cmd) {
         const customMap = await getCustomCommandMap(botIdForGate)
         const mappedKey = customMap.get(cmd)
