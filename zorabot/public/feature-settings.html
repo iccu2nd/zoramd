@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Account — ZoraBot</title>
+  <title>Feature Settings — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=17" />
+  <link rel="stylesheet" href="/css/style.css?v=23" />
 </head>
-<body data-page="account">
+<body data-page="feature-settings">
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
     <div class="loading-card">
       <div class="loading-logo">ZoraBot</div>
@@ -44,14 +44,14 @@
         <a href="/dashboard" class="nav-item"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
         <a href="/connect" class="nav-item"><i class="fa-solid fa-qrcode"></i><span>Connect Bot</span></a>
         <a href="/bot-settings" class="nav-item"><i class="fa-solid fa-sliders"></i><span>Bot Settings</span></a>
-        <a href="/feature-settings" class="nav-item"><i class="fa-solid fa-puzzle-piece"></i><span>Feature Settings</span></a>
+        <a href="/feature-settings" class="nav-item active"><i class="fa-solid fa-puzzle-piece"></i><span>Feature Settings</span></a>
 <a href="/database" class="nav-item"><i class="fa-solid fa-database"></i><span>Database</span></a>
         <a href="/chatlog" class="nav-item"><i class="fa-solid fa-comments"></i><span>Live Chatlog</span></a>
 <div class="nav-label">Premium</div>
         <a href="/upgrade" class="nav-item"><i class="fa-solid fa-crown"></i><span>Order Plan Premium</span></a>
         <a href="/orders" class="nav-item"><i class="fa-solid fa-receipt"></i><span>Riwayat Order</span></a>
         <div class="nav-label">Akun</div>
-        <a href="/account" class="nav-item active"><i class="fa-solid fa-user"></i><span>Account</span></a>
+        <a href="/account" class="nav-item"><i class="fa-solid fa-user"></i><span>Account</span></a>
         <a href="/admin" class="nav-item nav-admin hidden" id="nav-admin"><i class="fa-solid fa-shield-halved"></i><span>Admin Panel</span></a>
       </nav>
       <button id="logout-btn" class="btn outline logout"><i class="fa-solid fa-right-from-bracket"></i><span>Keluar</span></button>
@@ -59,15 +59,19 @@
     <div id="sidebar-overlay" class="overlay"></div>
 
     <main class="content">
-      <h2>Account</h2>
-      <div class="info-card" id="account-info"></div>
-      <div class="info-card" id="email-verify-card" style="margin-top:16px"></div>
+      <h2>Feature Settings</h2>
+      <p class="hint">Atur ON/OFF tiap fitur. Jika OFF, logic fitur tidak dijalankan. Custom response, command, dan access rule hanya untuk Premium.</p>
+      <div class="field">
+        <label>Pilih Bot</label>
+        <select id="feature-bot-select"></select>
+      </div>
+      <div id="features-list" class="features-list"></div>
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=17"></script>
-  <script src="/js/common.js?v=17"></script>
-  <script src="/js/account.js?v=17"></script>
+  <script src="/js/bg-pattern.js?v=22"></script>
+  <script src="/js/common.js?v=23"></script>
+  <script src="/js/feature-settings.js?v=23"></script>
 
   <script>
   // Safety net: jangan pernah stuck loading > 6 detik

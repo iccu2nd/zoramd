@@ -62,22 +62,28 @@
         closeAllMenus()
         if (act === 'settings') { location.href = '/bot-settings'; return }
         try {
-          if (act === 'restart') { await Z.restartBot(botId); alert('Bot di-restart') }
+          if (act === 'restart') {
+            await Z.restartBot(botId)
+            Z.toast('Bot berhasil di-restart.', 'success')
+          }
           else if (act === 'power') {
             var enable = btn.textContent === 'Nyalakan'
             await Z.api('/bots/' + botId + '/power', { method: 'POST', body: { enabled: enable }, timeoutMs: 30000 })
+            Z.toast(enable ? 'Bot berhasil diaktifkan.' : 'Bot berhasil dimatikan.', 'success')
           } else if (act === 'disconnect') {
             if (!confirm('Putuskan koneksi bot ini?')) return
             await Z.api('/bots/' + botId + '/disconnect', { method: 'POST' })
+            Z.toast('Koneksi bot berhasil diputuskan.', 'success')
           } else if (act === 'delete') {
             if (!confirm('Hapus bot ini? Semua data, sesi, dan pengaturan bot akan hilang permanen.')) return
             await Z.api('/bots/' + botId, { method: 'DELETE' })
+            Z.toast('Bot berhasil dihapus.', 'success')
           }
           var data = await Z.api('/bots')
           Z.state.bots = data.bots || []
           limits = data.limits || limits
           renderBots()
-        } catch (e2) { alert(e2.message) }
+        } catch (e2) { Z.toast(e2.message, 'error') }
       }
     })
   }
@@ -87,38 +93,22 @@
   }
   document.addEventListener('click', closeAllMenus)
 
-  function loadErrors() {
-    var sel = Z.$('#err-bot-select')
-    var list = Z.$('#err-list')
-    if (!sel || !list) return
-    var botId = sel.value
-    if (!botId) { list.innerHTML = '<p class="hint">Pilih bot</p>'; return }
-    list.innerHTML = '<p class="hint">Memuat...</p>'
-    Z.api('/bots/' + botId + '/errors', { timeoutMs: 10000 }).then(function (data) {
-      var items = data.errors || []
-      if (!items.length) { list.innerHTML = '<p class="hint">Belum ada error tercatat.</p>'; return }
-      list.innerHTML = items.map(function (e) {
-        var t = e.createdAt ? new Date(e.createdAt).toLocaleString('id-ID') : ''
-        return '<div class="err-item"><strong>.' + Z.escapeHtml(e.cmd || '?') + '</strong> · ' +
-          Z.escapeHtml(t) + '<div class="err-msg">' + Z.escapeHtml(e.message || '') + '</div></div>'
-      }).join('')
-    }).catch(function (e) {
-      list.innerHTML = '<p class="error">' + Z.escapeHtml(e.message) + '</p>'
-    })
-  }
-
   function setupOnboarding() {
     var box = Z.$('#onboarding')
     if (!box) return
     var bots = Z.state.bots || []
     var anyConnected = bots.some(function (b) { return b.status === 'connected' })
     var dismissed = localStorage.getItem('zora_onboard_v1') === '1'
-    if (!dismissed && !anyConnected) box.classList.remove('hidden')
+    if (!dismissed && !anyConnected) {
+      box.classList.remove('hidden')
+      requestAnimationFrame(function () { box.classList.remove('is-closing') })
+    }
     else box.classList.add('hidden')
     var btn = Z.$('#onboard-dismiss')
     if (btn) btn.onclick = function () {
       localStorage.setItem('zora_onboard_v1', '1')
-      box.classList.add('hidden')
+      box.classList.add('is-closing')
+      setTimeout(function () { box.classList.add('hidden') }, 220)
     }
   }
 
@@ -126,15 +116,11 @@
     if (Z.state.limits) limits = Z.state.limits
     renderBots()
     setupOnboarding()
-    Z.fillBotSelect('err-bot-select')
-    loadErrors()
-    var es = Z.$('#err-bot-select')
-    if (es) es.onchange = loadErrors
     var btn = Z.$('#create-bot-btn')
     if (!btn) return
     btn.onclick = async function () {
       if (limits.used >= limits.max) {
-        alert(limits.plan === 'premium' ? 'Batas Premium: max 3 bot.' : 'Batas Free: max 1 bot. Upgrade Premium untuk 3 bot.')
+        Z.toast(limits.plan === 'premium' ? 'Batas Premium: maksimal 3 bot.' : 'Batas Free: maksimal 1 bot. Upgrade ke Premium untuk 3 bot.', 'warning')
         return
       }
       var name = prompt('Nama bot:', 'ZoraBot')
@@ -146,7 +132,8 @@
         Z.state.bots = data.bots || []
         limits = data.limits || limits
         renderBots()
-      } catch (e) { alert(e.message) }
+        Z.toast('Bot berhasil dibuat.', 'success')
+      } catch (e) { Z.toast(e.message, 'error') }
     }
   })
 })()

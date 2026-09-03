@@ -12,6 +12,67 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
   }
 
+  var toastTitles = {
+    success: 'Berhasil',
+    error: 'Terjadi kesalahan',
+    warning: 'Perhatian',
+    info: 'Informasi'
+  }
+
+  function ensureToastContainer() {
+    var existing = document.getElementById('toast-container')
+    if (existing) return existing
+    var container = document.createElement('div')
+    container.id = 'toast-container'
+    container.className = 'toast-container'
+    container.setAttribute('aria-live', 'polite')
+    container.setAttribute('aria-atomic', 'false')
+    document.body.appendChild(container)
+    return container
+  }
+
+  function toast(message, type, title) {
+    var kind = toastTitles[type] ? type : 'info'
+    var container = ensureToastContainer()
+    var item = document.createElement('div')
+    var icon = {
+      success: 'fa-circle-check',
+      error: 'fa-circle-exclamation',
+      warning: 'fa-triangle-exclamation',
+      info: 'fa-circle-info'
+    }[kind]
+    var close = document.createElement('button')
+    var timer = null
+    var dismissTimer = null
+
+    item.className = 'toast toast-' + kind
+    item.setAttribute('role', kind === 'error' ? 'alert' : 'status')
+    item.innerHTML =
+      '<span class="toast-icon" aria-hidden="true"><i class="fa-solid ' + icon + '"></i></span>' +
+      '<span class="toast-copy"><strong>' + escapeHtml(title || toastTitles[kind]) + '</strong>' +
+      '<span>' + escapeHtml(message || '') + '</span></span>'
+
+    close.type = 'button'
+    close.className = 'toast-close'
+    close.setAttribute('aria-label', 'Tutup notifikasi')
+    close.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i>'
+    item.appendChild(close)
+
+    function dismiss() {
+      if (dismissTimer) return
+      if (timer) clearTimeout(timer)
+      item.classList.add('is-leaving')
+      dismissTimer = setTimeout(function () {
+        if (item.parentNode) item.parentNode.removeChild(item)
+      }, 220)
+    }
+
+    close.onclick = dismiss
+    container.appendChild(item)
+    timer = setTimeout(dismiss, 4000)
+    return { close: dismiss }
+  }
+
   var state = {
     token: null,
     user: null,
@@ -263,6 +324,7 @@
   async function bootPage(pageInit) {
     bindShell()
     ensureSiteFooter()
+    ensureToastContainer()
     try { setupNotifications() } catch (e) {}
 
     if (!state.token) {
@@ -305,7 +367,7 @@
   }
 
   global.Zora = {
-    $, $$, show, hide, escapeHtml, state, api, goToLogin,
+    $, $$, show, hide, escapeHtml, toast, state, api, goToLogin,
     setLoading, showMainApp, bindShell, ensureSiteFooter, loadBots, fillBotSelect, bootPage, restartBot
   }
 })(window)

@@ -39,7 +39,7 @@
             method: 'POST', body: { role: btn.dataset.role }
           })
           location.reload()
-        } catch (e) { alert(e.message) }
+        } catch (e) { Z.toast(e.message, 'error') }
       }
     })
   }
@@ -62,17 +62,17 @@
       btn.onclick = async function () {
         try {
           await Z.api('/admin/bots/' + btn.dataset.id + '/premium', { method: 'POST', body: { months: 1 } })
-          alert('Premium diaktifkan 1 bulan')
-        } catch (e) { alert(e.message) }
+          Z.toast('Premium diaktifkan selama 1 bulan.', 'success')
+        } catch (e) { Z.toast(e.message, 'error') }
       }
     })
     botsEl.querySelectorAll('.admin-stop').forEach(function (btn) {
       btn.onclick = async function () {
         try {
           await Z.api('/admin/bots/' + btn.dataset.id + '/status', { method: 'POST', body: { action: 'stop' } })
-          alert('Bot di-stop')
+          Z.toast('Bot berhasil dihentikan.', 'success')
           location.reload()
-        } catch (e) { alert(e.message) }
+        } catch (e) { Z.toast(e.message, 'error') }
       }
     })
     botsEl.querySelectorAll('.admin-del').forEach(function (btn) {
@@ -80,8 +80,9 @@
         if (!confirm('Hapus bot ini permanen?')) return
         try {
           await Z.api('/admin/bots/' + btn.dataset.id, { method: 'DELETE' })
+          Z.toast('Bot berhasil dihapus.', 'success')
           location.reload()
-        } catch (e) { alert(e.message) }
+        } catch (e) { Z.toast(e.message, 'error') }
       }
     })
   }
@@ -154,7 +155,7 @@
       var text = manualText || defaultText
       if (!text) {
         if (msg) { msg.textContent = 'Isi teks iklan dulu (manual atau default).'; msg.className = 'msg err' }
-        alert('Isi teks iklan dulu (manual atau default).')
+        Z.toast('Isi teks iklan dulu (manual atau default).', 'warning')
         return
       }
 
@@ -185,7 +186,7 @@
 
         if (!targets.length) {
           if (msg) { msg.textContent = 'Tidak ada bot connected.'; msg.className = 'msg err' }
-          alert('Tidak ada bot yang terhubung.')
+          Z.toast('Tidak ada bot yang terhubung.', 'warning')
           return
         }
 
@@ -241,11 +242,11 @@
           msg.className = 'msg ok'
         }
         if (totalSent === 0) {
-          alert('Gak ada yang kekirim. Kemungkinan bot belum connected, atau semuanya dilewati (premium). Cek hasil di bawah.')
+          Z.toast('Tidak ada pesan yang terkirim. Periksa status bot dan hasil di bawah.', 'warning')
         }
       } catch (e) {
         if (msg) { msg.textContent = e.message; msg.className = 'msg err' }
-        alert('Gagal kirim: ' + e.message)
+        Z.toast('Gagal mengirim: ' + e.message, 'error')
       } finally {
         sendAds.disabled = false
         sendAds.classList.remove('is-loading')
@@ -259,13 +260,13 @@
       var me = await Z.api('/auth/me', { timeoutMs: 8000 })
       Z.state.user = me.user
       if (!me.user || !me.user.isAdmin) {
-        alert('Akses admin saja')
+        Z.toast('Halaman ini hanya dapat diakses admin.', 'error')
         location.replace('/dashboard')
         return
       }
     } catch (e) {
       if (e.status === 401) return
-      alert('Gagal cek admin')
+      Z.toast('Gagal memeriksa akses admin.', 'error')
       location.replace('/dashboard')
       return
     }
@@ -290,7 +291,7 @@
         bindAdsSettings()
       }
     } catch (e) {
-      alert(e.message || 'Gagal memuat admin')
+      Z.toast(e.message || 'Gagal memuat admin.', 'error')
       if (e.status === 403) location.replace('/dashboard')
     }
   })

@@ -4,11 +4,37 @@
   var Z = window.Zora
 
   async function doRestart(botId) {
-    if (!botId) return alert('Pilih bot')
+    if (!botId) return Z.toast('Pilih bot terlebih dahulu.', 'warning')
     try {
       await Z.restartBot(botId)
-      alert('Bot di-restart')
-    } catch (e) { alert(e.message) }
+      Z.toast('Bot berhasil di-restart.', 'success')
+    } catch (e) { Z.toast(e.message, 'error') }
+  }
+
+  async function loadErrors() {
+    var botId = Z.$('#settings-bot-select') && Z.$('#settings-bot-select').value
+    var list = Z.$('#settings-err-list')
+    if (!list) return
+    if (!botId) {
+      list.innerHTML = '<p class="hint">Pilih bot untuk melihat log.</p>'
+      return
+    }
+    list.innerHTML = '<p class="hint">Memuat log...</p>'
+    try {
+      var data = await Z.api('/bots/' + botId + '/errors', { timeoutMs: 10000 })
+      var items = data.errors || []
+      if (!items.length) {
+        list.innerHTML = '<p class="hint">Belum ada error tercatat.</p>'
+        return
+      }
+      list.innerHTML = items.map(function (e) {
+        var t = e.createdAt ? new Date(e.createdAt).toLocaleString('id-ID') : ''
+        return '<div class="err-item"><strong>.' + Z.escapeHtml(e.cmd || '?') + '</strong> · ' +
+          Z.escapeHtml(t) + '<div class="err-msg">' + Z.escapeHtml(e.message || '') + '</div></div>'
+      }).join('')
+    } catch (e) {
+      list.innerHTML = '<p class="error">' + Z.escapeHtml(e.message) + '</p>'
+    }
   }
 
   async function loadSettings() {
@@ -69,8 +95,12 @@
   Z.bootPage(function () {
     Z.fillBotSelect('settings-bot-select')
     loadSettings()
+    loadErrors()
     var sel = Z.$('#settings-bot-select')
-    if (sel) sel.onchange = loadSettings
+    if (sel) sel.onchange = function () {
+      loadSettings()
+      loadErrors()
+    }
 
     var rs = Z.$('#restart-bot-btn')
     if (rs) rs.onclick = function () {
@@ -94,9 +124,11 @@
           msg.textContent = en.checked ? 'Bot diaktifkan' : 'Bot dimatikan (session tetap tersimpan)'
           msg.className = 'msg ok'
         }
+        Z.toast(en.checked ? 'Bot berhasil diaktifkan.' : 'Bot berhasil dimatikan.', 'success')
       } catch (e) {
         en.checked = !en.checked
         if (msg) { msg.textContent = e.message; msg.className = 'msg err' }
+        Z.toast(e.message, 'error')
       }
     }
 
@@ -137,17 +169,20 @@
             Z.$('#settings-msg').textContent = 'Tersimpan & diterapkan'
             Z.$('#settings-msg').className = 'msg ok'
           }
+          Z.toast('Bot Settings berhasil disimpan dan diterapkan.', 'success')
         } catch (re) {
           if (Z.$('#settings-msg')) {
             Z.$('#settings-msg').textContent = 'Tersimpan (restart: ' + re.message + ')'
             Z.$('#settings-msg').className = 'msg ok'
           }
+          Z.toast('Bot Settings tersimpan, tetapi restart gagal: ' + re.message, 'warning')
         }
       } catch (e) {
         if (Z.$('#settings-msg')) {
           Z.$('#settings-msg').textContent = e.message
           Z.$('#settings-msg').className = 'msg err'
         }
+        Z.toast('Gagal menyimpan Bot Settings: ' + e.message, 'error')
       }
     }
   })

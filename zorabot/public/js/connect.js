@@ -4,6 +4,7 @@
   var Z = window.Zora
   var pollTimer = null
   var pollCount = 0
+  var lastConnectionStatus = null
   var MAX_POLLS = 24 // ~2 menit @ 5s
 
   function renderBotsList() {
@@ -45,6 +46,12 @@
 
   function updateConnectUI(st) {
     if (!st) return
+    if (st.status === 'connected' && lastConnectionStatus !== 'connected') {
+      Z.toast('Bot berhasil terhubung.', 'success')
+    } else if (st.status === 'disconnected' && lastConnectionStatus === 'connected') {
+      Z.toast('Bot terputus dari WhatsApp.', 'warning')
+    }
+    lastConnectionStatus = st.status
     var box = Z.$('#connect-status')
     if (box) {
       var text = 'Status: ' + st.status
@@ -120,10 +127,10 @@
     var startBtn = Z.$('#connect-start-btn')
     if (startBtn) startBtn.onclick = async function () {
       var botId = Z.$('#connect-bot-select') && Z.$('#connect-bot-select').value
-      if (!botId) return alert('Pilih bot dulu')
+      if (!botId) return Z.toast('Pilih bot terlebih dahulu.', 'warning')
       var method = (document.querySelector('input[name="connect-method"]:checked') || {}).value || 'qr'
       var phone = Z.$('#pairing-phone') && Z.$('#pairing-phone').value
-      if (method === 'pairing' && !phone) return alert('Isi nomor WhatsApp (628...)')
+      if (method === 'pairing' && !phone) return Z.toast('Isi nomor WhatsApp (628...) terlebih dahulu.', 'warning')
 
       var box = Z.$('#connect-status')
       if (box) box.innerHTML = '<div class="inline-loading"><div class="spinner tiny" aria-hidden="true"><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div></div> Menghubungkan... (pairing bisa 5–10 detik)</div>'
@@ -131,6 +138,7 @@
       Z.hide(Z.$('#pairing-code-wrap'))
       startBtn.disabled = true
       stopPoll()
+      lastConnectionStatus = null
       try {
         var data = await Z.api('/bots/' + botId + '/connect', {
           method: 'POST',
@@ -151,6 +159,7 @@
       } catch (e) {
         if (e.status === 401) return Z.goToLogin('session')
         if (box) box.textContent = e.message
+        Z.toast(e.message, 'error')
       } finally {
         startBtn.disabled = false
       }
@@ -167,7 +176,8 @@
         if (box) box.textContent = 'Terputus'
         Z.hide(Z.$('#qr-wrap'))
         Z.hide(Z.$('#pairing-code-wrap'))
-      } catch (e) { alert(e.message) }
+        Z.toast('Koneksi bot berhasil diputuskan.', 'success')
+      } catch (e) { Z.toast(e.message, 'error') }
     }
 
     var logoutBtn = Z.$('#connect-logout-btn')
@@ -182,20 +192,22 @@
         if (box) box.textContent = 'Session dihapus'
         Z.hide(Z.$('#qr-wrap'))
         Z.hide(Z.$('#pairing-code-wrap'))
-      } catch (e) { alert(e.message) }
+        Z.toast('Session bot berhasil dihapus. Bot perlu pairing atau QR ulang.', 'success')
+      } catch (e) { Z.toast(e.message, 'error') }
     }
 
     // Bersihkan poll saat keluar halaman
     var rs = document.getElementById('restart-bot-btn')
     if (rs) rs.onclick = async function () {
       var botId = Z.$('#connect-bot-select') && Z.$('#connect-bot-select').value
-      if (!botId) return alert('Pilih bot')
+      if (!botId) return Z.toast('Pilih bot terlebih dahulu.', 'warning')
       if (!confirm('Restart bot?')) return
       try {
         await Z.restartBot(botId)
         var box = Z.$('#connect-status')
         if (box) box.textContent = 'Bot di-restart'
-      } catch (e) { alert(e.message) }
+        Z.toast('Bot berhasil di-restart.', 'success')
+      } catch (e) { Z.toast(e.message, 'error') }
     }
     window.addEventListener('beforeunload', stopPoll)
   })

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dashboard — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=20" />
+  <link rel="stylesheet" href="/css/style.css?v=23" />
 </head>
 <body data-page="dashboard">
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
@@ -63,13 +63,15 @@
       <p class="hint">Kelola bot WhatsApp. Buat bot, hubungkan, lalu atur dari menu.</p>
 
       <div id="onboarding" class="onboard-card hidden">
+        <button type="button" id="onboard-dismiss" class="onboard-close" aria-label="Tutup Mulai cepat">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
         <h3>Mulai cepat</h3>
         <ol class="onboard-steps">
           <li><a href="/connect">Hubungkan bot</a> (QR / pairing)</li>
           <li>Uji di WhatsApp: ketik <code>.menu</code></li>
           <li>Atur di <a href="/bot-settings">Bot Settings</a></li>
         </ol>
-        <button type="button" id="onboard-dismiss" class="btn outline btn-sm">Tutup</button>
       </div>
 
       <div id="limits-bar" class="limits-bar"></div>
@@ -80,21 +82,12 @@
       </div>
       <div id="bots-list" class="bots-list"></div>
 
-      <div class="plan-card" style="margin-top:20px">
-        <h3>Log error command</h3>
-        <p class="hint">Error terakhir dari plugin (membantu debug).</p>
-        <div class="field">
-          <label>Bot</label>
-          <select id="err-bot-select"></select>
-        </div>
-        <div id="err-list" class="err-list"></div>
-      </div>
     </main>
   </div>
 
   <script src="/js/bg-pattern.js?v=20"></script>
-  <script src="/js/common.js?v=20"></script>
-  <script src="/js/dashboard.js?v=20"></script>
+  <script src="/js/common.js?v=23"></script>
+  <script src="/js/dashboard.js?v=23"></script>
 
   <script>
   // Safety net: jangan pernah stuck loading > 6 detik

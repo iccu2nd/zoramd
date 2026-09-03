@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bot Settings — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=17" />
+  <link rel="stylesheet" href="/css/style.css?v=23" />
 </head>
 <body data-page="bot-settings">
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
@@ -178,12 +178,17 @@
         <p id="settings-msg" class="msg"></p>
         </div>
       </div>
+      <section class="plan-card error-log-card">
+        <h3>Log error command</h3>
+        <p class="hint">Error terakhir dari plugin untuk membantu proses debug.</p>
+        <div id="settings-err-list" class="err-list"></div>
+      </section>
     </main>
   </div>
 
   <script src="/js/bg-pattern.js?v=17"></script>
-  <script src="/js/common.js?v=17"></script>
-  <script src="/js/bot-settings.js?v=17"></script>
+  <script src="/js/common.js?v=23"></script>
+  <script src="/js/bot-settings.js?v=23"></script>
 
   <script>
   // Safety net: jangan pernah stuck loading > 6 detik

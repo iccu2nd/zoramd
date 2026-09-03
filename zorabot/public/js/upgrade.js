@@ -260,25 +260,30 @@
       hideCheckingOverlay()
       if (data.status === 'paid') {
         if (msg) { msg.textContent = 'Pembayaran berhasil. Premium aktif!'; msg.className = 'msg ok' }
+        Z.toast('Pembayaran berhasil. Premium aktif.', 'success')
         showPaidSuccess()
         savePending(null)
         currentOrder = null
         await loadPremium()
       } else if (data.status === 'expired') {
         if (msg) { msg.textContent = data.message || 'Order kedaluwarsa'; msg.className = 'msg err' }
+        Z.toast(data.message || 'Order kedaluwarsa.', 'error')
         savePending(null)
         setOrderBtnVisible(true)
       } else if (data.status === 'cancelled') {
         if (msg) { msg.textContent = 'Order dibatalkan'; msg.className = 'msg' }
+        Z.toast('Order dibatalkan.', 'info')
         savePending(null)
         setOrderBtnVisible(true)
       } else {
         showUnpaidX()
         if (msg) { msg.textContent = 'Pembayaran belum masuk. Bayar dulu lalu cek lagi.'; msg.className = 'msg' }
+        Z.toast('Pembayaran belum masuk. Silakan cek lagi setelah membayar.', 'warning')
       }
     } catch (e) {
       hideCheckingOverlay()
       if (msg) { msg.textContent = e.message; msg.className = 'msg err' }
+      Z.toast(e.message, 'error')
     }
   }
 
@@ -290,6 +295,7 @@
     try {
       await Z.api('/premium/cancel', { method: 'POST', body: { orderId: oid } })
       if (msg) { msg.textContent = 'Transaksi dibatalkan.'; msg.className = 'msg' }
+      Z.toast('Transaksi berhasil dibatalkan.', 'success')
       if (expiryTimer) clearInterval(expiryTimer)
       savePending(null)
       currentOrder = null
@@ -298,6 +304,7 @@
       setOrderBtnVisible(true)
     } catch (e) {
       if (msg) { msg.textContent = e.message; msg.className = 'msg err' }
+      Z.toast(e.message, 'error')
     }
   }
 

@@ -14,7 +14,7 @@
     var dl = document.getElementById('db-download-btn')
     if (dl) dl.onclick = async function () {
       var botId = document.getElementById('db-bot-select') && document.getElementById('db-bot-select').value
-      if (!botId) return alert('Pilih bot dulu')
+      if (!botId) return Z.toast('Pilih bot terlebih dahulu.', 'warning')
       var withSession = document.getElementById('db-include-session') && document.getElementById('db-include-session').checked
       var msg = document.getElementById('db-msg')
       try {
@@ -37,18 +37,19 @@
         a.remove()
         URL.revokeObjectURL(a.href)
         if (msg) { msg.textContent = 'Download dimulai.'; msg.className = 'msg ok' }
+        Z.toast('Download database dimulai.', 'success')
       } catch (e) {
         if (msg) { msg.textContent = e.message; msg.className = 'msg err' }
-        else alert(e.message)
+        Z.toast(e.message, 'error')
       }
     }
 
     var imp = document.getElementById('db-import-btn')
     if (imp) imp.onclick = async function () {
       var botId = document.getElementById('db-bot-select') && document.getElementById('db-bot-select').value
-      if (!botId) return alert('Pilih bot dulu')
+      if (!botId) return Z.toast('Pilih bot terlebih dahulu.', 'warning')
       var fileInput = document.getElementById('db-file')
-      if (!fileInput || !fileInput.files || !fileInput.files[0]) return alert('Pilih file JSON dulu')
+      if (!fileInput || !fileInput.files || !fileInput.files[0]) return Z.toast('Pilih file JSON terlebih dahulu.', 'warning')
       var msg = document.getElementById('db-msg')
       try {
         var text = await fileInput.files[0].text()
@@ -64,9 +65,10 @@
             '. ' + (res.note || '')
           msg.className = 'msg ok'
         }
+        Z.toast('Database berhasil diimport.', 'success')
       } catch (e) {
         if (msg) { msg.textContent = e.message; msg.className = 'msg err' }
-        else alert(e.message)
+        Z.toast(e.message, 'error')
       }
     }
   })

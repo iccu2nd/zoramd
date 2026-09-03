@@ -111,7 +111,7 @@
             var total = group.querySelectorAll('.feat-enabled').length
             group.querySelector('.feat-group-meta').textContent = on + '/' + total + ' aktif'
             scheduleRestart(botId)
-          } catch (err) { alert(err.message) }
+          } catch (err) { Z.toast(err.message, 'error') }
         }
         var save = item.querySelector('.feat-save')
         if (save) save.onclick = async function () {
@@ -139,8 +139,9 @@
             var msg = item.querySelector('.feat-saved')
             if (msg) { msg.textContent = 'Tersimpan...'; }
             try { await Z.restartBot(botId); if (msg) msg.textContent = 'Tersimpan' } catch (e) {}
+            Z.toast('Pengaturan fitur berhasil disimpan.', 'success')
             setTimeout(function () { if (msg) msg.textContent = '' }, 1500)
-          } catch (err) { alert(err.message) }
+          } catch (err) { Z.toast(err.message, 'error') }
         }
       })
     } catch (e) {
