@@ -38,10 +38,18 @@
       if (Z.$('#set-botname')) Z.$('#set-botname').value = data.botName || ''
       if (Z.$('#set-ownernumber')) Z.$('#set-ownernumber').value = data.ownerNumber || ''
       var id = data.identity || {}
+      if (Z.$('#set-author')) Z.$('#set-author').value = id.author || ''
+      if (Z.$('#set-packname')) Z.$('#set-packname').value = id.packname || ''
+      if (Z.$('#set-title')) Z.$('#set-title').value = id.title || ''
+      if (Z.$('#set-body')) Z.$('#set-body').value = id.body || ''
+      if (Z.$('#set-thumbnail')) Z.$('#set-thumbnail').value = id.thumbnail || ''
       if (Z.$('#set-channelurl')) Z.$('#set-channelurl').value = id.channelUrl || ''
+      if (Z.$('#set-idch')) Z.$('#set-idch').value = id.idch || ''
       if (Z.$('#set-groupurl')) Z.$('#set-groupurl').value = id.groupUrl || ''
+      if (Z.$('#set-groupid')) Z.$('#set-groupid').value = id.groupId || ''
       var disabled = !data.isPremium
-      ;['set-botname', 'set-ownernumber', 'set-channelurl', 'set-groupurl'].forEach(function (i) {
+      ;['set-botname', 'set-ownernumber', 'set-author', 'set-packname', 'set-title', 'set-body',
+        'set-thumbnail', 'set-channelurl', 'set-idch', 'set-groupurl', 'set-groupid'].forEach(function (i) {
         var el = Z.$('#' + i)
         if (el) el.disabled = disabled
       })
@@ -112,7 +120,14 @@
             ownerNumber: Z.$('#set-ownernumber') && Z.$('#set-ownernumber').value,
             identity: {
               channelUrl: Z.$('#set-channelurl') && Z.$('#set-channelurl').value,
-              groupUrl: Z.$('#set-groupurl') && Z.$('#set-groupurl').value
+              groupUrl: Z.$('#set-groupurl') && Z.$('#set-groupurl').value,
+              idch: Z.$('#set-idch') && Z.$('#set-idch').value,
+              groupId: Z.$('#set-groupid') && Z.$('#set-groupid').value,
+              author: Z.$('#set-author') && Z.$('#set-author').value,
+              packname: Z.$('#set-packname') && Z.$('#set-packname').value,
+              title: Z.$('#set-title') && Z.$('#set-title').value,
+              body: Z.$('#set-body') && Z.$('#set-body').value,
+              thumbnail: Z.$('#set-thumbnail') && Z.$('#set-thumbnail').value
             }
           }
         })

@@ -12,7 +12,7 @@ import { checkGconlyAccess, notifyGconlyOnce } from './lib/gconly.js'
 import { hasActiveMenfesSession } from './plugins/_menfes.js'
 import { isPremiumActive } from './lib/plugins.js'
 import { setBotStatus } from './lib/db/accounts.js'
-import { resolveFeature, checkAccessRule } from './lib/featureGate.js'
+import { resolveFeature, checkAccessRule, getCustomCommandMap } from './lib/featureGate.js'
 import { runWithFreeQueue } from './lib/freeQueue.js'
 import { isAccountPremium } from './lib/db/subscription.js'
 
@@ -103,6 +103,7 @@ export async function handleMessage(sock, config, { messages, type }) {
     if (settings.autoread) sock.readMessages([m.key]).catch(() => {})
 
     // eval / shell owner (=>, >, $) dihapus demi keamanan
+    const botIdForGate = config.botId || sock.sessionId || 'default'
     const prefix = prefixes.find(p => m.body.startsWith(p))
     let afterPrefix, cmd, plugin
 
@@ -116,11 +117,18 @@ export async function handleMessage(sock, config, { messages, type }) {
         plugin = getPlugin(cmd)
     }
 
+    // Command hasil ganti nama di Feature Settings (Custom Command) ikut dikenali,
+    // di samping command default aslinya.
+    if (!plugin && cmd) {
+        const customMap = await getCustomCommandMap(botIdForGate)
+        const mappedKey = customMap.get(cmd)
+        if (mappedKey) plugin = getPlugin(mappedKey)
+    }
+
     m.pluginName = plugin ? cmd : undefined
     printChatLog(m, sock?.sessionId)
 
     // onMessage plugins: respect Feature Settings OFF (backend, not just UI)
-    const botIdForGate = config.botId || sock.sessionId || 'default'
     for (const handler of getOnMessageHandlers()) {
         try {
             const fKey = (handler.cmd && handler.cmd[0]) || handler.featureKey
@@ -186,7 +194,20 @@ export async function handleMessage(sock, config, { messages, type }) {
     try {
         const textWithoutCmd = afterPrefix.slice(cmd.length).trim()
         if (settings.autotyping) sock.sendPresenceUpdate('composing', m.from).catch(() => {})
-        if (feat.customResponse) m._customResponse = feat.customResponse
+
+        // Custom Response (Feature Settings): timpa balasan pertama plugin dengan teks custom.
+        if (feat.customResponse) {
+            m._customResponse = feat.customResponse
+            const originalReply = m.reply
+            let customResponseUsed = false
+            m.reply = (text, options = {}) => {
+                if (!customResponseUsed) {
+                    customResponseUsed = true
+                    return originalReply(feat.customResponse, options)
+                }
+                return originalReply(text, options)
+            }
+        }
 
         // Premium: langsung. Free: antrian global (satu proses fitur per waktu),
         // kecuali Fast Respon diaktifkan manual di Bot Settings -> bypass antrian juga.

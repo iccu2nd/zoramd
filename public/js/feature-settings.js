@@ -32,11 +32,13 @@
       }).join('') +
       '</select></div><div class="field"><label>Custom Response</label>' +
       '<input class="feat-response" type="text" value="' + Z.escapeHtml(f.customResponse || '') + '" ' +
-      (isPremium ? '' : 'disabled') + ' placeholder="Kosongkan = default"/></div>' +
+      (isPremium ? '' : 'disabled') + ' placeholder="Kosongkan = default"/>' +
+      (f.description ? '<span class="field-hint">Isi plugin: ' + Z.escapeHtml(String(f.description).slice(0, 100)) + '</span>' : '') +
+      '</div>' +
       '<div class="field"><label>Custom Command</label>' +
       '<input class="feat-command" type="text" value="' + Z.escapeHtml(f.customCommand || '') + '" ' +
       (isPremium ? '' : 'disabled') + ' placeholder="Kosongkan = default"/>' +
-      '<span class="field-hint">Default: ' + Z.escapeHtml((f.aliases && f.aliases.length ? f.aliases : [key]).join(', ')) + '</span>' +
+      '<span class="field-hint">Command asli: ' + Z.escapeHtml((f.aliases && f.aliases.length ? f.aliases : [key]).join(', ')) + ' (custom command jadi alias tambahan)</span>' +
       '</div>' +
       '<div class="row gap"><button type="button" class="btn outline feat-save">Simpan</button>' +
       '<span class="feat-saved msg ok"></span></div></div></div>'

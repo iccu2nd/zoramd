@@ -368,6 +368,9 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
                 if (body.identity?.groupId) identity.groupId = body.identity.groupId
                 if (body.identity?.author) identity.author = body.identity.author
                 if (body.identity?.packname) identity.packname = body.identity.packname
+                if (body.identity?.title) identity.title = body.identity.title
+                if (body.identity?.body) identity.body = body.identity.body
+                if (body.identity?.thumbnail) identity.thumbnail = body.identity.thumbnail
                 await updateOwnedBot(bot._id.toString(), req.account._id.toString(), {
                     botName: identity.botName || bot.botName,
                     ownerNumber: identity.ownerNumber || bot.ownerNumber,
