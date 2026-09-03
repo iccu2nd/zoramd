@@ -34,42 +34,57 @@
 
     var sendAds = document.getElementById('admin-ads-send')
     if (sendAds) sendAds.onclick = async function () {
-      var msg = document.getElementById('admin-ads-send-msg')
-      var resultEl = document.getElementById('admin-ads-send-result')
-      var manualText = document.getElementById('admin-ads-manual-text').value.trim()
-      var defaultText = document.getElementById('admin-ads-text').value.trim()
-      var text = manualText || defaultText
-      if (!text) {
-        if (msg) { msg.textContent = 'Isi teks iklan dulu (manual atau default).'; msg.className = 'msg err' }
-        return
-      }
-      var target = document.getElementById('admin-ads-target').value || 'all'
-      var skipPremium = document.getElementById('admin-ads-skip-premium').checked
-
-      sendAds.disabled = true
-      sendAds.classList.add('is-loading')
-      if (msg) { msg.textContent = 'Mengirim...'; msg.className = 'msg' }
-      if (resultEl) resultEl.innerHTML = ''
-
       try {
-        var data = await Z.api('/admin/ads/send', {
-          method: 'POST',
-          body: { target: target, text: text, skipPremium: skipPremium },
-          timeoutMs: 60000
-        })
-        if (msg) { msg.textContent = 'Terkirim ke total ' + (data.totalSent || 0) + ' grup.'; msg.className = 'msg ok' }
-        if (resultEl) {
-          resultEl.innerHTML = (data.results || []).map(function (r) {
-            var status = r.error ? ('<span class="badge">Gagal: ' + esc(r.error) + '</span>')
-              : r.skipped ? '<span class="badge">Dilewati (premium)</span>'
-              : '<span class="badge premium">' + r.sent + ' grup</span>'
-            return '<div class="bot-card"><div><h3>' + esc(r.botName || r.sessionId) + '</h3>' +
-              '<div class="bot-meta">' + esc(r.sessionId) + '</div></div>' + status + '</div>'
-          }).join('')
+        var msg = document.getElementById('admin-ads-send-msg')
+        var resultEl = document.getElementById('admin-ads-send-result')
+        var manualTextEl = document.getElementById('admin-ads-manual-text')
+        var defaultTextEl = document.getElementById('admin-ads-text')
+        var targetEl = document.getElementById('admin-ads-target')
+        var skipPremiumEl = document.getElementById('admin-ads-skip-premium')
+
+        var manualText = manualTextEl ? manualTextEl.value.trim() : ''
+        var defaultText = defaultTextEl ? defaultTextEl.value.trim() : ''
+        var text = manualText || defaultText
+        if (!text) {
+          if (msg) { msg.textContent = 'Isi teks iklan dulu (manual atau default).'; msg.className = 'msg err' }
+          alert('Isi teks iklan dulu (manual atau default).')
+          return
         }
-      } catch (e) {
-        if (msg) { msg.textContent = e.message; msg.className = 'msg err' }
-      } finally {
+        var target = (targetEl && targetEl.value) || 'all'
+        var skipPremium = skipPremiumEl ? skipPremiumEl.checked : true
+
+        sendAds.disabled = true
+        sendAds.classList.add('is-loading')
+        if (msg) { msg.textContent = 'Mengirim...'; msg.className = 'msg' }
+        if (resultEl) resultEl.innerHTML = ''
+
+        try {
+          var data = await Z.api('/admin/ads/send', {
+            method: 'POST',
+            body: { target: target, text: text, skipPremium: skipPremium },
+            timeoutMs: 60000
+          })
+          var totalSent = data.totalSent || 0
+          if (msg) { msg.textContent = 'Terkirim ke total ' + totalSent + ' grup.'; msg.className = 'msg ok' }
+          if (resultEl) {
+            resultEl.innerHTML = (data.results || []).map(function (r) {
+              var status = r.error ? ('<span class="badge">Gagal: ' + esc(r.error) + '</span>')
+                : r.skipped ? '<span class="badge">Dilewati (premium)</span>'
+                : '<span class="badge premium">' + r.sent + ' grup</span>'
+              return '<div class="bot-card"><div><h3>' + esc(r.botName || r.sessionId) + '</h3>' +
+                '<div class="bot-meta">' + esc(r.sessionId) + '</div></div>' + status + '</div>'
+            }).join('')
+          }
+          if (totalSent === 0) alert('Gak ada yang kekirim. Kemungkinan bot yang dipilih lagi belum connected, atau semuanya dilewati (premium). Cek daftar hasil di bawah tombol.')
+        } catch (e) {
+          if (msg) { msg.textContent = e.message; msg.className = 'msg err' }
+          alert('Gagal kirim: ' + e.message)
+        } finally {
+          sendAds.disabled = false
+          sendAds.classList.remove('is-loading')
+        }
+      } catch (outerErr) {
+        alert('Terjadi error: ' + outerErr.message)
         sendAds.disabled = false
         sendAds.classList.remove('is-loading')
       }
