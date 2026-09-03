@@ -77,6 +77,32 @@
         <p id="admin-ads-msg" class="msg"></p>
       </div>
 
+      <div class="info-card" style="margin-bottom:16px">
+        <h3 style="margin-bottom:10px">Kirim Iklan Manual</h3>
+        <p class="hint">Kirim iklan sekarang juga tanpa nunggu jadwal otomatis. Bisa pilih semua bot atau satu bot tertentu.</p>
+        <div class="field" style="margin-top:8px">
+          <label>Kirim ke</label>
+          <select id="admin-ads-target">
+            <option value="all">Semua Bot (connected)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Teks iklan manual</label>
+          <textarea id="admin-ads-manual-text" rows="3" placeholder="Kosongkan = pakai teks iklan di atas"></textarea>
+          <span class="field-hint">Kosongkan untuk pakai teks iklan default di atas.</span>
+        </div>
+        <div class="toggle-row" style="border:none;padding:8px 0">
+          <div class="toggle-meta">
+            <strong>Lewati bot Premium</strong>
+            <span>Bot dengan owner Premium tidak dikirimi</span>
+          </div>
+          <label class="switch"><input type="checkbox" id="admin-ads-skip-premium" checked /><span class="slider"></span></label>
+        </div>
+        <button type="button" id="admin-ads-send" class="btn primary">Kirim Sekarang</button>
+        <p id="admin-ads-send-msg" class="msg"></p>
+        <div id="admin-ads-send-result" class="bots-list" style="margin-top:10px"></div>
+      </div>
+
       <p class="hint">Kelola seluruh user, bot, premium, dan order. Hanya akun admin.</p>
       <div id="admin-stats" class="limits-bar" style="margin-bottom:16px"></div>
 

@@ -17,6 +17,7 @@ import { getMongoDb } from '../../lib/db/mongo.js'
 import { COLLECTIONS } from '../../lib/db/schema.js'
 import botManager from '../../lib/botManager.js'
 import { getPlatformSettings, setPlatformSettings } from '../../lib/platformSettings.js'
+import { sendAdsManually } from '../../lib/adsScheduler.js'
 import * as sociabuzz from '../../lib/sociabuzz.js'
 
 const router = Router()
@@ -929,6 +930,31 @@ router.put('/admin/platform', authMiddleware, loadAccount, requireAdmin, async (
             adsPerDay: body.adsPerDay
         })
         res.json({ settings })
+    } catch (e) {
+        res.status(500).json({ error: e.message })
+    }
+})
+
+router.post('/admin/ads/send', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        const body = req.body || {}
+        const target = body.target || 'all' // 'all' atau sessionId bot tertentu
+        const text = (body.text || '').trim()
+        if (!text) return res.status(400).json({ error: 'Teks iklan tidak boleh kosong' })
+
+        const results = await sendAdsManually({
+            target,
+            text,
+            skipPremium: body.skipPremium !== false
+        })
+
+        if (!results.length) return res.status(404).json({ error: 'Tidak ada bot yang cocok / terhubung' })
+
+        res.json({
+            ok: true,
+            totalSent: results.reduce((a, r) => a + (r.sent || 0), 0),
+            results
+        })
     } catch (e) {
         res.status(500).json({ error: e.message })
     }
