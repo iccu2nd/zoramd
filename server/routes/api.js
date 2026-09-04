@@ -21,7 +21,7 @@ import { getPlatformSettings, setPlatformSettings } from '../../lib/platformSett
 import { sendAdsManually } from '../../lib/adsScheduler.js'
 import * as sociabuzz from '../../lib/sociabuzz.js'
 import { rateLimit, clientIp } from '../../lib/rateLimit.js'
-import { authCookieOptions, publicError } from '../../lib/security.js'
+import { AUTH_COOKIE_NAME, authCookieOptions, clearAuthCookies, publicError } from '../../lib/security.js'
 import { getChatLog } from '../../lib/liveChatlog.js'
 import { pushNotification, listNotifications, markNotificationsRead, countUnread } from '../../lib/notifications.js'
 import { listCommandErrors } from '../../lib/commandErrors.js'
@@ -139,8 +139,9 @@ router.post('/auth/register/confirm', authStrictLimit, async (req, res) => {
     try {
         const { email, code } = req.body || {}
         const { account, token } = await completeRegister({ email, code })
-        res.cookie('token', token, authCookieOptions(req))
+        res.cookie(AUTH_COOKIE_NAME, token, authCookieOptions(req))
         res.json({
+            token,
             user: {
                 id: account._id,
                 email: account.email,
@@ -168,8 +169,9 @@ router.post('/auth/login', authStrictLimit, async (req, res) => {
     try {
         const { email, password } = req.body || {}
         const { account, token } = await login({ email, password })
-        res.cookie('token', token, authCookieOptions(req))
+        res.cookie(AUTH_COOKIE_NAME, token, authCookieOptions(req))
         res.json({
+            token,
             user: { id: account._id, email: account.email, name: account.name }
         })
     } catch (e) {
@@ -178,7 +180,7 @@ router.post('/auth/login', authStrictLimit, async (req, res) => {
 })
 
 router.post('/auth/logout', (req, res) => {
-    res.clearCookie('token', { ...authCookieOptions(req), maxAge: 0 })
+    clearAuthCookies(req, res)
     res.json({ ok: true })
 })
 

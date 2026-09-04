@@ -64,7 +64,7 @@ function sendNotFound(res) {
 
 async function requireAdminPage(req, res, next) {
     try {
-        const token = req.cookies?.token
+        const token = req.cookies?.zora_sid || req.cookies?.token
         const payload = token && verifyToken(token)
         if (!payload?.sub) return sendNotFound(res)
         const account = await findAccountById(payload.sub)

@@ -16,10 +16,23 @@ function setLoading(on, text) {
   }
 }
 
+function persistToken(token) {
+  if (!token) return
+  try {
+    sessionStorage.setItem('zora_token', token)
+    localStorage.setItem('zora_token', token)
+  } catch (e) {}
+}
+
 async function api(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  try {
+    const stored = sessionStorage.getItem('zora_token') || localStorage.getItem('zora_token')
+    if (stored && !headers.Authorization) headers.Authorization = 'Bearer ' + stored
+  } catch (e) {}
   const res = await fetch('/api' + path, { ...opts, headers, credentials: 'include' })
   const data = await res.json().catch(() => ({}))
+  if (data && data.token) persistToken(data.token)
   if (!res.ok) throw new Error(data.error || res.statusText)
   return data
 }
@@ -191,6 +204,7 @@ $('#login-form').onsubmit = async (e) => {
         password: $('#login-password').value
       })
     })
+    persistToken(data.token)
     setLoading(true, 'Berhasil masuk...')
     await new Promise(r => setTimeout(r, 400))
     redirectToApp()
@@ -261,6 +275,7 @@ if (otpForm) {
         method: 'POST',
         body: JSON.stringify({ email: pendingReg.email, code })
       })
+      persistToken(data.token)
       pendingReg = null
       if (otpTimerInterval) clearInterval(otpTimerInterval)
       setLoading(true, 'Akun dibuat...')

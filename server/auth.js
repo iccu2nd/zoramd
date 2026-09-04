@@ -20,10 +20,18 @@ export function signToken(account) {
 
 export function verifyToken(token) {
     try {
-        return jwt.verify(token, JWT_SECRET)
+        return jwt.verify(token, JWT_SECRET, { clockTolerance: 60 })
     } catch {
         return null
     }
+}
+
+export function readAuthToken(req) {
+    const header = req.headers.authorization || ''
+    if (header.startsWith('Bearer ') && header.length > 7) {
+        return header.slice(7).trim()
+    }
+    return req.cookies?.zora_sid || req.cookies?.token || null
 }
 
 export function isAdminAccount(account) {
@@ -89,9 +97,7 @@ export async function login({ email, password }) {
 }
 
 export function authMiddleware(req, res, next) {
-    const header = req.headers.authorization || ''
-    const cookieToken = req.cookies?.token
-    const token = header.startsWith('Bearer ') ? header.slice(7) : cookieToken
+    const token = readAuthToken(req)
     if (!token) {
         return res.status(401).json({ error: 'Unauthorized' })
     }

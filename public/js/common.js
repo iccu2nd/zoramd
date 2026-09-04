@@ -79,6 +79,29 @@
     limits: null
   }
   var inflightGets = new Map()
+  function getStoredToken() {
+    try { return sessionStorage.getItem('zora_token') || localStorage.getItem('zora_token') || '' } catch (e) { return '' }
+  }
+  function setStoredToken(token) {
+    try {
+      if (token) {
+        sessionStorage.setItem('zora_token', token)
+        localStorage.setItem('zora_token', token)
+      } else {
+        sessionStorage.removeItem('zora_token')
+        localStorage.removeItem('zora_token')
+      }
+    } catch (e) {}
+  }
+  function clearSessionCache() {
+    state.user = null
+    try {
+      localStorage.removeItem('zora_user')
+      localStorage.removeItem('zora_bots')
+      setStoredToken('')
+    } catch (e) {}
+  }
+
   try {
     var cu = localStorage.getItem('zora_user')
     if (cu) state.user = JSON.parse(cu)
@@ -125,6 +148,8 @@
 
     var request = (async function () {
       var headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {})
+      var stored = getStoredToken()
+      if (stored && !headers.Authorization) headers.Authorization = 'Bearer ' + stored
       var fetchOpts = {
         method: method,
         headers: headers,
@@ -135,11 +160,7 @@
       var data = {}
       try { data = await res.json() } catch (e) {}
       if (res.status === 401) {
-        state.user = null
-        try {
-          localStorage.removeItem('zora_user')
-          localStorage.removeItem('zora_bots')
-        } catch (e) {}
+        clearSessionCache()
         var err = new Error(data.error || 'Unauthorized')
         err.status = 401
         throw err
@@ -287,11 +308,8 @@
     var logoutBtn = document.getElementById('logout-btn')
     if (logoutBtn) {
       logoutBtn.onclick = function () {
-        state.user = null
-        try {
-          localStorage.removeItem('zora_user')
-          localStorage.removeItem('zora_bots')
-        } catch (e) {}
+        api('/auth/logout', { method: 'POST', body: {} }).catch(function () {})
+        clearSessionCache()
         location.replace('/login')
       }
     }
@@ -339,6 +357,7 @@
     try {
       var me = await api('/auth/me', { timeoutMs: 8000 })
       state.user = me.user
+      if (me.token) setStoredToken(me.token)
       try { localStorage.setItem('zora_user', JSON.stringify(me.user)) } catch (e) {}
       var navAd = document.getElementById('nav-admin')
       if (navAd && me.user && me.user.isAdmin) navAd.classList.remove('hidden')
@@ -368,6 +387,7 @@
 
   global.Zora = {
     $, $$, show, hide, escapeHtml, toast, state, api, goToLogin,
-    setLoading, showMainApp, bindShell, ensureSiteFooter, loadBots, fillBotSelect, bootPage, restartBot
+    setLoading, showMainApp, bindShell, ensureSiteFooter, loadBots, fillBotSelect, bootPage, restartBot,
+    getStoredToken, setStoredToken, clearSessionCache
   }
 })(window)
