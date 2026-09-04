@@ -242,12 +242,19 @@ export async function handleMessage(sock, config, { messages, type }) {
             }
         }
 
-        // Direct processing with concurrency limits (premium gets higher budget).
-        let premiumUser = false
-        try {
-            const ownerId = sock.botConfig?.ownerAccountId || config.ownerAccountId
-            if (ownerId) premiumUser = await isAccountPremium(String(ownerId))
-        } catch {}
+        // Premium fast path: use cached plan on sock when present (set at connect/resume).
+        // Avoid a DB round-trip on every command when possible.
+        let premiumUser = !!(sock.botConfig?.isPremiumAccount || sock.isPremiumAccount)
+        if (!premiumUser) {
+            try {
+                const ownerId = sock.botConfig?.ownerAccountId || config.ownerAccountId
+                if (ownerId) {
+                    premiumUser = await isAccountPremium(String(ownerId))
+                    if (sock.botConfig) sock.botConfig.isPremiumAccount = premiumUser
+                    sock.isPremiumAccount = premiumUser
+                }
+            } catch {}
+        }
 
         const isPremiumLane = premiumUser || !!settings.fastrespon
         const sessionKey = sock.sessionId || config.botId || 'default'

@@ -21,12 +21,12 @@
       var el = Z.$(id)
       if (el) el.textContent = v
     }
-    set('#m-in', m.messagesIn != null ? String(m.messagesIn) : '0')
-    set('#m-out', m.messagesOut != null ? String(m.messagesOut) : '0')
-    set('#m-cmds', m.commands != null ? String(m.commands) : '0')
+    set('#m-in', String(m.messagesIn || 0))
+    set('#m-out', String(m.messagesOut || 0))
+    set('#m-cmds', String(m.commands || 0))
     set('#m-okfail', (m.commandsOk || 0) + ' / ' + (m.commandsFail || 0))
-    set('#m-users', m.activeUsers24h != null ? String(m.activeUsers24h) : '0')
-    set('#m-rt', fmtMs(m.avgResponseMs))
+    set('#m-users', String(m.activeUsers24h || 0))
+    set('#m-rt', m.avgResponseMs ? fmtMs(m.avgResponseMs) : '—')
     set('#m-err', (m.errorRate != null ? m.errorRate : 0) + '%')
     set('#m-plan', (data && data.plan === 'premium') ? 'Premium' : 'Free')
 
@@ -180,7 +180,10 @@
     setupOnboarding()
     loadMetrics()
     if (metricsTimer) clearInterval(metricsTimer)
-    metricsTimer = setInterval(loadMetrics, 30000)
+    metricsTimer = setInterval(function () {
+      if (document.hidden) return
+      loadMetrics()
+    }, 45000)
 
     var btn = Z.$('#create-bot-btn')
     if (!btn) return
