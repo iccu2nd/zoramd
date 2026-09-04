@@ -115,6 +115,20 @@ export function createApp() {
         next()
     })
 
+    // Semua respons /api WAJIB no-store -- ini API dinamis & bergantung sesi
+    // (cookie JWT per-user), bukan aset statis. Kalau ada CDN/reverse proxy di
+    // depan (Cloudflare dkk) yang punya rule caching agresif (mis. "Cache
+    // Everything"), tanpa header ini respons /api/auth/me bisa ke-cache dan
+    // disajikan ulang ke request BERIKUTNYA -- termasuk ke user lain / kondisi
+    // login yang udah beda -- sehingga status login kebaca beda-beda (nyambung-
+    // putus) padahal cookie-nya sama. Set paling awal di chain /api supaya
+    // kepasang di SEMUA respons, termasuk yang error duluan sebelum handler.
+    app.use('/api', (req, res, next) => {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private')
+        res.setHeader('Pragma', 'no-cache')
+        next()
+    })
+
     // Semua handler lama mengembalikan error JSON masing-masing. Sanitasi error
     // 5xx di satu tempat agar detail Mongo/provider tidak bocor di production.
     app.use('/api', (req, res, next) => {
