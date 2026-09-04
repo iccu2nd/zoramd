@@ -91,7 +91,7 @@ function sameOriginGuard(req, res, next) {
         const sameHost = parsed.host === req.get('host')
         if (sameHost || allowed.includes(origin)) return next()
     } catch {}
-    return res.status(403).json({ error: 'Origin tidak diizinkan' })
+    return res.status(403).json({ error: 'Origin not allowed' })
 }
 
 export function createApp() {
@@ -135,7 +135,7 @@ export function createApp() {
         windowMs: 60 * 1000,
         max: 180,
         keyFn: (req) => 'api:' + clientIp(req),
-        message: 'Terlalu banyak request. Coba lagi sebentar.'
+        message: 'Too many requests. Please try again shortly.'
     }))
 
 
@@ -190,7 +190,7 @@ export function createApp() {
     app.use((err, req, res, next) => {
         console.error('[http]', err?.message || err)
         if (err?.message === 'CORS not allowed') {
-            return res.status(403).json({ error: 'Origin tidak diizinkan' })
+            return res.status(403).json({ error: 'Origin not allowed' })
         }
         res.status(500).json({ error: 'Internal server error' })
     })

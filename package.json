@@ -14,7 +14,7 @@
   "dependencies": {
     "@hapi/boom": "^10.0.1",
     "@napi-rs/canvas": "*",
-    "@whiskeysockets/baileys": "latest",
+    "@whiskeysockets/baileys": "7.0.0-rc14",
     "adm-zip": "^0.5.17",
     "axios": "^1.6.8",
     "bcryptjs": "^2.4.3",

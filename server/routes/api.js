@@ -21,11 +21,11 @@ import { getPlatformSettings, setPlatformSettings } from '../../lib/platformSett
 import { sendAdsManually } from '../../lib/adsScheduler.js'
 import * as sociabuzz from '../../lib/sociabuzz.js'
 import { rateLimit, clientIp } from '../../lib/rateLimit.js'
+import { getSessionMetrics, getAggregateMetrics, clearSessionMetrics } from '../../lib/botMetrics.js'
 import { AUTH_COOKIE_NAME, authCookieOptions, clearAuthCookies, publicError } from '../../lib/security.js'
 import { getChatLog } from '../../lib/liveChatlog.js'
 import { pushNotification, listNotifications, markNotificationsRead, countUnread } from '../../lib/notifications.js'
 import { listCommandErrors, listCommandErrorsAdmin } from '../../lib/commandErrors.js'
-import { getSessionMetrics, getAggregateMetrics } from '../../lib/botMetrics.js'
 
 const router = Router()
 
@@ -42,13 +42,19 @@ const otpLimit = rateLimit({
     max: 10,
     blockMs: 30 * 60 * 1000,
     keyFn: (req) => 'otp:' + clientIp(req),
-    message: 'Terlalu banyak permintaan OTP. Coba lagi nanti.'
+    message: 'Too many OTP requests. Please try again later.'
 })
 const adsSendLimit = rateLimit({
     windowMs: 5 * 60 * 1000,
     max: 10,
     keyFn: (req) => 'ads:' + (req.user?.sub || clientIp(req)),
-    message: 'Terlalu sering kirim iklan. Tunggu beberapa menit.'
+    message: 'Too many ad sends. Please wait a few minutes.'
+})
+const createBotLimit = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    keyFn: (req) => 'createbot:' + (req.user?.sub || clientIp(req)),
+    message: 'Too many bots created. Please wait and try again.'
 })
 
 // Health (no secrets)
@@ -133,7 +139,7 @@ router.post('/auth/register', authStrictLimit, async (req, res) => {
         const result = await startRegister({ email, password, name })
         res.json({ pending: true, email: result.email, message: 'Kode OTP dikirim ke email' })
     } catch (e) {
-        res.status(400).json({ error: publicError(e, 'Registrasi gagal') })
+        res.status(400).json({ error: publicError(e, 'Registration failed') })
     }
 })
 
@@ -152,7 +158,7 @@ router.post('/auth/register/confirm', authStrictLimit, async (req, res) => {
             }
         })
     } catch (e) {
-        res.status(400).json({ error: publicError(e, 'Verifikasi gagal') })
+        res.status(400).json({ error: publicError(e, 'Verification failed') })
     }
 })
 
@@ -163,7 +169,7 @@ router.post('/auth/register/resend', authStrictLimit, async (req, res) => {
         const result = await startRegister({ email, password, name })
         res.json({ pending: true, email: result.email, message: 'Kode OTP dikirim ulang' })
     } catch (e) {
-        res.status(400).json({ error: publicError(e, 'Gagal kirim ulang OTP') })
+        res.status(400).json({ error: publicError(e, 'Failed to resend OTP') })
     }
 })
 
@@ -177,7 +183,7 @@ router.post('/auth/login', authStrictLimit, async (req, res) => {
             user: { id: account._id, email: account.email, name: account.name }
         })
     } catch (e) {
-        res.status(400).json({ error: publicError(e, 'Login gagal') })
+        res.status(400).json({ error: publicError(e, 'Login failed') })
     }
 })
 
@@ -206,7 +212,7 @@ router.post('/auth/verify-email/request', authMiddleware, loadAccount, otpLimit,
         await requestEmailVerification(req.account.email)
         res.json({ ok: true })
     } catch (e) {
-        res.status(400).json({ error: publicError(e, 'Gagal kirim OTP') })
+        res.status(400).json({ error: publicError(e, 'Failed to send OTP') })
     }
 })
 
@@ -216,7 +222,7 @@ router.post('/auth/verify-email/confirm', authMiddleware, loadAccount, otpLimit,
         await confirmEmailVerification(req.account.email, code)
         res.json({ ok: true })
     } catch (e) {
-        res.status(400).json({ error: publicError(e, 'Verifikasi gagal') })
+        res.status(400).json({ error: publicError(e, 'Verification failed') })
     }
 })
 
@@ -277,11 +283,11 @@ router.get('/bots', authMiddleware, loadAccount, async (req, res) => {
             limits: { max: maxBots, used: enriched.length, plan: anyPremium ? 'premium' : 'free' }
         })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
-router.post('/bots', authMiddleware, loadAccount, async (req, res) => {
+router.post('/bots', authMiddleware, loadAccount, createBotLimit, async (req, res) => {
     try {
         const { botName, ownerNumber } = req.body || {}
         const existing = await findBotsByOwner(req.account._id)
@@ -314,14 +320,14 @@ router.post('/bots', authMiddleware, loadAccount, async (req, res) => {
             limits: { max: maxBots, used: existing.length + 1, plan: anyPremium ? 'premium' : 'free' }
         })
     } catch (e) {
-        res.status(400).json({ error: e.message })
+        res.status(400).json({ error: publicError(e, 'Invalid request') })
     }
 })
 
 router.get('/bots/:botId', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const sub = await getSubscription(bot._id.toString())
         const state = botManager.getState(bot.sessionId)
         res.json({
@@ -340,7 +346,7 @@ router.get('/bots/:botId', authMiddleware, loadAccount, async (req, res) => {
             }
         })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -348,7 +354,7 @@ router.get('/bots/:botId', authMiddleware, loadAccount, async (req, res) => {
 router.post('/bots/:botId/connect', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const { phoneNumber, method } = req.body || {}
         // method: 'qr' | 'pairing'
         const forcePairing = method === 'pairing'
@@ -372,31 +378,32 @@ router.post('/bots/:botId/connect', authMiddleware, loadAccount, async (req, res
         }).catch(e => console.error(`[connect] start ${bot.sessionId}:`, e.message))
         res.json({ state: { ...inst.getPublicState(), status: forcePairing ? 'pairing' : 'connecting' } })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
 router.post('/bots/:botId/disconnect', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const { clearSession } = req.body || {}
         await botManager.stopBot(bot.sessionId, { clearSession: !!clearSession })
         res.json({ ok: true })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
 router.delete('/bots/:botId', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         await botManager.stopBot(bot.sessionId, { clearSession: true })
+        try { if (bot.sessionId) clearSessionMetrics(bot.sessionId) } catch {}
         await deleteBotById(req.params.botId)
         res.json({ ok: true })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -425,11 +432,11 @@ router.patch('/bots/:botId', authMiddleware, loadAccount, async (req, res) => {
 router.get('/bots/:botId/status', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const state = botManager.getState(bot.sessionId)
         res.json({ state })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -437,7 +444,7 @@ router.get('/bots/:botId/status', authMiddleware, loadAccount, async (req, res) 
 router.get('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const premium = (await isAccountPremium(req.account._id.toString())) || (await isBotPremium(bot._id.toString()))
         const db = await getMongoDb()
         const settingsDoc = await db.collection(COLLECTIONS.BOT_SETTINGS).findOne({ botId: bot.sessionId })
@@ -449,14 +456,14 @@ router.get('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
             isPremium: premium
         })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
 router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const premium = ((await isAccountPremium(req.account._id.toString())) || (await isBotPremium(bot._id.toString())))
         const body = req.body || {}
 
@@ -493,7 +500,7 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
                 })
             }
         } else if (body.identity || body.botName || body.ownerNumber) {
-            return res.status(403).json({ error: 'Custom identity hanya tersedia untuk Premium' })
+            return res.status(403).json({ error: 'Custom identity is available for Premium only' })
         }
 
         if (Object.keys(patchSettings).length) {
@@ -527,7 +534,7 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
 
         res.json({ ok: true })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -535,7 +542,7 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
 router.get('/bots/:botId/features', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const premium = ((await isAccountPremium(req.account._id.toString())) || (await isBotPremium(bot._id.toString())))
         const saved = await getAllFeatureSettings(bot.sessionId)
         const savedMap = {}
@@ -583,14 +590,14 @@ router.get('/bots/:botId/features', authMiddleware, loadAccount, async (req, res
             accessRules: ACCESS_FLAGS
         })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
 router.put('/bots/:botId/features/:featureKey', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const premium = ((await isAccountPremium(req.account._id.toString())) || (await isBotPremium(bot._id.toString())))
         const body = req.body || {}
         const patch = {}
@@ -615,7 +622,7 @@ router.put('/bots/:botId/features/:featureKey', authMiddleware, loadAccount, asy
         const updated = await getFeatureSetting(bot.sessionId, req.params.featureKey)
         res.json({ feature: updated })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -633,7 +640,7 @@ router.get('/premium', authMiddleware, loadAccount, async (req, res) => {
             orders: orders.slice(0, 10)
         })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -679,7 +686,7 @@ router.post('/premium/order', authMiddleware, loadAccount, async (req, res) => {
             payment: paymentInfo
         })
     } catch (e) {
-        res.status(500).json({ error: e.message || 'Gagal membuat order' })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -689,7 +696,7 @@ router.post('/premium/check', authMiddleware, loadAccount, async (req, res) => {
         if (!orderId) return res.status(400).json({ error: 'orderId wajib' })
         const order = await findOrder(orderId)
         if (!order || order.accountId !== req.account._id.toString()) {
-            return res.status(404).json({ error: 'Order tidak ditemukan' })
+            return res.status(404).json({ error: 'Order not found' })
         }
         if (order.status === 'paid') return res.json({ status: 'paid', already: true })
         if (order.status === 'cancelled') return res.json({ status: 'cancelled' })
@@ -729,7 +736,7 @@ router.post('/premium/check', authMiddleware, loadAccount, async (req, res) => {
         await markOrderChecked(orderId, 'pending')
         res.json({ status: 'pending' })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -741,7 +748,7 @@ router.post('/premium/cancel', authMiddleware, loadAccount, async (req, res) => 
         if (!result.ok) return res.status(400).json({ error: result.error })
         res.json({ ok: true, status: 'cancelled' })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -749,7 +756,7 @@ router.post('/premium/cancel', authMiddleware, loadAccount, async (req, res) => 
 router.post('/bots/:botId/premium/order', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const { method = 'qris', name } = req.body || {}
 
         const payment = await sociabuzz.createPayment(PREMIUM_PRICE, {
@@ -790,20 +797,20 @@ router.post('/bots/:botId/premium/order', authMiddleware, loadAccount, async (re
             payment: paymentInfo
         })
     } catch (e) {
-        res.status(500).json({ error: e.message || 'Gagal membuat order' })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
 router.post('/bots/:botId/premium/check', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const { orderId } = req.body || {}
         if (!orderId) return res.status(400).json({ error: 'orderId wajib' })
 
         const order = await findOrder(orderId)
         if (!order || order.accountId !== req.account._id.toString()) {
-            return res.status(404).json({ error: 'Order tidak ditemukan' })
+            return res.status(404).json({ error: 'Order not found' })
         }
         if (order.status === 'paid') {
             return res.json({ status: 'paid', already: true })
@@ -850,14 +857,14 @@ router.post('/bots/:botId/premium/check', authMiddleware, loadAccount, async (re
         await markOrderChecked(orderId, 'pending')
         res.json({ status: 'pending' })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
 router.get('/bots/:botId/premium', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const sub = await getSubscription(bot._id.toString())
         const orders = await findOrdersByAccount(req.account._id.toString())
         const botOrders = orders.filter(o => o.botId === bot._id.toString())
@@ -868,7 +875,7 @@ router.get('/bots/:botId/premium', authMiddleware, loadAccount, async (req, res)
             orders: botOrders
         })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -878,14 +885,14 @@ router.get('/bots/:botId/premium', authMiddleware, loadAccount, async (req, res)
 router.post('/bots/:botId/premium/cancel', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const { orderId } = req.body || {}
         if (!orderId) return res.status(400).json({ error: 'orderId wajib' })
         const result = await cancelOrder(orderId, req.account._id.toString())
         if (!result.ok) return res.status(400).json({ error: result.error })
         res.json({ ok: true, status: 'cancelled' })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -896,7 +903,7 @@ router.post('/bots/:botId/premium/cancel', authMiddleware, loadAccount, async (r
 router.post('/bots/:botId/power', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const enabled = req.body?.enabled !== false
         await updateOwnedBot(bot._id.toString(), req.account._id.toString(), { enabled })
         const inst = botManager.get(bot.sessionId)
@@ -910,21 +917,21 @@ router.post('/bots/:botId/power', authMiddleware, loadAccount, async (req, res) 
         }
         res.json({ ok: true, enabled, state: botManager.getState(bot.sessionId) })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
 router.post('/bots/:botId/restart', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         await botManager.stopBot(bot.sessionId, { clearSession: false })
         // short delay then start with existing session
         await new Promise(r => setTimeout(r, 800))
         const state = await botManager.startBot(bot.sessionId, bot, { isRestart: true })
         res.json({ ok: true, state })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -932,7 +939,7 @@ router.post('/bots/:botId/restart', authMiddleware, loadAccount, async (req, res
 router.get('/bots/:botId/chatlog', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const logs = getChatLog(bot.sessionId)
         res.json({ logs })
     } catch (e) {
@@ -944,7 +951,7 @@ router.get('/bots/:botId/chatlog', authMiddleware, loadAccount, async (req, res)
 router.get('/bots/:botId/database', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const db = await getMongoDb()
         const sid = bot.sessionId
         const [botData, botSettings, features, sub, authDocs] = await Promise.all([
@@ -980,14 +987,14 @@ router.get('/bots/:botId/database', authMiddleware, loadAccount, async (req, res
         res.setHeader('Content-Disposition', `attachment; filename="database-${sid}.json"`)
         res.json(payload)
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
 router.post('/bots/:botId/database/import', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const body = req.body || {}
         if (body.format && body.format !== 'zorabot-database') {
             return res.status(400).json({ error: 'Format file tidak dikenali. Gunakan export ZoraBot.' })
@@ -1079,7 +1086,7 @@ router.post('/bots/:botId/database/import', authMiddleware, loadAccount, async (
                 : 'Data bot diimpor. Session tidak disertakan (centang session saat export jika perlu).'
         })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -1137,7 +1144,7 @@ router.put('/admin/platform', authMiddleware, loadAccount, requireAdmin, async (
         })
         res.json({ settings })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -1163,7 +1170,7 @@ router.post('/admin/ads/send', authMiddleware, loadAccount, requireAdmin, adsSen
             results
         })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -1318,10 +1325,14 @@ router.post('/admin/accounts/:id/role', authMiddleware, loadAccount, requireAdmi
     try {
         if (!safeObjectId(req.params.id)) return res.status(400).json({ error: 'Invalid ID' })
         const role = req.body?.role === 'admin' ? 'admin' : 'user'
+        // Prevent locking yourself out of the last admin path by demoting self
+        if (role === 'user' && String(req.params.id) === String(req.account._id)) {
+            return res.status(400).json({ error: 'You cannot demote your own admin role' })
+        }
         await setAccountRole(req.params.id, role)
         res.json({ ok: true, role })
     } catch (e) {
-        res.status(500).json({ error: publicError(e) })
+        res.status(500).json({ error: publicError(e, 'Failed to update role') })
     }
 })
 
@@ -1373,7 +1384,7 @@ router.post('/admin/bots/:id/status', authMiddleware, loadAccount, requireAdmin,
         if (!oid) return res.status(400).json({ error: 'Invalid ID' })
         const db = await getMongoDb()
         const bot = await db.collection(COLLECTIONS.BOTS).findOne({ _id: oid })
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const action = req.body?.action
         if (action === 'stop') {
             await botManager.stopBot(bot.sessionId, { clearSession: !!req.body.clearSession })
@@ -1411,7 +1422,7 @@ router.get('/notifications', authMiddleware, loadAccount, async (req, res) => {
             unread
         })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -1421,7 +1432,7 @@ router.post('/notifications/read', authMiddleware, loadAccount, async (req, res)
         await markNotificationsRead(req.account._id.toString(), ids)
         res.json({ ok: true })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -1442,7 +1453,7 @@ router.get('/orders', authMiddleware, loadAccount, async (req, res) => {
             }))
         })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
@@ -1462,7 +1473,7 @@ router.delete('/orders/:orderId', authMiddleware, loadAccount, async (req, res) 
 router.get('/bots/:botId/errors', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
         const errors = await listCommandErrors(bot.sessionId, { limit: 25 })
         res.json({
             errors: errors.map(e => ({
@@ -1472,7 +1483,7 @@ router.get('/bots/:botId/errors', authMiddleware, loadAccount, async (req, res) 
             }))
         })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 

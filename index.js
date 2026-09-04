@@ -62,8 +62,12 @@ async function main() {
     // Database/plugin initialization runs after HTTP is listening so Railway's
     // health checks and the dashboard can receive a response during warm-up.
     await ensureIndexes().catch(e =>
-        console.error(chalk.redBright('Gagal membuat index MongoDB:'), e.message)
+        console.error(chalk.redBright('Failed to create MongoDB indexes:'), e.message)
     )
+    try {
+        const { ensureCommandErrorIndexes } = await import('./lib/commandErrors.js')
+        await ensureCommandErrorIndexes()
+    } catch {}
     await loadPlugins()
 
     // Resume previously connected bots (session still valid in Mongo)

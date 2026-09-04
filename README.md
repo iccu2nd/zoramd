@@ -60,3 +60,16 @@ Rp25.000/bulan via SociaBuzz. Status dicek **manual** (tombol Cek Status), tanpa
 - Bot engine butuh proses Node.js **persistent** (bukan pure serverless).
 - Session WA tidak pernah dikirim ke frontend.
 - User hanya akses bot miliknya (`ownerId` di setiap query).
+
+
+## Production checklist
+
+1. Set strong `JWT_SECRET` (min 24 chars) — app exits in production if missing/weak.
+2. Set `MONGODB_URI`, `APP_URL` (https), `NODE_ENV=production`.
+3. Prefer `FORCE_SECURE_COOKIE=1` only when the site is fully HTTPS.
+4. Set `ADMIN_EMAILS` for bootstrap admin access (comma-separated).
+5. Optional concurrency: `CMD_CONCURRENCY_FREE`, `CMD_CONCURRENCY_PREMIUM`.
+6. Health: `GET /api/health`
+7. Deploy needs a **persistent** Node process (not pure serverless) for Baileys sessions.
+
+See `.env.example` for all variables.
