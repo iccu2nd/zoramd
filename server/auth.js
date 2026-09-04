@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import { findAccountByEmail, findAccountById, createAccount, updateAccount } from '../lib/db/accounts.js'
 import { issueOtp, verifyOtp } from '../lib/db/emailTokens.js'
 import { sendVerificationOtp, sendPasswordResetOtp } from '../lib/email.js'
-import { assertJwtSecret } from '../lib/security.js'
+import { assertJwtSecret, publicError } from '../lib/security.js'
 
 assertJwtSecret()
 
@@ -24,6 +24,16 @@ export function verifyToken(token) {
     } catch {
         return null
     }
+}
+
+export function isAdminAccount(account) {
+    if (!account) return false
+    if (account.role === 'admin') return true
+    const allow = (process.env.ADMIN_EMAILS || '')
+        .split(',')
+        .map(s => s.trim().toLowerCase())
+        .filter(Boolean)
+    return !!account.email && allow.includes(String(account.email).toLowerCase())
 }
 
 /** Step 1: validasi + kirim OTP. Akun belum dibuat. */
@@ -142,6 +152,6 @@ export async function loadAccount(req, res, next) {
         req.account = account
         next()
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Sesi tidak dapat diverifikasi') })
     }
 }

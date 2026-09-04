@@ -20,7 +20,6 @@
       try {
         var url = '/api/bots/' + botId + '/database' + (withSession ? '?session=1' : '')
         var res = await fetch(url, {
-          headers: { Authorization: 'Bearer ' + (Z.state.token || '') },
           credentials: 'include'
         })
         if (!res.ok) {

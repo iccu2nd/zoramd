@@ -133,7 +133,7 @@
       if (method === 'pairing' && !phone) return Z.toast('Isi nomor WhatsApp (628...) terlebih dahulu.', 'warning')
 
       var box = Z.$('#connect-status')
-      if (box) box.innerHTML = '<div class="inline-loading"><div class="spinner tiny" aria-hidden="true"></div> Menghubungkan... (pairing bisa 5–10 detik)</div>'
+      if (box) box.innerHTML = '<div class="inline-loading"><div class="spinner tiny" aria-hidden="true"><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div></div> Menghubungkan... (pairing bisa 5–10 detik)</div>'
       Z.hide(Z.$('#qr-wrap'))
       Z.hide(Z.$('#pairing-code-wrap'))
       startBtn.disabled = true

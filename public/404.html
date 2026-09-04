@@ -3,81 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="robots" content="noindex" />
-  <title>Halaman tidak ditemukan — ZoraBot</title>
-  <link rel="stylesheet" href="/css/style.css?v=23" />
-  <style>
-    .nf-wrap {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-    .nf-card {
-      width: 100%;
-      max-width: 420px;
-      text-align: center;
-      position: relative;
-    }
-    .nf-mark {
-      width: 80px;
-      height: 80px;
-      margin: 0 auto 22px;
-      animation: nfFloat 3.2s var(--ease) infinite;
-    }
-    .nf-mark img { width: 100%; height: 100%; display: block; }
-    .nf-code {
-      font-size: 13px;
-      font-weight: 600;
-      font-style: italic;
-      font-family: var(--font-display);
-      color: var(--purple-2);
-      margin-bottom: 10px;
-    }
-    .nf-title {
-      font-size: 24px;
-      font-weight: 600;
-      font-family: var(--font-display);
-      color: var(--text);
-      margin-bottom: 10px;
-    }
-    .nf-desc {
-      font-size: 14.5px;
-      color: var(--text-2);
-      line-height: 1.6;
-      margin-bottom: 32px;
-    }
-    .nf-actions {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    @keyframes nfFloat {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-6px); }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .nf-mark { animation: none; }
-    }
-  </style>
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Halaman tidak ditemukan — Botzora</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="/css/style.css?v=24" />
 </head>
-<body>
-  <div class="nf-wrap">
-    <div class="nf-card">
-      <div class="scrap-note tag-purple" style="top:-10px; left:-52px; transform:rotate(-5deg)">nyasar, kayaknya</div>
-      <div class="nf-mark">
-        <img src="/img/mascot-cat.svg" alt="" aria-hidden="true" />
-      </div>
-      <div class="nf-code">404 — tidak ditemukan</div>
-      <h1 class="nf-title">Halaman tidak ditemukan</h1>
-      <p class="nf-desc">Halaman yang kamu cari sudah dipindahkan, dihapus, atau memang tidak pernah ada.</p>
-      <div class="nf-actions">
-        <a href="/" class="btn primary">Kembali ke Beranda</a>
-        <a href="javascript:history.back()" class="btn outline">Halaman Sebelumnya</a>
-      </div>
+<body class="not-found-page">
+  <main class="not-found">
+    <a class="not-found-brand" href="/" aria-label="Kembali ke Botzora">Botzora</a>
+    <div class="not-found-rule" aria-hidden="true"></div>
+    <p class="not-found-code">404</p>
+    <h1>Halaman ini tidak tersedia</h1>
+    <p class="not-found-copy">Tautan mungkin sudah dipindahkan, dihapus, atau tidak bisa diakses dari akun ini.</p>
+    <div class="not-found-actions">
+      <a class="btn primary" href="/dashboard"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Kembali ke Dashboard</a>
+      <a class="btn outline" href="/"><i class="fa-solid fa-house" aria-hidden="true"></i> Halaman utama</a>
     </div>
-  </div>
+  </main>
 </body>
 </html>

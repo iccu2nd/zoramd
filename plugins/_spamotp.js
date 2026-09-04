@@ -13,7 +13,7 @@ function buildEndpoints(p08, p62, b) {
             name: 'Internet Rakyat',
             url: 'https://internetrakyat.id/api/app/auth/send-otp-register',
             data: { phone_number: p08 },
-            headers: { 'x-api-key': '280999!FTTH' }
+            headers: process.env.INTERNETRAKYAT_API_KEY ? { 'x-api-key': process.env.INTERNETRAKYAT_API_KEY } : {}
         },
         {
             name: 'Bonus Belanja',
@@ -37,7 +37,7 @@ function buildEndpoints(p08, p62, b) {
             name: 'Saturdays',
             url: 'https://beta.api.saturdays.com/api/v1/user/otp/send',
             data: { number: b, country_code: '+62', type: '' },
-            headers: { 'x-api-key': 'GCMUDiuY5a7WvyUNt9n3QztToSHzK7Uj', 'country-code': 'ID' }
+            headers: { ...(process.env.SATURDAYS_API_KEY ? { 'x-api-key': process.env.SATURDAYS_API_KEY } : {}), 'country-code': 'ID' }
         },
         {
             name: 'KTBS',

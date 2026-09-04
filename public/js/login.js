@@ -18,8 +18,6 @@ function setLoading(on, text) {
 
 async function api(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) }
-  const token = localStorage.getItem('token')
-  if (token) headers.Authorization = `Bearer ${token}`
   const res = await fetch('/api' + path, { ...opts, headers, credentials: 'include' })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || res.statusText)
@@ -44,28 +42,29 @@ function takeLoginReason() {
 
 function redirectToApp() {
   const next = takeLoginNext()
-  // Hanya izinkan path relatif di domain yang sama
-  const safe = next.startsWith('/') && !next.startsWith('//') ? next : '/'
+  // Hanya izinkan path internal; backslash/newline dapat dinormalisasi browser
+  // menjadi URL eksternal jika hanya dicek dengan startsWith('/').
+  let safe = '/'
+  if (next.startsWith('/') && !next.startsWith('//') && !/[\\\r\n]/.test(next)) {
+    try {
+      const parsed = new URL(next, location.origin)
+      if (parsed.origin === location.origin) {
+        safe = parsed.pathname + parsed.search + parsed.hash
+      }
+    } catch {}
+  }
   location.href = safe
 }
 
 // Jika sudah login, langsung ke dashboard
 async function checkExistingSession() {
   setLoading(true, 'Memeriksa sesi...')
-  const token = localStorage.getItem('token')
-  if (!token) {
-    await new Promise(r => setTimeout(r, 400))
-    setLoading(false)
-    showNoticeFromQuery()
-    return
-  }
   try {
     await api('/auth/me')
     setLoading(true, 'Sudah masuk, mengalihkan...')
     await new Promise(r => setTimeout(r, 300))
     redirectToApp()
   } catch {
-    localStorage.removeItem('token')
     setLoading(false)
     showNoticeFromQuery()
   }
@@ -192,7 +191,6 @@ $('#login-form').onsubmit = async (e) => {
         password: $('#login-password').value
       })
     })
-    localStorage.setItem('token', data.token)
     setLoading(true, 'Berhasil masuk...')
     await new Promise(r => setTimeout(r, 400))
     redirectToApp()
@@ -263,7 +261,6 @@ if (otpForm) {
         method: 'POST',
         body: JSON.stringify({ email: pendingReg.email, code })
       })
-      localStorage.setItem('token', data.token)
       pendingReg = null
       if (otpTimerInterval) clearInterval(otpTimerInterval)
       setLoading(true, 'Akun dibuat...')

@@ -74,12 +74,11 @@
   }
 
   var state = {
-    token: null,
     user: null,
     bots: [],
     limits: null
   }
-  try { state.token = localStorage.getItem('token') || null } catch (e) {}
+  var inflightGets = new Map()
   try {
     var cu = localStorage.getItem('zora_user')
     if (cu) state.user = JSON.parse(cu)
@@ -119,31 +118,41 @@
 
   async function api(path, opts) {
     opts = opts || {}
-    var headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {})
-    if (state.token) headers.Authorization = 'Bearer ' + state.token
-    var fetchOpts = {
-      method: opts.method || 'GET',
-      headers: headers,
-      credentials: 'include'
+    var method = (opts.method || 'GET').toUpperCase()
+    var dedupe = method === 'GET' && opts.dedupe !== false
+    var key = path + '|' + String(opts.timeoutMs || 10000)
+    if (dedupe && inflightGets.has(key)) return inflightGets.get(key)
+
+    var request = (async function () {
+      var headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {})
+      var fetchOpts = {
+        method: method,
+        headers: headers,
+        credentials: 'include'
+      }
+      if (opts.body != null) fetchOpts.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body)
+      var res = await withTimeout(fetch('/api' + path, fetchOpts), opts.timeoutMs || 10000, path)
+      var data = {}
+      try { data = await res.json() } catch (e) {}
+      if (res.status === 401) {
+        state.user = null
+        try {
+          localStorage.removeItem('zora_user')
+          localStorage.removeItem('zora_bots')
+        } catch (e) {}
+        var err = new Error(data.error || 'Unauthorized')
+        err.status = 401
+        throw err
+      }
+      if (!res.ok) throw new Error(data.error || res.statusText || 'Request failed')
+      return data
+    })()
+    if (dedupe) {
+      inflightGets.set(key, request)
+      request.then(function () { if (inflightGets.get(key) === request) inflightGets.delete(key) },
+        function () { if (inflightGets.get(key) === request) inflightGets.delete(key) })
     }
-    if (opts.body != null) fetchOpts.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body)
-    var res = await withTimeout(fetch('/api' + path, fetchOpts), opts.timeoutMs || 10000, path)
-    var data = {}
-    try { data = await res.json() } catch (e) {}
-    if (res.status === 401) {
-      state.token = null
-      state.user = null
-      try {
-        localStorage.removeItem('token')
-        localStorage.removeItem('zora_user')
-        localStorage.removeItem('zora_bots')
-      } catch (e) {}
-      var err = new Error(data.error || 'Unauthorized')
-      err.status = 401
-      throw err
-    }
-    if (!res.ok) throw new Error(data.error || res.statusText || 'Request failed')
-    return data
+    return request
   }
 
   function goToLogin(reason) {
@@ -278,10 +287,8 @@
     var logoutBtn = document.getElementById('logout-btn')
     if (logoutBtn) {
       logoutBtn.onclick = function () {
-        state.token = null
         state.user = null
         try {
-          localStorage.removeItem('token')
           localStorage.removeItem('zora_user')
           localStorage.removeItem('zora_bots')
         } catch (e) {}
@@ -327,20 +334,8 @@
     ensureToastContainer()
     try { setupNotifications() } catch (e) {}
 
-    if (!state.token) {
-      goToLogin('required')
-      return
-    }
-
-    // Langsung tampil — zero loading flash
-    showMainApp()
-
-    // pageInit segera (bisa pakai cache)
-    if (typeof pageInit === 'function') {
-      try { await pageInit() } catch (e) { console.warn('pageInit', e) }
-    }
-
-    // Refresh auth + bots di background
+    // Cookie HttpOnly diverifikasi lebih dulu supaya halaman tidak memproses
+    // data cache sebelum sesi server dipastikan valid.
     try {
       var me = await api('/auth/me', { timeoutMs: 8000 })
       state.user = me.user
@@ -352,6 +347,11 @@
         goToLogin('session')
         return
       }
+    }
+
+    showMainApp()
+    if (typeof pageInit === 'function') {
+      try { await pageInit() } catch (e) { console.warn('pageInit', e) }
     }
 
     try {

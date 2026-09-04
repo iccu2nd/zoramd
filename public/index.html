@@ -4,18 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ZoraBot</title>
-  <script>
-    // Jika ada token → dashboard, jika tidak → login (URL tetap bersih, tanpa query string)
-    if (localStorage.getItem('token')) {
-      location.replace('/dashboard')
-    } else {
-      try {
-        sessionStorage.setItem('zora_login_reason', 'required')
-        sessionStorage.setItem('zora_login_next', '/dashboard')
-      } catch (e) {}
-      location.replace('/login')
-    }
-  </script>
+  <script>location.replace('/dashboard')</script>
 </head>
 <body>
   <p style="font-family:system-ui;text-align:center;margin-top:40vh;color:#6b7280">Mengalihkan...</p>

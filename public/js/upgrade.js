@@ -122,7 +122,12 @@
     ov.className = 'pay-check-overlay'
     ov.innerHTML =
       '<div class="pay-check-card">' +
-        '<div class="spinner center" style="font-size:32px;margin:0 auto 8px"></div>' +
+        '<div class="spinner center" style="font-size:32px;margin:0 auto 8px">' +
+          '<div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>' +
+          '<div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>' +
+          '<div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>' +
+          '<div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>' +
+        '</div>' +
         '<p>Memeriksa status pembayaran...</p>' +
       '</div>'
     document.body.appendChild(ov)
