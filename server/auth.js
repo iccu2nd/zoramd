@@ -7,7 +7,7 @@ import { assertJwtSecret } from '../lib/security.js'
 
 assertJwtSecret()
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'zorabot-dev-secret-change-me'
+const JWT_SECRET = process.env.JWT_SECRET || 'zorabot-dev-secret-change-me'
 const TOKEN_TTL = '7d'
 
 export function signToken(account) {
@@ -24,16 +24,6 @@ export function verifyToken(token) {
     } catch {
         return null
     }
-}
-
-export function isAdminAccount(account) {
-    if (!account) return false
-    if (account.role === 'admin') return true
-    const allow = (process.env.ADMIN_EMAILS || '')
-        .split(',')
-        .map(s => s.trim().toLowerCase())
-        .filter(Boolean)
-    return !!account.email && allow.includes(String(account.email).toLowerCase())
 }
 
 /** Step 1: validasi + kirim OTP. Akun belum dibuat. */

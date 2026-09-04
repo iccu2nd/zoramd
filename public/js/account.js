@@ -33,8 +33,7 @@
       '  <input type="text" id="verify-code-input" inputmode="numeric" maxlength="6" />' +
       '  <button type="button" class="btn primary" id="verify-confirm-btn" style="margin-top:10px">Konfirmasi</button>' +
       '</div>' +
-      '<p id="verify-error" class="error"></p>' +
-      '<p id="verify-notice" class="auth-notice hidden"></p>'
+      '<p id="verify-error" class="error"></p>'
 
     Z.$('#verify-request-btn').onclick = async function () {
       var btn = Z.$('#verify-request-btn')
@@ -43,10 +42,9 @@
       try {
         await Z.api('/auth/verify-email/request', { method: 'POST', timeoutMs: 8000 })
         Z.show(Z.$('#verify-code-wrap'))
-        var notice = Z.$('#verify-notice')
-        notice.textContent = 'Kode sudah dikirim ke email kamu.'
-        Z.show(notice)
+        Z.toast('Kode verifikasi sudah dikirim ke email kamu.', 'success')
       } catch (e) {
+        Z.toast(e.message, 'error')
         Z.$('#verify-error').textContent = e.message
       } finally {
         btn.disabled = false
@@ -62,8 +60,10 @@
         await Z.api('/auth/verify-email/confirm', { method: 'POST', body: { code: code }, timeoutMs: 8000 })
         Z.state.user.emailVerified = true
         try { localStorage.setItem('zora_user', JSON.stringify(Z.state.user)) } catch (e) {}
+        Z.toast('Email berhasil diverifikasi.', 'success')
         renderVerify()
       } catch (e) {
+        Z.toast(e.message, 'error')
         Z.$('#verify-error').textContent = e.message
         btn.disabled = false
       }

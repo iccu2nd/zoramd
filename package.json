@@ -1,13 +1,12 @@
 {
-  "name": "@workspace/zorabot",
+  "name": "zorabot",
   "version": "1.0.0",
   "description": "ZoraBot - Portable WhatsApp JadiBot Platform",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "node --watch index.js",
-    "build": "node -e \"console.log('ZoraBot server bundle uses the source runtime')\""
+    "dev": "node --watch index.js"
   },
   "engines": {
     "node": ">=18"

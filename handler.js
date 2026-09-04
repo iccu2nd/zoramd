@@ -7,7 +7,7 @@ import { getPlugin, getOnMessageHandlers, getOnConnectHandlers, getAllCommandEnt
 import { findClosestCommands } from './lib/didyoumean.js'
 import loadUser, { saveMetadata, syncGroupParticipants, getContact, getLidMapping, settings } from './lib/database.js'
 import { printChatLog } from './lib/chatlog.js'
-import { groupCache, setCachedGroupMetadata, getCachedGroupSubject } from './lib/simple.js'
+import { groupCache, setCachedGroupMetadata } from './lib/simple.js'
 import { checkGconlyAccess, notifyGconlyOnce } from './lib/gconly.js'
 import { hasActiveMenfesSession } from './plugins/_menfes.js'
 import { isPremiumActive } from './lib/plugins.js'

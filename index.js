@@ -39,15 +39,16 @@ async function main() {
     console.log(chalk.whiteBright('  Portable WhatsApp JadiBot Platform'))
     console.log()
 
-    const hasMongo = Boolean(process.env.MONGODB_URI)
-    if (!hasMongo) {
-        console.warn(chalk.yellowBright('MONGODB_URI belum diset; dashboard berjalan dalam mode preview tanpa bot/database.'))
-    } else {
-        await ensureIndexes().catch(e =>
-            console.error(chalk.redBright('Gagal membuat index MongoDB:'), e.message)
-        )
-        await loadPlugins()
+    if (!process.env.MONGODB_URI) {
+        console.error(chalk.redBright('MONGODB_URI belum diset. Lihat .env.example'))
+        process.exit(1)
     }
+
+    await ensureIndexes().catch(e =>
+        console.error(chalk.redBright('Gagal membuat index MongoDB:'), e.message)
+    )
+
+    await loadPlugins()
 
     // Start HTTP server (dashboard + API)
     const app = createApp()
@@ -57,10 +58,8 @@ async function main() {
     })
 
     // Resume previously connected bots (session still valid in Mongo)
-    if (hasMongo) {
-        await botManager.resumeAll()
-        startAdsScheduler()
-    }
+    await botManager.resumeAll()
+    startAdsScheduler()
 }
 
 main().catch(e => {

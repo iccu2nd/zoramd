@@ -50,8 +50,7 @@
     item.innerHTML =
       '<span class="toast-icon" aria-hidden="true"><i class="fa-solid ' + icon + '"></i></span>' +
       '<span class="toast-copy"><strong>' + escapeHtml(title || toastTitles[kind]) + '</strong>' +
-      '<span>' + escapeHtml(message || '') + '</span></span>' +
-      '<span class="toast-progress" aria-hidden="true"></span>'
+      '<span>' + escapeHtml(message || '') + '</span></span>'
 
     close.type = 'button'
     close.className = 'toast-close'
@@ -70,7 +69,7 @@
 
     close.onclick = dismiss
     container.appendChild(item)
-    timer = setTimeout(dismiss, 5200)
+    timer = setTimeout(dismiss, 4000)
     return { close: dismiss }
   }
 
@@ -214,14 +213,10 @@
     var btn = document.getElementById('notif-btn')
     var panel = document.getElementById('notif-panel')
     var dot = document.getElementById('notif-dot')
-    var refreshPromise = null
-    var lastRefreshAt = 0
 
     async function refresh() {
-      if (refreshPromise) return refreshPromise
-      if (lastRefreshAt && Date.now() - lastRefreshAt < 30000) return
-      refreshPromise = api('/notifications', { timeoutMs: 8000 }).then(function (data) {
-        lastRefreshAt = Date.now()
+      try {
+        var data = await api('/notifications', { timeoutMs: 8000 })
         var items = data.notifications || []
         if (dot) {
           if (data.unread > 0) dot.classList.add('show')
@@ -241,18 +236,12 @@
           el.onclick = async function () {
             try { await api('/notifications/read', { method: 'POST', body: { ids: [el.dataset.id] } }) } catch (e) {}
             if (el.dataset.link) location.href = el.dataset.link
-            else {
-              lastRefreshAt = 0
-              refresh()
-            }
+            else refresh()
           }
         })
-      }).catch(function () {
+      } catch (e) {
         if (panel) panel.innerHTML = '<div class="notif-empty">Gagal memuat</div>'
-      }).finally(function () {
-        refreshPromise = null
-      })
-      return refreshPromise
+      }
     }
 
     if (btn && panel) {
@@ -263,8 +252,10 @@
       }
       document.addEventListener('click', function () { panel.classList.add('hidden') })
       panel.addEventListener('click', function (e) { e.stopPropagation() })
-      // One shared initial fetch updates both the badge and the panel state.
-      refresh()
+      // initial badge
+      api('/notifications', { timeoutMs: 8000 }).then(function (data) {
+        if (dot && data.unread > 0) dot.classList.add('show')
+      }).catch(function () {})
     }
   }
 

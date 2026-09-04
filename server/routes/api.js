@@ -3,7 +3,6 @@ import { ObjectId } from 'mongodb'
 import { v4 as uuidv4 } from 'uuid'
 import {
     authMiddleware, loadAccount, register, login, startRegister, completeRegister,
-    isAdminAccount,
     requestEmailVerification, confirmEmailVerification,
     requestPasswordReset, resetPassword
 } from '../auth.js'
@@ -11,7 +10,7 @@ import {
     createBot, findBotsByOwner, findOwnedBot, updateOwnedBot, findBotBySessionId, setBotStatus,
     listAllAccounts, listAllBots, setAccountRole, deleteBotById, updateAccount, findAccountById
 } from '../../lib/db/accounts.js'
-import { getSubscription, isBotPremium, activatePremium, isAccountPremium, activateAccountPremium, getAccountSubscription, getAccountPremiumMap } from '../../lib/db/subscription.js'
+import { getSubscription, isBotPremium, activatePremium, isAccountPremium, activateAccountPremium, getAccountSubscription } from '../../lib/db/subscription.js'
 import { getAllFeatureSettings, setFeatureSetting, getFeatureSetting, ACCESS_FLAGS } from '../../lib/db/featureSettings.js'
 import { DEFAULT_ACCESS_RULES } from '../../lib/db/defaultAccessRules.js'
 import { createOrder, findOrder, findOrdersByAccount, markOrderChecked, cancelOrder, isOrderExpired } from '../../lib/db/orders.js'
@@ -87,6 +86,14 @@ function normalizePhone(raw) {
 }
 
 
+
+export function isAdminAccount(account) {
+    if (!account) return false
+    if (account.role === 'admin') return true
+    const allow = (process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+    if (account.email && allow.includes(String(account.email).toLowerCase())) return true
+    return false
+}
 
 function requireAdmin(req, res, next) {
     if (!isAdminAccount(req.account)) {
@@ -223,11 +230,8 @@ router.post('/auth/password/reset', otpLimit, async (req, res) => {
 router.get('/bots', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bots = await findBotsByOwner(req.account._id)
-        const accountSub = await getAccountSubscription(req.account._id.toString())
-        const anyPremium = accountSub.plan === 'premium' &&
-            accountSub.status === 'active' &&
-            (!accountSub.expiresAt || new Date(accountSub.expiresAt).getTime() >= Date.now())
         const enriched = await Promise.all(bots.map(async (b) => {
+            const sub = await getSubscription(b._id.toString())
             const state = botManager.getState(b.sessionId)
             const status = state.status || b.status || 'disconnected'
             return {
@@ -243,11 +247,12 @@ router.get('/bots', authMiddleware, loadAccount, async (req, res) => {
                 waName: state.waName || null,
                 waNumber: state.waNumber || null,
                 profilePic: state.profilePic || null,
-                plan: anyPremium ? 'premium' : 'free',
-                premiumExpiresAt: accountSub.expiresAt,
+                plan: sub.plan,
+                premiumExpiresAt: sub.expiresAt,
                 createdAt: b.createdAt
             }
         }))
+        const anyPremium = await isAccountPremium(req.account._id.toString())
         for (const b of enriched) {
             b.plan = anyPremium ? 'premium' : 'free'
         }
