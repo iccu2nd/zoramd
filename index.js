@@ -4,6 +4,8 @@ import chalk from 'chalk'
 import { ensureIndexes } from './lib/db/schema.js'
 import { loadPlugins } from './lib/plugins.js'
 import { createApp } from './server/app.js'
+import botManager from './lib/botManager.js'
+import { startAdsScheduler } from './lib/adsScheduler.js'
 import config from './config.js'
 
 dns.setDefaultResultOrder('ipv4first')
@@ -13,23 +15,13 @@ process.on('unhandledRejection', (err) => console.error(chalk.redBright.bold('ER
 
 const PORT = Number(process.env.PORT) || 3000
 let httpServer = null
-let botManager = null
-let stopAdsScheduler = null
 
 async function shutdown(signal) {
     console.log(chalk.yellowBright(`\n  ${signal} — graceful shutdown...`))
     try {
-        if (stopAdsScheduler) stopAdsScheduler()
-        if (botManager) await botManager.closeAll()
-    } catch {}
-    try {
         if (httpServer) {
             await new Promise((resolve) => httpServer.close(() => resolve()))
         }
-    } catch {}
-    try {
-        const { stopDatabaseFlush } = await import('./lib/database.js')
-        stopDatabaseFlush()
     } catch {}
     try {
         const { closeMongo } = await import('./lib/db/mongo.js')
@@ -47,9 +39,14 @@ async function main() {
     console.log(chalk.whiteBright('  Portable WhatsApp JadiBot Platform'))
     console.log()
 
-    if (!process.env.MONGODB_URI) {
-        console.error(chalk.redBright('MONGODB_URI belum diset. Lihat .env.example'))
-        process.exit(1)
+    const hasMongo = Boolean(process.env.MONGODB_URI)
+    if (!hasMongo) {
+        console.warn(chalk.yellowBright('MONGODB_URI belum diset; dashboard berjalan dalam mode preview tanpa bot/database.'))
+    } else {
+        await ensureIndexes().catch(e =>
+            console.error(chalk.redBright('Gagal membuat index MongoDB:'), e.message)
+        )
+        await loadPlugins()
     }
 
     // Start HTTP server (dashboard + API)
@@ -59,20 +56,11 @@ async function main() {
         console.log()
     })
 
-    // Database/plugin initialization runs after HTTP is listening so Railway's
-    // health checks and the dashboard can receive a response during warm-up.
-    await ensureIndexes().catch(e =>
-        console.error(chalk.redBright('Gagal membuat index MongoDB:'), e.message)
-    )
-    await loadPlugins()
-
     // Resume previously connected bots (session still valid in Mongo)
-    const managerModule = await import('./lib/botManager.js')
-    botManager = managerModule.default
-    const adsModule = await import('./lib/adsScheduler.js')
-    stopAdsScheduler = adsModule.stopAdsScheduler
-    await botManager.resumeAll()
-    adsModule.startAdsScheduler()
+    if (hasMongo) {
+        await botManager.resumeAll()
+        startAdsScheduler()
+    }
 }
 
 main().catch(e => {

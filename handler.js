@@ -7,7 +7,7 @@ import { getPlugin, getOnMessageHandlers, getOnConnectHandlers, getAllCommandEnt
 import { findClosestCommands } from './lib/didyoumean.js'
 import loadUser, { saveMetadata, syncGroupParticipants, getContact, getLidMapping, settings } from './lib/database.js'
 import { printChatLog } from './lib/chatlog.js'
-import { groupCache, setCachedGroupMetadata } from './lib/simple.js'
+import { groupCache, setCachedGroupMetadata, getCachedGroupSubject } from './lib/simple.js'
 import { checkGconlyAccess, notifyGconlyOnce } from './lib/gconly.js'
 import { hasActiveMenfesSession } from './plugins/_menfes.js'
 import { isPremiumActive } from './lib/plugins.js'
@@ -24,23 +24,6 @@ const DELETE_CACHE_MAX = 800
 const DELETE_CACHE_TTL_MS = 15 * 60 * 1000
 const PP_FETCH_TIMEOUT_MS = 1000
 const SCHEDULED_LEAVE_INTERVAL_MS = 5 * 60 * 1000
-const seenMessageIds = new Map()
-const SEEN_MESSAGE_TTL_MS = 10 * 60 * 1000
-
-function isDuplicateMessage(sock, raw) {
-    const id = raw?.key?.id
-    if (!id) return false
-    const key = `${sock.sessionId || 'default'}:${id}`
-    if (seenMessageIds.has(key)) return true
-    seenMessageIds.set(key, Date.now())
-    if (seenMessageIds.size > 4000) {
-        const cutoff = Date.now() - SEEN_MESSAGE_TTL_MS
-        for (const [entry, timestamp] of seenMessageIds) {
-            if (timestamp < cutoff) seenMessageIds.delete(entry)
-        }
-    }
-    return false
-}
 
 export async function reportPluginError({ sock, config, m, cmd, prefix = '', text = '', e }) {
     try {
@@ -88,7 +71,6 @@ export async function handleMessage(sock, config, { messages, type }) {
     if (type !== 'notify') return
     const raw = messages[0]
     if (!raw?.message) return
-    if (isDuplicateMessage(sock, raw)) return
 
     const rawType = getContentType(raw.message)
     if (rawType === 'protocolMessage') {
@@ -263,7 +245,7 @@ export async function handleMessage(sock, config, { messages, type }) {
                 isAdmin: m.isAdmin,
                 isBotAdmin: m.isBotAdmin
             })
-        }, { key: `${sock.sessionId || 'default'}:${m.from || 'unknown'}` })
+        })
         if (settings.autotyping) sock.sendPresenceUpdate('paused', m.from).catch(() => {})
     } catch (e) {
         console.error(chalk.redBright(e))

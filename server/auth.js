@@ -3,11 +3,11 @@ import bcrypt from 'bcryptjs'
 import { findAccountByEmail, findAccountById, createAccount, updateAccount } from '../lib/db/accounts.js'
 import { issueOtp, verifyOtp } from '../lib/db/emailTokens.js'
 import { sendVerificationOtp, sendPasswordResetOtp } from '../lib/email.js'
-import { assertJwtSecret, publicError } from '../lib/security.js'
+import { assertJwtSecret } from '../lib/security.js'
 
 assertJwtSecret()
 
-const JWT_SECRET = process.env.JWT_SECRET || 'zorabot-dev-secret-change-me'
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'zorabot-dev-secret-change-me'
 const TOKEN_TTL = '7d'
 
 export function signToken(account) {
@@ -152,6 +152,6 @@ export async function loadAccount(req, res, next) {
         req.account = account
         next()
     } catch (e) {
-        res.status(500).json({ error: publicError(e, 'Sesi tidak dapat diverifikasi') })
+        res.status(500).json({ error: e.message })
     }
 }

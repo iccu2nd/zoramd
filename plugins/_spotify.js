@@ -9,7 +9,7 @@ class SpotifyDL {
     }
     this.client = axios.create({
       headers: {
-        ...(process.env.SPOTIFY_API_TOKEN ? { Authorization: `Bearer ${process.env.SPOTIFY_API_TOKEN}` } : {}),
+        Authorization: "Bearer pGLXoCsVu0hcstAecIDwlrlbcrUzv0e1cWBJ0yuB",
         "Content-Type": "application/json",
         "User-Agent": "Spotmate/1.0"
       }

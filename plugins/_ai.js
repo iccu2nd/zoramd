@@ -1,8 +1,6 @@
 import axios from 'axios'
 
 async function deepai(prompt) {
-    const apiKey = process.env.DEEPAI_API_KEY
-    if (!apiKey) throw new Error('AI plugin belum dikonfigurasi')
     const chatHistory = JSON.stringify([{ role: 'user', content: prompt }])
     const payload = new URLSearchParams()
     payload.append('chat_style', 'chat')
@@ -10,7 +8,7 @@ async function deepai(prompt) {
 
     const { data } = await axios.post('https://api.deepai.org/hacking_is_a_serious_crime', payload.toString(), {
         headers: {
-            'api-key': apiKey,
+            'api-key': 'tryit-84303483976-293520c15ccc5fada63d9e51c4639dbb',
             'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36',
             Accept: '*/*',
             Origin: 'https://deepai.org',

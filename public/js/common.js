@@ -50,7 +50,8 @@
     item.innerHTML =
       '<span class="toast-icon" aria-hidden="true"><i class="fa-solid ' + icon + '"></i></span>' +
       '<span class="toast-copy"><strong>' + escapeHtml(title || toastTitles[kind]) + '</strong>' +
-      '<span>' + escapeHtml(message || '') + '</span></span>'
+      '<span>' + escapeHtml(message || '') + '</span></span>' +
+      '<span class="toast-progress" aria-hidden="true"></span>'
 
     close.type = 'button'
     close.className = 'toast-close'
@@ -69,16 +70,17 @@
 
     close.onclick = dismiss
     container.appendChild(item)
-    timer = setTimeout(dismiss, 4000)
+    timer = setTimeout(dismiss, 5200)
     return { close: dismiss }
   }
 
   var state = {
+    token: null,
     user: null,
     bots: [],
     limits: null
   }
-  var inflightGets = new Map()
+  try { state.token = localStorage.getItem('token') || null } catch (e) {}
   try {
     var cu = localStorage.getItem('zora_user')
     if (cu) state.user = JSON.parse(cu)
@@ -118,41 +120,31 @@
 
   async function api(path, opts) {
     opts = opts || {}
-    var method = (opts.method || 'GET').toUpperCase()
-    var dedupe = method === 'GET' && opts.dedupe !== false
-    var key = path + '|' + String(opts.timeoutMs || 10000)
-    if (dedupe && inflightGets.has(key)) return inflightGets.get(key)
-
-    var request = (async function () {
-      var headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {})
-      var fetchOpts = {
-        method: method,
-        headers: headers,
-        credentials: 'include'
-      }
-      if (opts.body != null) fetchOpts.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body)
-      var res = await withTimeout(fetch('/api' + path, fetchOpts), opts.timeoutMs || 10000, path)
-      var data = {}
-      try { data = await res.json() } catch (e) {}
-      if (res.status === 401) {
-        state.user = null
-        try {
-          localStorage.removeItem('zora_user')
-          localStorage.removeItem('zora_bots')
-        } catch (e) {}
-        var err = new Error(data.error || 'Unauthorized')
-        err.status = 401
-        throw err
-      }
-      if (!res.ok) throw new Error(data.error || res.statusText || 'Request failed')
-      return data
-    })()
-    if (dedupe) {
-      inflightGets.set(key, request)
-      request.then(function () { if (inflightGets.get(key) === request) inflightGets.delete(key) },
-        function () { if (inflightGets.get(key) === request) inflightGets.delete(key) })
+    var headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {})
+    if (state.token) headers.Authorization = 'Bearer ' + state.token
+    var fetchOpts = {
+      method: opts.method || 'GET',
+      headers: headers,
+      credentials: 'include'
     }
-    return request
+    if (opts.body != null) fetchOpts.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body)
+    var res = await withTimeout(fetch('/api' + path, fetchOpts), opts.timeoutMs || 10000, path)
+    var data = {}
+    try { data = await res.json() } catch (e) {}
+    if (res.status === 401) {
+      state.token = null
+      state.user = null
+      try {
+        localStorage.removeItem('token')
+        localStorage.removeItem('zora_user')
+        localStorage.removeItem('zora_bots')
+      } catch (e) {}
+      var err = new Error(data.error || 'Unauthorized')
+      err.status = 401
+      throw err
+    }
+    if (!res.ok) throw new Error(data.error || res.statusText || 'Request failed')
+    return data
   }
 
   function goToLogin(reason) {
@@ -222,10 +214,14 @@
     var btn = document.getElementById('notif-btn')
     var panel = document.getElementById('notif-panel')
     var dot = document.getElementById('notif-dot')
+    var refreshPromise = null
+    var lastRefreshAt = 0
 
     async function refresh() {
-      try {
-        var data = await api('/notifications', { timeoutMs: 8000 })
+      if (refreshPromise) return refreshPromise
+      if (lastRefreshAt && Date.now() - lastRefreshAt < 30000) return
+      refreshPromise = api('/notifications', { timeoutMs: 8000 }).then(function (data) {
+        lastRefreshAt = Date.now()
         var items = data.notifications || []
         if (dot) {
           if (data.unread > 0) dot.classList.add('show')
@@ -245,12 +241,18 @@
           el.onclick = async function () {
             try { await api('/notifications/read', { method: 'POST', body: { ids: [el.dataset.id] } }) } catch (e) {}
             if (el.dataset.link) location.href = el.dataset.link
-            else refresh()
+            else {
+              lastRefreshAt = 0
+              refresh()
+            }
           }
         })
-      } catch (e) {
+      }).catch(function () {
         if (panel) panel.innerHTML = '<div class="notif-empty">Gagal memuat</div>'
-      }
+      }).finally(function () {
+        refreshPromise = null
+      })
+      return refreshPromise
     }
 
     if (btn && panel) {
@@ -261,10 +263,8 @@
       }
       document.addEventListener('click', function () { panel.classList.add('hidden') })
       panel.addEventListener('click', function (e) { e.stopPropagation() })
-      // initial badge
-      api('/notifications', { timeoutMs: 8000 }).then(function (data) {
-        if (dot && data.unread > 0) dot.classList.add('show')
-      }).catch(function () {})
+      // One shared initial fetch updates both the badge and the panel state.
+      refresh()
     }
   }
 
@@ -287,8 +287,10 @@
     var logoutBtn = document.getElementById('logout-btn')
     if (logoutBtn) {
       logoutBtn.onclick = function () {
+        state.token = null
         state.user = null
         try {
+          localStorage.removeItem('token')
           localStorage.removeItem('zora_user')
           localStorage.removeItem('zora_bots')
         } catch (e) {}
@@ -334,8 +336,20 @@
     ensureToastContainer()
     try { setupNotifications() } catch (e) {}
 
-    // Cookie HttpOnly diverifikasi lebih dulu supaya halaman tidak memproses
-    // data cache sebelum sesi server dipastikan valid.
+    if (!state.token) {
+      goToLogin('required')
+      return
+    }
+
+    // Langsung tampil — zero loading flash
+    showMainApp()
+
+    // pageInit segera (bisa pakai cache)
+    if (typeof pageInit === 'function') {
+      try { await pageInit() } catch (e) { console.warn('pageInit', e) }
+    }
+
+    // Refresh auth + bots di background
     try {
       var me = await api('/auth/me', { timeoutMs: 8000 })
       state.user = me.user
@@ -347,11 +361,6 @@
         goToLogin('session')
         return
       }
-    }
-
-    showMainApp()
-    if (typeof pageInit === 'function') {
-      try { await pageInit() } catch (e) { console.warn('pageInit', e) }
     }
 
     try {

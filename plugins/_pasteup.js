@@ -1,5 +1,6 @@
 import os from 'os'
 
+const API_KEY = 'pilO34wM7E1IoMp0AP8xSzBm_ltGx8f8'
 const URL_POST = 'https://pastebin.com/api/api_post.php'
 
 const BNODE = [{
@@ -24,9 +25,7 @@ export default {
         await m.react('☁️')
 
         try {
-            const apiKey = process.env.PASTEBIN_API_KEY
-            if (!apiKey) return m.reply('Pastebin belum dikonfigurasi oleh administrator.')
-            const formData = `api_dev_key=${encodeURIComponent(apiKey)}&api_option=paste&api_paste_code=${encodeURIComponent(pasteText.split(os.EOL).join('\n'))}`
+            const formData = `api_dev_key=${API_KEY}&api_option=paste&api_paste_code=${encodeURIComponent(pasteText.split(os.EOL).join('\n'))}`
 
             const res = await fetch(URL_POST, {
                 method: 'POST',

@@ -2,7 +2,8 @@ import { Router } from 'express'
 import { ObjectId } from 'mongodb'
 import { v4 as uuidv4 } from 'uuid'
 import {
-    authMiddleware, loadAccount, register, login, startRegister, completeRegister, isAdminAccount,
+    authMiddleware, loadAccount, register, login, startRegister, completeRegister,
+    isAdminAccount,
     requestEmailVerification, confirmEmailVerification,
     requestPasswordReset, resetPassword
 } from '../auth.js'
@@ -10,7 +11,7 @@ import {
     createBot, findBotsByOwner, findOwnedBot, updateOwnedBot, findBotBySessionId, setBotStatus,
     listAllAccounts, listAllBots, setAccountRole, deleteBotById, updateAccount, findAccountById
 } from '../../lib/db/accounts.js'
-import { getSubscription, isBotPremium, activatePremium, isAccountPremium, activateAccountPremium, getAccountSubscription } from '../../lib/db/subscription.js'
+import { getSubscription, isBotPremium, activatePremium, isAccountPremium, activateAccountPremium, getAccountSubscription, getAccountPremiumMap } from '../../lib/db/subscription.js'
 import { getAllFeatureSettings, setFeatureSetting, getFeatureSetting, ACCESS_FLAGS } from '../../lib/db/featureSettings.js'
 import { DEFAULT_ACCESS_RULES } from '../../lib/db/defaultAccessRules.js'
 import { createOrder, findOrder, findOrdersByAccount, markOrderChecked, cancelOrder, isOrderExpired } from '../../lib/db/orders.js'
@@ -89,7 +90,7 @@ function normalizePhone(raw) {
 
 function requireAdmin(req, res, next) {
     if (!isAdminAccount(req.account)) {
-        return res.status(404).json({ error: 'Not found' })
+        return res.status(403).json({ error: 'Akses admin saja' })
     }
     next()
 }
@@ -101,27 +102,6 @@ function safeObjectId(id) {
     } catch {
         return null
     }
-}
-
-function validateImportValue(value, state = { nodes: 0 }, depth = 0) {
-    if (value == null || typeof value !== 'object') return true
-    if (depth > 12) return false
-    if (Array.isArray(value)) {
-        if (value.length > 10000) return false
-        return value.every(item => validateImportValue(item, state, depth + 1))
-    }
-    const keys = Object.keys(value)
-    state.nodes += keys.length
-    if (state.nodes > 50000) return false
-    for (const key of keys) {
-        if (key.startsWith('$') || key.includes('.')) return false
-        if (!validateImportValue(value[key], state, depth + 1)) return false
-    }
-    return true
-}
-
-function importMap(value) {
-    return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
 }
 
 // ---------- Auth ----------
@@ -139,8 +119,9 @@ router.post('/auth/register/confirm', authStrictLimit, async (req, res) => {
     try {
         const { email, code } = req.body || {}
         const { account, token } = await completeRegister({ email, code })
-        res.cookie('token', token, authCookieOptions(req))
+        res.cookie('token', token, authCookieOptions())
         res.json({
+            token,
             user: {
                 id: account._id,
                 email: account.email,
@@ -168,8 +149,9 @@ router.post('/auth/login', authStrictLimit, async (req, res) => {
     try {
         const { email, password } = req.body || {}
         const { account, token } = await login({ email, password })
-        res.cookie('token', token, authCookieOptions(req))
+        res.cookie('token', token, authCookieOptions())
         res.json({
+            token,
             user: { id: account._id, email: account.email, name: account.name }
         })
     } catch (e) {
@@ -178,7 +160,7 @@ router.post('/auth/login', authStrictLimit, async (req, res) => {
 })
 
 router.post('/auth/logout', (req, res) => {
-    res.clearCookie('token', { ...authCookieOptions(req), maxAge: 0 })
+    res.clearCookie('token', { ...authCookieOptions(), maxAge: 0 })
     res.json({ ok: true })
 })
 
@@ -241,8 +223,11 @@ router.post('/auth/password/reset', otpLimit, async (req, res) => {
 router.get('/bots', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bots = await findBotsByOwner(req.account._id)
+        const accountSub = await getAccountSubscription(req.account._id.toString())
+        const anyPremium = accountSub.plan === 'premium' &&
+            accountSub.status === 'active' &&
+            (!accountSub.expiresAt || new Date(accountSub.expiresAt).getTime() >= Date.now())
         const enriched = await Promise.all(bots.map(async (b) => {
-            const sub = await getSubscription(b._id.toString())
             const state = botManager.getState(b.sessionId)
             const status = state.status || b.status || 'disconnected'
             return {
@@ -258,12 +243,11 @@ router.get('/bots', authMiddleware, loadAccount, async (req, res) => {
                 waName: state.waName || null,
                 waNumber: state.waNumber || null,
                 profilePic: state.profilePic || null,
-                plan: sub.plan,
-                premiumExpiresAt: sub.expiresAt,
+                plan: anyPremium ? 'premium' : 'free',
+                premiumExpiresAt: accountSub.expiresAt,
                 createdAt: b.createdAt
             }
         }))
-        const anyPremium = await isAccountPremium(req.account._id.toString())
         for (const b of enriched) {
             b.plan = anyPremium ? 'premium' : 'free'
         }
@@ -526,21 +510,18 @@ router.get('/bots/:botId/features', authMiddleware, loadAccount, async (req, res
             if (!groups[cat]) groups[cat] = []
             // hindari duplikat key dalam group
             if (groups[cat].some(f => f.featureKey === key)) continue
-            // savedMap[key] datang dari getAllFeatureSettings, yang sudah nge-resolve
-            // accessRules dengan fallback ke DEFAULT_ACCESS_RULES kalau fitur itu belum
-            // pernah disave secara eksplisit lewat Access Rule -- jangan dihitung ulang
-            // di sini (dulu ada bug: dihitung ulang pakai s.accessRules yang defaultnya
-            // selalu ada sebagai array, jadi checkbox Access Rule keliatan kosong/publik
-            // padahal defaultnya owner/admin-only).
-            const s = savedMap[key]
-            const accessRules = s ? s.accessRules : (DEFAULT_ACCESS_RULES[key] || [])
+            const s = savedMap[key] || {}
+            const hasExplicitRules = s.accessRules != null || s.accessRule != null
+            const accessRules = hasExplicitRules
+                ? (Array.isArray(s.accessRules) ? s.accessRules : [])
+                : (DEFAULT_ACCESS_RULES[key] || [])
             groups[cat].push({
                 featureKey: key,
                 aliases: cmds,
                 description: plugin.description || plugin.help || '',
-                enabled: s ? s.enabled !== false : true,
-                customResponse: (s && s.customResponse) || null,
-                customCommand: (s && s.customCommand) || null,
+                enabled: s.enabled !== false,
+                customResponse: s.customResponse || null,
+                customCommand: s.customCommand || null,
                 accessRule: accessRules.length ? accessRules.join('+') : 'public',
                 accessRules
             })
@@ -966,17 +947,14 @@ router.post('/bots/:botId/database/import', authMiddleware, loadAccount, async (
         if (body.format && body.format !== 'zorabot-database') {
             return res.status(400).json({ error: 'Format file tidak dikenali. Gunakan export ZoraBot.' })
         }
-        if (!body || typeof body !== 'object' || Array.isArray(body) || !validateImportValue(body)) {
-            return res.status(400).json({ error: 'Data import terlalu besar, terlalu dalam, atau memiliki key yang tidak valid' })
-        }
         const db = await getMongoDb()
         const sid = bot.sessionId
         const data = body.botData || body
-        const users = importMap(data.users || body.users)
-        const chats = importMap(data.chats || body.chats)
-        const contacts = importMap(data.contacts || body.contacts)
-        const lid_mapping = importMap(data.lid_mapping || body.lid_mapping)
-        const msgs = importMap(data.msgs || body.msgs)
+        const users = data.users || body.users || {}
+        const chats = data.chats || body.chats || {}
+        const contacts = data.contacts || body.contacts || {}
+        const lid_mapping = data.lid_mapping || body.lid_mapping || {}
+        const msgs = data.msgs || body.msgs || {}
 
         await db.collection(COLLECTIONS.BOT_DATA).updateOne(
             { botId: sid },
