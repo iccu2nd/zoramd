@@ -526,18 +526,21 @@ router.get('/bots/:botId/features', authMiddleware, loadAccount, async (req, res
             if (!groups[cat]) groups[cat] = []
             // hindari duplikat key dalam group
             if (groups[cat].some(f => f.featureKey === key)) continue
-            const s = savedMap[key] || {}
-            const hasExplicitRules = s.accessRules != null || s.accessRule != null
-            const accessRules = hasExplicitRules
-                ? (Array.isArray(s.accessRules) ? s.accessRules : [])
-                : (DEFAULT_ACCESS_RULES[key] || [])
+            // savedMap[key] datang dari getAllFeatureSettings, yang sudah nge-resolve
+            // accessRules dengan fallback ke DEFAULT_ACCESS_RULES kalau fitur itu belum
+            // pernah disave secara eksplisit lewat Access Rule -- jangan dihitung ulang
+            // di sini (dulu ada bug: dihitung ulang pakai s.accessRules yang defaultnya
+            // selalu ada sebagai array, jadi checkbox Access Rule keliatan kosong/publik
+            // padahal defaultnya owner/admin-only).
+            const s = savedMap[key]
+            const accessRules = s ? s.accessRules : (DEFAULT_ACCESS_RULES[key] || [])
             groups[cat].push({
                 featureKey: key,
                 aliases: cmds,
                 description: plugin.description || plugin.help || '',
-                enabled: s.enabled !== false,
-                customResponse: s.customResponse || null,
-                customCommand: s.customCommand || null,
+                enabled: s ? s.enabled !== false : true,
+                customResponse: (s && s.customResponse) || null,
+                customCommand: (s && s.customCommand) || null,
                 accessRule: accessRules.length ? accessRules.join('+') : 'public',
                 accessRules
             })
