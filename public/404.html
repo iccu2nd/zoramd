@@ -18,33 +18,29 @@
       width: 100%;
       max-width: 420px;
       text-align: center;
+      position: relative;
     }
     .nf-mark {
-      width: 64px;
-      height: 64px;
-      margin: 0 auto 28px;
-      border-radius: 18px;
-      background: var(--sidebar);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: var(--shadow-md);
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 22px;
       animation: nfFloat 3.2s var(--ease) infinite;
     }
-    .nf-mark svg { width: 30px; height: 30px; }
+    .nf-mark img { width: 100%; height: 100%; display: block; }
     .nf-code {
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: 0.14em;
+      font-size: 13px;
+      font-weight: 600;
+      font-style: italic;
+      font-family: var(--font-display);
       color: var(--purple-2);
       margin-bottom: 10px;
     }
     .nf-title {
-      font-size: 22px;
-      font-weight: 700;
+      font-size: 24px;
+      font-weight: 600;
+      font-family: var(--font-display);
       color: var(--text);
       margin-bottom: 10px;
-      letter-spacing: -0.02em;
     }
     .nf-desc {
       font-size: 14.5px;
@@ -58,30 +54,6 @@
       justify-content: center;
       flex-wrap: wrap;
     }
-    .nf-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      height: 42px;
-      padding: 0 20px;
-      border-radius: var(--radius-sm);
-      font-size: 14px;
-      font-weight: 600;
-      text-decoration: none;
-      transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease), background var(--t) var(--ease);
-    }
-    .nf-btn.primary {
-      background: var(--purple);
-      color: #fff;
-      box-shadow: var(--shadow);
-    }
-    .nf-btn.primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); background: var(--purple-2); }
-    .nf-btn.ghost {
-      background: var(--surface);
-      color: var(--text-2);
-      border: 1px solid var(--border-strong);
-    }
-    .nf-btn.ghost:hover { color: var(--text); border-color: var(--purple-mid); }
     @keyframes nfFloat {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-6px); }
@@ -94,18 +66,16 @@
 <body>
   <div class="nf-wrap">
     <div class="nf-card">
+      <div class="scrap-note tag-purple" style="top:-10px; left:-52px; transform:rotate(-5deg)">nyasar, kayaknya</div>
       <div class="nf-mark">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 9v4.5M12 16.2v.01" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M10.3 3.6c.75-1.2 2.65-1.2 3.4 0l7.7 12.4c.78 1.26-.13 2.9-1.7 2.9H4.3c-1.57 0-2.48-1.64-1.7-2.9l7.7-12.4Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
-        </svg>
+        <img src="/img/mascot-cat.svg" alt="" aria-hidden="true" />
       </div>
-      <div class="nf-code">404</div>
+      <div class="nf-code">404 — tidak ditemukan</div>
       <h1 class="nf-title">Halaman tidak ditemukan</h1>
       <p class="nf-desc">Halaman yang kamu cari sudah dipindahkan, dihapus, atau memang tidak pernah ada.</p>
       <div class="nf-actions">
-        <a href="/" class="nf-btn primary">Kembali ke Beranda</a>
-        <a href="javascript:history.back()" class="nf-btn ghost">Halaman Sebelumnya</a>
+        <a href="/" class="btn primary">Kembali ke Beranda</a>
+        <a href="javascript:history.back()" class="btn outline">Halaman Sebelumnya</a>
       </div>
     </div>
   </div>

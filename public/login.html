@@ -7,22 +7,22 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="/css/style.css?v=23" />
   <style>
-    .terms-row{display:flex;align-items:flex-start;gap:8px;margin:14px 0;font-size:13px;line-height:1.5;color:#888;cursor:pointer}
+    .terms-row{display:flex;align-items:flex-start;gap:8px;margin:14px 0;font-size:13px;line-height:1.5;color:var(--muted);cursor:pointer}
     .terms-row input[type="checkbox"]{margin-top:4px;width:16px;height:16px;flex:none;cursor:pointer}
     .terms-row a{color:inherit;text-decoration:underline}
   
     .otp-boxes{display:flex;gap:8px;justify-content:center;margin:18px 0 16px}
     .otp-digit{
       width:44px;height:52px;text-align:center;font-size:1.35rem;font-weight:700;
-      border:1px solid #e5e7eb;border-radius:12px;background:#fff;color:#111;
+      border:1.5px solid var(--border-strong);border-radius:var(--radius-xs);background:var(--surface);color:var(--text);
     }
-    .otp-digit:focus{outline:2px solid #7c3aed;border-color:#7c3aed}
+    .otp-digit:focus{outline:2px solid var(--purple-2);border-color:var(--purple-2)}
     </style>
 </head>
 <body>
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
     <div class="loading-card">
-      <div class="loading-logo">ZoraBot</div>
+      <div class="loading-logo"><img src="/img/mascot-cat.svg" alt="" class="mascot sm" aria-hidden="true" style="display:inline-block;vertical-align:middle;margin-right:8px" />ZoraBot</div>
             <div class="spinner center" aria-hidden="true"></div>
       <p class="loading-text" id="loading-text">Memuat...</p>
     </div>
@@ -30,7 +30,8 @@
 
   <div id="auth-view" class="auth-wrap hidden">
     <div class="auth-card">
-      <h1>ZoraBot</h1>
+      <div class="scrap-note tag-purple" style="top:-18px; right:-46px; transform:rotate(4deg)">halo, saya penjaga pintu masuknya</div>
+      <h1><img src="/img/mascot-cat.svg" alt="" class="mascot sm" aria-hidden="true" /> ZoraBot</h1>
       <p class="subtitle">WhatsApp JadiBot Platform</p>
       <p id="auth-notice" class="auth-notice hidden"></p>
       <form id="login-form" class="auth-form">
