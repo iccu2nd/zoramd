@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { ObjectId } from 'mongodb'
 import { v4 as uuidv4 } from 'uuid'
 import {
-    authMiddleware, loadAccount, register, login, startRegister, completeRegister,
+    authMiddleware, loadAccount, register, login, startRegister, completeRegister, isAdminAccount,
     requestEmailVerification, confirmEmailVerification,
     requestPasswordReset, resetPassword
 } from '../auth.js'
@@ -87,17 +87,9 @@ function normalizePhone(raw) {
 
 
 
-export function isAdminAccount(account) {
-    if (!account) return false
-    if (account.role === 'admin') return true
-    const allow = (process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
-    if (account.email && allow.includes(String(account.email).toLowerCase())) return true
-    return false
-}
-
 function requireAdmin(req, res, next) {
     if (!isAdminAccount(req.account)) {
-        return res.status(403).json({ error: 'Akses admin saja' })
+        return res.status(404).json({ error: 'Not found' })
     }
     next()
 }
@@ -109,6 +101,27 @@ function safeObjectId(id) {
     } catch {
         return null
     }
+}
+
+function validateImportValue(value, state = { nodes: 0 }, depth = 0) {
+    if (value == null || typeof value !== 'object') return true
+    if (depth > 12) return false
+    if (Array.isArray(value)) {
+        if (value.length > 10000) return false
+        return value.every(item => validateImportValue(item, state, depth + 1))
+    }
+    const keys = Object.keys(value)
+    state.nodes += keys.length
+    if (state.nodes > 50000) return false
+    for (const key of keys) {
+        if (key.startsWith('$') || key.includes('.')) return false
+        if (!validateImportValue(value[key], state, depth + 1)) return false
+    }
+    return true
+}
+
+function importMap(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
 }
 
 // ---------- Auth ----------
@@ -128,7 +141,6 @@ router.post('/auth/register/confirm', authStrictLimit, async (req, res) => {
         const { account, token } = await completeRegister({ email, code })
         res.cookie('token', token, authCookieOptions())
         res.json({
-            token,
             user: {
                 id: account._id,
                 email: account.email,
@@ -158,7 +170,6 @@ router.post('/auth/login', authStrictLimit, async (req, res) => {
         const { account, token } = await login({ email, password })
         res.cookie('token', token, authCookieOptions())
         res.json({
-            token,
             user: { id: account._id, email: account.email, name: account.name }
         })
     } catch (e) {
@@ -952,14 +963,17 @@ router.post('/bots/:botId/database/import', authMiddleware, loadAccount, async (
         if (body.format && body.format !== 'zorabot-database') {
             return res.status(400).json({ error: 'Format file tidak dikenali. Gunakan export ZoraBot.' })
         }
+        if (!body || typeof body !== 'object' || Array.isArray(body) || !validateImportValue(body)) {
+            return res.status(400).json({ error: 'Data import terlalu besar, terlalu dalam, atau memiliki key yang tidak valid' })
+        }
         const db = await getMongoDb()
         const sid = bot.sessionId
         const data = body.botData || body
-        const users = data.users || body.users || {}
-        const chats = data.chats || body.chats || {}
-        const contacts = data.contacts || body.contacts || {}
-        const lid_mapping = data.lid_mapping || body.lid_mapping || {}
-        const msgs = data.msgs || body.msgs || {}
+        const users = importMap(data.users || body.users)
+        const chats = importMap(data.chats || body.chats)
+        const contacts = importMap(data.contacts || body.contacts)
+        const lid_mapping = importMap(data.lid_mapping || body.lid_mapping)
+        const msgs = importMap(data.msgs || body.msgs)
 
         await db.collection(COLLECTIONS.BOT_DATA).updateOne(
             { botId: sid },

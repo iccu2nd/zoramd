@@ -3,111 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="robots" content="noindex" />
-  <title>Halaman tidak ditemukan — ZoraBot</title>
-  <link rel="stylesheet" href="/css/style.css?v=23" />
-  <style>
-    .nf-wrap {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-    .nf-card {
-      width: 100%;
-      max-width: 420px;
-      text-align: center;
-    }
-    .nf-mark {
-      width: 64px;
-      height: 64px;
-      margin: 0 auto 28px;
-      border-radius: 18px;
-      background: var(--sidebar);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: var(--shadow-md);
-      animation: nfFloat 3.2s var(--ease) infinite;
-    }
-    .nf-mark svg { width: 30px; height: 30px; }
-    .nf-code {
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: 0.14em;
-      color: var(--purple-2);
-      margin-bottom: 10px;
-    }
-    .nf-title {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 10px;
-      letter-spacing: -0.02em;
-    }
-    .nf-desc {
-      font-size: 14.5px;
-      color: var(--text-2);
-      line-height: 1.6;
-      margin-bottom: 32px;
-    }
-    .nf-actions {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .nf-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      height: 42px;
-      padding: 0 20px;
-      border-radius: var(--radius-sm);
-      font-size: 14px;
-      font-weight: 600;
-      text-decoration: none;
-      transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease), background var(--t) var(--ease);
-    }
-    .nf-btn.primary {
-      background: var(--purple);
-      color: #fff;
-      box-shadow: var(--shadow);
-    }
-    .nf-btn.primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); background: var(--purple-2); }
-    .nf-btn.ghost {
-      background: var(--surface);
-      color: var(--text-2);
-      border: 1px solid var(--border-strong);
-    }
-    .nf-btn.ghost:hover { color: var(--text); border-color: var(--purple-mid); }
-    @keyframes nfFloat {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-6px); }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .nf-mark { animation: none; }
-    }
-  </style>
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Halaman tidak ditemukan — Botzora</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="/css/style.css?v=24" />
 </head>
-<body>
-  <div class="nf-wrap">
-    <div class="nf-card">
-      <div class="nf-mark">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 9v4.5M12 16.2v.01" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M10.3 3.6c.75-1.2 2.65-1.2 3.4 0l7.7 12.4c.78 1.26-.13 2.9-1.7 2.9H4.3c-1.57 0-2.48-1.64-1.7-2.9l7.7-12.4Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="nf-code">404</div>
-      <h1 class="nf-title">Halaman tidak ditemukan</h1>
-      <p class="nf-desc">Halaman yang kamu cari sudah dipindahkan, dihapus, atau memang tidak pernah ada.</p>
-      <div class="nf-actions">
-        <a href="/" class="nf-btn primary">Kembali ke Beranda</a>
-        <a href="javascript:history.back()" class="nf-btn ghost">Halaman Sebelumnya</a>
-      </div>
+<body class="not-found-page">
+  <main class="not-found">
+    <a class="not-found-brand" href="/" aria-label="Kembali ke Botzora">Botzora</a>
+    <div class="not-found-rule" aria-hidden="true"></div>
+    <p class="not-found-code">404</p>
+    <h1>Halaman ini tidak tersedia</h1>
+    <p class="not-found-copy">Tautan mungkin sudah dipindahkan, dihapus, atau tidak bisa diakses dari akun ini.</p>
+    <div class="not-found-actions">
+      <a class="btn primary" href="/dashboard"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Kembali ke Dashboard</a>
+      <a class="btn outline" href="/"><i class="fa-solid fa-house" aria-hidden="true"></i> Halaman utama</a>
     </div>
-  </div>
+  </main>
 </body>
 </html>
