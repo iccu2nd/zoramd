@@ -47,7 +47,7 @@
   function updateConnectUI(st) {
     if (!st) return
     if (st.status === 'connected' && lastConnectionStatus !== 'connected') {
-      Z.toast('Bot berhasil terhubung.', 'success')
+      Z.toast('Bot connected successfully.', 'success')
     } else if (st.status === 'disconnected' && lastConnectionStatus === 'connected') {
       Z.toast('Bot terputus dari WhatsApp.', 'warning')
     }
@@ -127,10 +127,10 @@
     var startBtn = Z.$('#connect-start-btn')
     if (startBtn) startBtn.onclick = async function () {
       var botId = Z.$('#connect-bot-select') && Z.$('#connect-bot-select').value
-      if (!botId) return Z.toast('Pilih bot terlebih dahulu.', 'warning')
+      if (!botId) return Z.toast('Select a bot first.', 'warning')
       var method = (document.querySelector('input[name="connect-method"]:checked') || {}).value || 'qr'
       var phone = Z.$('#pairing-phone') && Z.$('#pairing-phone').value
-      if (method === 'pairing' && !phone) return Z.toast('Isi nomor WhatsApp (628...) terlebih dahulu.', 'warning')
+      if (method === 'pairing' && !phone) return Z.toast('Enter a WhatsApp number (e.g. 628...) first.', 'warning')
 
       var box = Z.$('#connect-status')
       if (box) box.innerHTML = '<div class="inline-loading"><div class="spinner tiny" aria-hidden="true"><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div></div> Menghubungkan... (pairing bisa 5–10 detik)</div>'
@@ -200,7 +200,7 @@
     var rs = document.getElementById('restart-bot-btn')
     if (rs) rs.onclick = async function () {
       var botId = Z.$('#connect-bot-select') && Z.$('#connect-bot-select').value
-      if (!botId) return Z.toast('Pilih bot terlebih dahulu.', 'warning')
+      if (!botId) return Z.toast('Select a bot first.', 'warning')
       if (!confirm('Restart bot?')) return
       try {
         await Z.restartBot(botId)

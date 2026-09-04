@@ -4,7 +4,7 @@
   var Z = window.Zora
 
   async function doRestart(botId) {
-    if (!botId) return Z.toast('Pilih bot terlebih dahulu.', 'warning')
+    if (!botId) return Z.toast('Select a bot first.', 'warning')
     try {
       await Z.restartBot(botId)
       Z.toast('Bot berhasil di-restart.', 'success')
@@ -19,7 +19,7 @@
       list.innerHTML = '<p class="hint">Pilih bot untuk melihat log.</p>'
       return
     }
-    list.innerHTML = '<p class="hint">Memuat log...</p>'
+    list.innerHTML = '<p class="hint">Loading logs...</p>'
     try {
       var data = await Z.api('/bots/' + botId + '/errors', { timeoutMs: 10000 })
       var items = data.errors || []
@@ -82,7 +82,7 @@
       if (Z.$('#premium-hint')) {
         Z.$('#premium-hint').textContent = data.isPremium
           ? 'Premium aktif — semua pengaturan tersedia.'
-          : 'Fitur di bawah hanya Premium. Upgrade di Order Plan Premium.'
+          : 'Fitur di bawah hanya Premium. Upgrade di Upgrade.'
       }
     } catch (e) {
       if (Z.$('#settings-msg')) Z.$('#settings-msg').textContent = e.message
@@ -166,13 +166,13 @@
         try {
           await Z.restartBot(botId)
           if (Z.$('#settings-msg')) {
-            Z.$('#settings-msg').textContent = 'Tersimpan & diterapkan'
+            Z.$('#settings-msg').textContent = 'Saved & diterapkan'
             Z.$('#settings-msg').className = 'msg ok'
           }
           Z.toast('Bot Settings berhasil disimpan dan diterapkan.', 'success')
         } catch (re) {
           if (Z.$('#settings-msg')) {
-            Z.$('#settings-msg').textContent = 'Tersimpan (restart: ' + re.message + ')'
+            Z.$('#settings-msg').textContent = 'Saved (restart: ' + re.message + ')'
             Z.$('#settings-msg').className = 'msg ok'
           }
           Z.toast('Bot Settings tersimpan, tetapi restart gagal: ' + re.message, 'warning')
@@ -182,7 +182,7 @@
           Z.$('#settings-msg').textContent = e.message
           Z.$('#settings-msg').className = 'msg err'
         }
-        Z.toast('Gagal menyimpan Bot Settings: ' + e.message, 'error')
+        Z.toast('Failed to save bot settings: ' + e.message, 'error')
       }
     }
   })

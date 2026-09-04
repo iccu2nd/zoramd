@@ -1,72 +1,65 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin Users — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=24" />
+  <link rel="stylesheet" href="/css/style.css?v=26" />
 </head>
 <body data-page="admin-users">
-  <div id="loading-view" class="loading-wrap hidden" style="display:none">
+  <div id="loading-view" class="loading-wrap hidden" style="display:none" aria-hidden="true">
     <div class="loading-card">
       <div class="loading-logo">ZoraBot</div>
-      <div class="spinner center" aria-hidden="true">
-        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
-        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
-        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
-        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
-      </div>
-      <p class="loading-text" id="loading-text">Memuat...</p>
+      <p class="loading-text" id="loading-text">Loading...</p>
     </div>
   </div>
-
   <div id="main-view">
     <header class="topbar">
-      <button id="menu-btn" class="icon-btn" aria-label="Menu">
-        <span></span><span></span><span></span>
-      </button>
+      <button id="menu-btn" class="icon-btn" aria-label="Menu"><span></span><span></span><span></span></button>
       <div class="brand">ZoraBot</div>
       <div class="user-chip" id="user-chip"></div>
     </header>
-
     <aside id="sidebar" class="sidebar">
       <nav>
         <div class="nav-label">Admin</div>
         <a href="/admin" class="nav-item"><i class="fa-solid fa-gauge-high"></i><span>Overview</span></a>
         <a href="/admin/users" class="nav-item active"><i class="fa-solid fa-users"></i><span>Users</span></a>
         <a href="/admin/bots" class="nav-item"><i class="fa-solid fa-robot"></i><span>Bots</span></a>
-<a href="/admin/ads" class="nav-item"><i class="fa-solid fa-bullhorn"></i><span>Ads / Iklan</span></a>
-        <div class="nav-label">Kembali</div>
+        <a href="/admin/ads" class="nav-item"><i class="fa-solid fa-bullhorn"></i><span>Ads</span></a>
+        <a href="/admin/errors" class="nav-item"><i class="fa-solid fa-bug"></i><span>Error logs</span></a>
+        <div class="nav-label">Back</div>
         <a href="/dashboard" class="nav-item"><i class="fa-solid fa-arrow-left"></i><span>Dashboard</span></a>
-        <a href="/account" class="nav-item"><i class="fa-solid fa-user"></i><span>Account</span></a>
       </nav>
-      <button id="logout-btn" class="btn outline logout"><i class="fa-solid fa-right-from-bracket"></i><span>Keluar</span></button>
+      <button id="logout-btn" class="btn outline logout"><i class="fa-solid fa-right-from-bracket"></i><span>Log out</span></button>
     </aside>
     <div id="sidebar-overlay" class="overlay"></div>
-
     <main class="content">
       <h2>Users</h2>
-      <p class="hint">Kelola role akun (admin / user).</p>
-      <div id="admin-stats" class="limits-bar" style="margin-bottom:16px"></div>
-      <div class="plan-card">
+      <p class="hint">Search, filter, and manage account roles. Server-side pagination.</p>
+      <div id="admin-stats" class="limits-bar" style="margin-bottom:16px;min-height:40px"></div>
+      <div class="admin-filters row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <input type="search" id="users-q" class="input" placeholder="Search email or name" style="min-width:180px;flex:1" />
+        <select id="users-role" class="input" style="width:auto">
+          <option value="">All roles</option>
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
+        <select id="users-sort" class="input" style="width:auto">
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="email">Email A–Z</option>
+        </select>
+        <button type="button" id="users-search" class="btn primary">Search</button>
+      </div>
+      <div class="plan-card" style="min-height:120px">
         <div id="admin-users" class="bots-list" style="margin-top:4px"></div>
+        <div id="users-pager" class="row" style="gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap"></div>
       </div>
     </main>
   </div>
-
-  <script src="/js/bg-pattern.js?v=17"></script>
-  <script src="/js/common.js?v=24"></script>
-  <script src="/js/admin.js?v=23"></script>
-  <script>
-  setTimeout(function () {
-    var lv = document.getElementById('loading-view');
-    var mv = document.getElementById('main-view');
-    if (lv && getComputedStyle(lv).display !== 'none') {
-      lv.classList.add('hidden'); lv.style.display = 'none';
-      if (mv) { mv.classList.remove('hidden'); mv.style.display = ''; }
-    }
-  }, 1500);
-  </script>
+  <script src="/js/bg-pattern.js?v=26"></script>
+  <script src="/js/common.js?v=26"></script>
+  <script src="/js/admin.js?v=26"></script>
 </body>
 </html>

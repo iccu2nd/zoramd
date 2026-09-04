@@ -14,7 +14,7 @@
     var dl = document.getElementById('db-download-btn')
     if (dl) dl.onclick = async function () {
       var botId = document.getElementById('db-bot-select') && document.getElementById('db-bot-select').value
-      if (!botId) return Z.toast('Pilih bot terlebih dahulu.', 'warning')
+      if (!botId) return Z.toast('Select a bot first.', 'warning')
       var withSession = document.getElementById('db-include-session') && document.getElementById('db-include-session').checked
       var msg = document.getElementById('db-msg')
       try {
@@ -46,9 +46,9 @@
     var imp = document.getElementById('db-import-btn')
     if (imp) imp.onclick = async function () {
       var botId = document.getElementById('db-bot-select') && document.getElementById('db-bot-select').value
-      if (!botId) return Z.toast('Pilih bot terlebih dahulu.', 'warning')
+      if (!botId) return Z.toast('Select a bot first.', 'warning')
       var fileInput = document.getElementById('db-file')
-      if (!fileInput || !fileInput.files || !fileInput.files[0]) return Z.toast('Pilih file JSON terlebih dahulu.', 'warning')
+      if (!fileInput || !fileInput.files || !fileInput.files[0]) return Z.toast('Select a JSON file first.', 'warning')
       var msg = document.getElementById('db-msg')
       try {
         var text = await fileInput.files[0].text()

@@ -17,6 +17,7 @@ import { runWithFreeQueue } from './lib/freeQueue.js'
 import { isAccountPremium } from './lib/db/subscription.js'
 import { resolveBotConfig } from './lib/botConfig.js'
 import { logCommandError } from './lib/commandErrors.js'
+import { trackMessageIn, trackCommand } from './lib/botMetrics.js'
 
 const prefixes = ['.', '/', '#', '!']
 
@@ -241,29 +242,38 @@ export async function handleMessage(sock, config, { messages, type }) {
             }
         }
 
-        // Premium: langsung. Free: antrian global (satu proses fitur per waktu),
-        // kecuali Fast Respon diaktifkan manual di Bot Settings -> bypass antrian juga.
+        // Direct processing with concurrency limits (premium gets higher budget).
         let premiumUser = false
         try {
             const ownerId = sock.botConfig?.ownerAccountId || config.ownerAccountId
             if (ownerId) premiumUser = await isAccountPremium(String(ownerId))
         } catch {}
 
-        const skipQueue = premiumUser || !!settings.fastrespon
-
-        await runWithFreeQueue(skipQueue, async () => {
-            await plugin.run(m, {
-                sock,
-                config,
-                text: textWithoutCmd,
-                jid: m.from,
-                prefix: prefix || '',
-                cmd,
-                isOwner: m.isOwner,
-                isAdmin: m.isAdmin,
-                isBotAdmin: m.isBotAdmin
-            })
-        }, { key: `${sock.sessionId || 'default'}:${m.from || 'unknown'}` })
+        const isPremiumLane = premiumUser || !!settings.fastrespon
+        const sessionKey = sock.sessionId || config.botId || 'default'
+        trackMessageIn(sessionKey, m.sender)
+        const t0 = Date.now()
+        let cmdOk = true
+        try {
+            await runWithFreeQueue(isPremiumLane, async () => {
+                await plugin.run(m, {
+                    sock,
+                    config,
+                    text: textWithoutCmd,
+                    jid: m.from,
+                    prefix: prefix || '',
+                    cmd,
+                    isOwner: m.isOwner,
+                    isAdmin: m.isAdmin,
+                    isBotAdmin: m.isBotAdmin
+                })
+            }, { key: `${sessionKey}:${m.from || 'unknown'}` })
+        } catch (cmdErr) {
+            cmdOk = false
+            throw cmdErr
+        } finally {
+            trackCommand(sessionKey, cmdOk, Date.now() - t0)
+        }
         if (settings.autotyping) sock.sendPresenceUpdate('paused', m.from).catch(() => {})
     } catch (e) {
         console.error(chalk.redBright(e))

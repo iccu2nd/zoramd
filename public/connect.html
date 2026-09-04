@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Connect Bot — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=24" />
+  <link rel="stylesheet" href="/css/style.css?v=26" />
 </head>
 <body data-page="connect">
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
@@ -25,7 +25,7 @@
         <div class="spinner-blade"></div>
         <div class="spinner-blade"></div>
       </div>
-      <p class="loading-text" id="loading-text">Memuat...</p>
+      <p class="loading-text" id="loading-text">Loading...</p>
     </div>
   </div>
 
@@ -46,15 +46,15 @@
         <a href="/bot-settings" class="nav-item"><i class="fa-solid fa-sliders"></i><span>Bot Settings</span></a>
         <a href="/feature-settings" class="nav-item"><i class="fa-solid fa-puzzle-piece"></i><span>Feature Settings</span></a>
 <a href="/database" class="nav-item"><i class="fa-solid fa-database"></i><span>Database</span></a>
-        <a href="/chatlog" class="nav-item"><i class="fa-solid fa-comments"></i><span>Live Chatlog</span></a>
+        <a href="/chatlog" class="nav-item"><i class="fa-solid fa-comments"></i><span>Live Chat Log</span></a>
 <div class="nav-label">Premium</div>
-        <a href="/upgrade" class="nav-item"><i class="fa-solid fa-crown"></i><span>Order Plan Premium</span></a>
-        <a href="/orders" class="nav-item"><i class="fa-solid fa-receipt"></i><span>Riwayat Order</span></a>
-        <div class="nav-label">Akun</div>
+        <a href="/upgrade" class="nav-item"><i class="fa-solid fa-crown"></i><span>Upgrade</span></a>
+        <a href="/orders" class="nav-item"><i class="fa-solid fa-receipt"></i><span>Orders</span></a>
+        <div class="nav-label">Account</div>
         <a href="/account" class="nav-item"><i class="fa-solid fa-user"></i><span>Account</span></a>
-        <a href="/admin" class="nav-item nav-admin hidden" id="nav-admin"><i class="fa-solid fa-shield-halved"></i><span>Admin Panel</span></a>
+        <a href="/admin" class="nav-item nav-admin hidden" id="nav-admin"><i class="fa-solid fa-shield-halved"></i><span>Admin</span></a>
       </nav>
-      <button id="logout-btn" class="btn outline logout"><i class="fa-solid fa-right-from-bracket"></i><span>Keluar</span></button>
+      <button id="logout-btn" class="btn outline logout"><i class="fa-solid fa-right-from-bracket"></i><span>Log out</span></button>
     </aside>
     <div id="sidebar-overlay" class="overlay"></div>
 
@@ -63,7 +63,7 @@
       <div id="connected-bots-list" class="wa-bots-list"></div>
 
       <div class="field">
-        <label>Pilih Bot</label>
+        <label>Select bot</label>
         <select id="connect-bot-select"></select>
       </div>
       <div class="row">
@@ -77,12 +77,12 @@
         </div>
       </div>
       <div id="pairing-phone-wrap" class="field hidden">
-        <label>Nomor WhatsApp (bot)</label>
+        <label>WhatsApp number (bot)</label>
         <input type="tel" id="pairing-phone" inputmode="tel" autocomplete="tel" placeholder="628xxxxxxxxx" />
       </div>
       <div class="row gap">
-        <button id="connect-start-btn" class="btn primary">Hubungkan</button>
-        <button id="connect-stop-btn" class="btn outline">Putuskan</button>
+        <button id="connect-start-btn" class="btn primary">Connect</button>
+        <button id="connect-stop-btn" class="btn outline">Disconnect</button>
         <button id="connect-logout-btn" class="btn danger">Logout Session</button>
       </div>
       <div id="connect-status" class="status-box"></div>
@@ -91,15 +91,15 @@
         <p>Scan QR dengan WhatsApp → Perangkat Tertaut</p>
       </div>
       <div id="pairing-code-wrap" class="pairing-wrap hidden">
-        <p>Masukkan kode ini di WhatsApp:</p>
+        <p>Enter this code in WhatsApp:</p>
         <div id="pairing-code" class="pairing-code"></div>
       </div>
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=17"></script>
-  <script src="/js/common.js?v=24"></script>
-  <script src="/js/connect.js?v=23"></script>
+  <script src="/js/bg-pattern.js?v=26"></script>
+  <script src="/js/common.js?v=26"></script>
+  <script src="/js/connect.js?v=26"></script>
 
   <script>
   // Safety net: jangan pernah stuck loading > 6 detik

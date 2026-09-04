@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Masuk — ZoraBot</title>
+  <title>Sign in — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=24" />
+  <link rel="stylesheet" href="/css/style.css?v=26" />
   <style>
     .terms-row{display:flex;align-items:flex-start;gap:8px;margin:14px 0;font-size:13px;line-height:1.5;color:#888;cursor:pointer}
     .terms-row input[type="checkbox"]{margin-top:4px;width:16px;height:16px;flex:none;cursor:pointer}
@@ -37,7 +37,7 @@
         <div class="spinner-blade"></div>
         <div class="spinner-blade"></div>
       </div>
-      <p class="loading-text" id="loading-text">Memuat...</p>
+      <p class="loading-text" id="loading-text">Loading...</p>
     </div>
   </div>
 
@@ -54,7 +54,7 @@
         <button type="submit" class="btn primary" id="login-submit">Masuk</button>
         <p id="login-error" class="error"></p>
         <p class="subtitle" style="margin-top:14px"><a href="/forgot-password">Lupa password?</a></p>
-        <p class="subtitle" style="margin-top:6px">Belum punya akun? <a href="#" id="go-register">Daftar sekarang</a></p>
+        <p class="subtitle" style="margin-top:6px">No account yet? <a href="#" id="go-register">Sign up</a></p>
       </form>
       <form id="register-form" class="auth-form hidden">
         <label>Nama</label>
@@ -65,11 +65,11 @@
         <input type="password" id="reg-password" required minlength="6" autocomplete="new-password" />
         <label class="terms-row" for="reg-terms">
           <input type="checkbox" id="reg-terms" />
-          <span>Saya setuju dengan <a href="/terms" target="_blank" rel="noopener">Syarat &amp; Ketentuan</a> dan <a href="/privacy" target="_blank" rel="noopener">Kebijakan Privasi</a> ZoraBot</span>
+          <span>Saya setuju dengan <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> dan <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a> ZoraBot</span>
         </label>
-        <button type="submit" class="btn primary" id="reg-submit" disabled>Daftar</button>
+        <button type="submit" class="btn primary" id="reg-submit" disabled>Sign up</button>
         <p id="reg-error" class="error"></p>
-        <p class="subtitle" style="margin-top:14px">Sudah punya akun? <a href="#" id="go-login">Masuk</a></p>
+        <p class="subtitle" style="margin-top:14px">Already have an account? <a href="#" id="go-login">Masuk</a></p>
       </form>
 
       <form id="otp-form" class="auth-form hidden">
@@ -84,22 +84,22 @@
           <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="one-time-code" />
           <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" autocomplete="one-time-code" />
         </div>
-        <button type="submit" class="btn primary" id="otp-submit">Verifikasi &amp; Buat Akun</button>
-        <button type="button" class="btn outline" id="otp-resend" style="margin-top:8px;width:100%">Kirim ulang kode</button>
+        <button type="submit" class="btn primary" id="otp-submit">Verify &amp; create account</button>
+        <button type="button" class="btn outline" id="otp-resend" style="margin-top:8px;width:100%">Resend code</button>
         <p id="otp-error" class="error"></p>
-        <p class="subtitle" style="margin-top:14px"><a href="#" id="otp-back">Kembali ke daftar</a></p>
+        <p class="subtitle" style="margin-top:14px"><a href="#" id="otp-back">Back to sign up</a></p>
       </form>
 
     </div>
   </div>
 
-  <script src="/js/bg-pattern.js?v=22"></script>
-  <script src="/js/login.js?v=24"></script>
+  <script src="/js/bg-pattern.js?v=26"></script>
+  <script src="/js/login.js?v=26"></script>
 
 <footer id="site-footer" class="site-footer">
   <div class="site-footer-links">
-    <a href="/terms">Syarat &amp; Ketentuan</a><span class="site-footer-sep">|</span>
-    <a href="/privacy">Kebijakan Privasi</a><span class="site-footer-sep">|</span>
+    <a href="/terms">Terms of Service</a><span class="site-footer-sep">|</span>
+    <a href="/privacy">Privacy Policy</a><span class="site-footer-sep">|</span>
     <a href="/login">Login</a><span class="site-footer-sep">|</span>
     <a href="https://t.me/reyzxdv" target="_blank" rel="noopener">CS Telegram</a>
   </div>

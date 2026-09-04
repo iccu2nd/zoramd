@@ -13,10 +13,10 @@
   }
 
   var toastTitles = {
-    success: 'Berhasil',
-    error: 'Terjadi kesalahan',
-    warning: 'Perhatian',
-    info: 'Informasi'
+    success: 'Success',
+    error: 'Something went wrong',
+    warning: 'Warning',
+    info: 'Info'
   }
 
   function ensureToastContainer() {
@@ -54,7 +54,7 @@
 
     close.type = 'button'
     close.className = 'toast-close'
-    close.setAttribute('aria-label', 'Tutup notifikasi')
+    close.setAttribute('aria-label', 'Dismiss')
     close.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i>'
     item.appendChild(close)
 
@@ -210,9 +210,9 @@
     foot.className = 'site-footer'
     foot.innerHTML =
       '<div class="site-footer-links">' +
-        '<a href="/terms" target="_blank" rel="noopener">Syarat &amp; Ketentuan</a>' +
+        '<a href="/terms" target="_blank" rel="noopener">Terms of Service</a>' +
         '<span class="site-footer-sep">|</span>' +
-        '<a href="/privacy" target="_blank" rel="noopener">Kebijakan Privasi</a>' +
+        '<a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>' +
         '<span class="site-footer-sep">|</span>' +
         '<a href="/upgrade">Premium</a>' +
         '<span class="site-footer-sep">|</span>' +
@@ -233,9 +233,9 @@
     wrap.className = 'notif-wrap'
     wrap.id = 'notif-wrap'
     wrap.innerHTML =
-      '<button type="button" class="notif-btn" id="notif-btn" aria-label="Notifikasi">' +
+      '<button type="button" class="notif-btn" id="notif-btn" aria-label="Notifications">' +
       '<i class="fa-regular fa-bell"></i><span class="notif-dot" id="notif-dot"></span></button>' +
-      '<div class="notif-panel hidden" id="notif-panel"><div class="notif-empty">Memuat...</div></div>'
+      '<div class="notif-panel hidden" id="notif-panel"><div class="notif-empty">Loading...</div></div>'
     // place before user-chip
     if (chip && chip.parentNode) chip.parentNode.insertBefore(wrap, chip)
     else top.appendChild(wrap)
@@ -254,7 +254,7 @@
         }
         if (!panel) return
         if (!items.length) {
-          panel.innerHTML = '<div class="notif-empty">Tidak ada notifikasi</div>'
+          panel.innerHTML = '<div class="notif-empty">No notifications</div>'
           return
         }
         panel.innerHTML = items.map(function (n) {
@@ -270,7 +270,7 @@
           }
         })
       } catch (e) {
-        if (panel) panel.innerHTML = '<div class="notif-empty">Gagal memuat</div>'
+        if (panel) panel.innerHTML = '<div class="notif-empty">Failed to load</div>'
       }
     }
 
@@ -381,7 +381,7 @@
   }
 
   async function restartBot(botId) {
-    if (!botId) throw new Error('Pilih bot dulu')
+    if (!botId) throw new Error('Select a bot first')
     return api('/bots/' + botId + '/restart', { method: 'POST', body: {}, timeoutMs: 30000 })
   }
 

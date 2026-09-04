@@ -21,7 +21,7 @@
     var key = f.featureKey
     var flags = [
       ['owner', 'Owner'],
-      ['admin', 'Admin grup'],
+      ['admin', 'Group admin'],
       ['group', 'Group only'],
       ['private', 'Private chat only']
     ]
@@ -59,7 +59,7 @@
       (isPremium ? '' : 'disabled') + ' placeholder="Command"/>' +
       '<span class="field-hint">Command asli plugin: <code>' + Z.escapeHtml(aliases.join(', ')) + '</code>. Ubah langsung teksnya untuk mengganti command (command lama berhenti berfungsi). Kalau aslinya ada 2+ (mis. donate, donasi), pisahkan pakai koma buat ganti semuanya.</span>' +
       '</div>' +
-      '<div class="row gap"><button type="button" class="btn outline feat-save">Simpan</button>' +
+      '<div class="row gap"><button type="button" class="btn outline feat-save">Save</button>' +
       '<span class="feat-saved msg ok"></span></div></div></div>'
   }
 
@@ -137,9 +137,9 @@
               }
             })
             var msg = item.querySelector('.feat-saved')
-            if (msg) { msg.textContent = 'Tersimpan...'; }
-            try { await Z.restartBot(botId); if (msg) msg.textContent = 'Tersimpan' } catch (e) {}
-            Z.toast('Pengaturan fitur berhasil disimpan.', 'success')
+            if (msg) { msg.textContent = 'Saving...'; }
+            try { await Z.restartBot(botId); if (msg) msg.textContent = 'Saved' } catch (e) {}
+            Z.toast('Feature settings saved successfully.', 'success')
             setTimeout(function () { if (msg) msg.textContent = '' }, 1500)
           } catch (err) { Z.toast(err.message, 'error') }
         }

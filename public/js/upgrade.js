@@ -93,7 +93,7 @@
     function tick() {
       var left = deadline.getTime() - Date.now()
       if (left <= 0) {
-        el.textContent = 'Order kedaluwarsa. Buat order baru.'
+        el.textContent = 'Order expired. Create a new order.'
         clearInterval(expiryTimer)
         savePending(null)
         currentOrder = null
@@ -101,10 +101,10 @@
         if (info) { info.innerHTML = ''; Z.hide(info) }
         setOrderBtnVisible(true)
         var msg = Z.$('#upgrade-msg')
-        if (msg) { msg.textContent = 'Order kedaluwarsa. Silakan buat order baru.'; msg.className = 'msg err' }
+        if (msg) { msg.textContent = 'Order expired. Please create a new order.'; msg.className = 'msg err' }
         return
       }
-      el.textContent = 'Bayar sebelum jam ' + deadlineStr + ' (sisa ' + fmtTime(left) + ')'
+      el.textContent = 'Pay before ' + deadlineStr + ' (time left ' + fmtTime(left) + ')'
     }
     tick()
     expiryTimer = setInterval(tick, 1000)
@@ -277,8 +277,8 @@
         setOrderBtnVisible(true)
       } else {
         showUnpaidX()
-        if (msg) { msg.textContent = 'Pembayaran belum masuk. Bayar dulu lalu cek lagi.'; msg.className = 'msg' }
-        Z.toast('Pembayaran belum masuk. Silakan cek lagi setelah membayar.', 'warning')
+        if (msg) { msg.textContent = 'Payment not received yet. Pay first, then check again.'; msg.className = 'msg' }
+        Z.toast('Payment not received yet. Check again after paying.', 'warning')
       }
     } catch (e) {
       hideCheckingOverlay()
@@ -290,7 +290,7 @@
   async function doCancel(orderId) {
     var oid = orderId || (currentOrder && currentOrder.orderId)
     if (!oid) return
-    if (!confirm('Batalkan transaksi ini?')) return
+    if (!confirm('Cancel this transaction?')) return
     var msg = Z.$('#upgrade-msg')
     try {
       await Z.api('/premium/cancel', { method: 'POST', body: { orderId: oid } })
@@ -339,8 +339,8 @@
         var msgE = Z.$('#upgrade-msg')
         if (msgE) {
           msgE.textContent = st.status === 'expired'
-            ? (st.message || 'Order sebelumnya sudah kedaluwarsa. Buat order baru.')
-            : 'Order sebelumnya dibatalkan. Buat order baru.'
+            ? (st.message || 'Previous order expired. Create a new order.')
+            : 'Previous order was cancelled. Create a new order.'
           msgE.className = 'msg err'
         }
         return
@@ -352,7 +352,7 @@
     renderPayment(pending)
     var msg = Z.$('#upgrade-msg')
     if (msg) {
-      msg.textContent = 'Melanjutkan transaksi sebelumnya.'
+      msg.textContent = 'Resuming previous transaction.'
       msg.className = 'msg'
     }
   }
@@ -373,7 +373,7 @@
       if (pending) {
         currentOrder = pending
         renderPayment(pending)
-        if (msg) { msg.textContent = 'Masih ada transaksi aktif. Lanjutkan bayar.'; msg.className = 'msg' }
+        if (msg) { msg.textContent = 'An active transaction already exists. Continue payment.'; msg.className = 'msg' }
         return
       }
       orderBtn.classList.add('is-loading')

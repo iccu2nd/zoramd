@@ -29,15 +29,17 @@ const PAGE_MAP = {
     '/admin/users': 'admin-users.html',
     '/admin/bots': 'admin-bots.html',
     '/admin/ads': 'admin-ads.html',
+    '/admin/errors': 'admin-errors.html',
     '/terms': 'terms.html',
     '/privacy': 'privacy.html'
 }
 
-const ADMIN_ROUTES = new Set(['/admin', '/admin/users', '/admin/bots', '/admin/ads'])
+const ADMIN_ROUTES = new Set(['/admin', '/admin/users', '/admin/bots', '/admin/ads', '/admin/errors'])
 const LEGACY_PAGE_MAP = {
     '/admin-users': '/admin/users',
     '/admin-bots': '/admin/bots',
-    '/admin-ads': '/admin/ads'
+    '/admin-ads': '/admin/ads',
+    '/admin-errors': '/admin/errors'
 }
 
 function buildCorsOrigin() {

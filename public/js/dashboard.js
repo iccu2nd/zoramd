@@ -2,11 +2,64 @@
   'use strict'
   if (!window.Zora) {
     var t = document.getElementById('loading-text')
-    if (t) t.textContent = 'Script gagal dimuat. Refresh halaman.'
+    if (t) t.textContent = 'Failed to load scripts. Please refresh.'
     return
   }
   var Z = window.Zora
   var limits = { max: 1, used: 0, plan: 'free' }
+  var metricsTimer = null
+
+  function fmtMs(ms) {
+    if (ms == null || ms === 0) return '—'
+    if (ms < 1000) return Math.round(ms) + ' ms'
+    return (ms / 1000).toFixed(1) + ' s'
+  }
+
+  function renderMetrics(data) {
+    var m = (data && data.metrics) || {}
+    var set = function (id, v) {
+      var el = Z.$(id)
+      if (el) el.textContent = v
+    }
+    set('#m-in', m.messagesIn != null ? String(m.messagesIn) : '0')
+    set('#m-out', m.messagesOut != null ? String(m.messagesOut) : '0')
+    set('#m-cmds', m.commands != null ? String(m.commands) : '0')
+    set('#m-okfail', (m.commandsOk || 0) + ' / ' + (m.commandsFail || 0))
+    set('#m-users', m.activeUsers24h != null ? String(m.activeUsers24h) : '0')
+    set('#m-rt', fmtMs(m.avgResponseMs))
+    set('#m-err', (m.errorRate != null ? m.errorRate : 0) + '%')
+    set('#m-plan', (data && data.plan === 'premium') ? 'Premium' : 'Free')
+
+    var chart = Z.$('#cmd-chart')
+    if (!chart) return
+    var bots = (data && data.bots) || []
+    var hours = {}
+    bots.forEach(function (b) {
+      var hourly = (b.metrics && b.metrics.hourly) || []
+      hourly.forEach(function (h) {
+        hours[h.t] = (hours[h.t] || 0) + (h.cmds || 0)
+      })
+    })
+    var keys = Object.keys(hours).map(Number).sort(function (a, b) { return a - b }).slice(-24)
+    if (!keys.length) {
+      chart.innerHTML = '<p class="hint">No command activity yet. Metrics appear after the bot processes messages.</p>'
+      return
+    }
+    var max = Math.max.apply(null, keys.map(function (k) { return hours[k] })) || 1
+    chart.innerHTML = keys.map(function (k) {
+      var h = Math.max(4, Math.round((hours[k] / max) * 64))
+      return '<div class="bar" title="' + hours[k] + ' cmds" style="height:' + h + 'px"></div>'
+    }).join('')
+  }
+
+  async function loadMetrics() {
+    try {
+      var data = await Z.api('/metrics', { timeoutMs: 8000 })
+      renderMetrics(data)
+    } catch (e) {
+      /* non-fatal */
+    }
+  }
 
   function renderBots() {
     var list = Z.$('#bots-list')
@@ -15,29 +68,29 @@
     if (bar) {
       var plan = limits.plan === 'premium' ? 'Premium' : 'Free'
       var extras = limits.plan === 'premium'
-        ? ' · tanpa iklan · identity custom · max 3 bot'
-        : ' · max 1 bot · Upgrade untuk 3 bot & identity'
+        ? ' · no ads · custom identity · up to 3 bots · higher concurrency'
+        : ' · max 1 bot · upgrade for 3 bots & premium features'
       bar.innerHTML = '<span>Plan: <strong>' + plan + '</strong></span>' +
-        ' <span>Bot: <strong>' + limits.used + '</strong>/' + limits.max + '</span>' +
+        ' <span>Bots: <strong>' + limits.used + '</strong>/' + limits.max + '</span>' +
         '<span class="limits-extra">' + extras + '</span>'
     }
     if (!Z.state.bots || !Z.state.bots.length) {
-      list.innerHTML = '<p class="hint">Belum ada bot. Buat bot baru untuk memulai.</p>'
+      list.innerHTML = '<p class="hint">No bots yet. Create a bot to get started.</p>'
       return
     }
     list.innerHTML = Z.state.bots.map(function (b) {
       return '<div class="bot-card" data-id="' + Z.escapeHtml(b.id) + '">' +
         '<button type="button" class="bot-menu-btn" aria-label="Menu">&#8942;</button>' +
         '<div class="bot-menu-dropdown hidden">' +
-          '<button type="button" data-act="settings">Pengaturan Bot</button>' +
+          '<button type="button" data-act="settings">Bot settings</button>' +
           '<button type="button" data-act="restart">Restart</button>' +
-          '<button type="button" data-act="power">' + (b.enabled !== false ? 'Matikan' : 'Nyalakan') + '</button>' +
-          '<button type="button" class="danger" data-act="disconnect">Putuskan Koneksi</button>' +
-          '<button type="button" class="danger" data-act="delete">Hapus Bot</button>' +
+          '<button type="button" data-act="power">' + (b.enabled !== false ? 'Disable' : 'Enable') + '</button>' +
+          '<button type="button" class="danger" data-act="disconnect">Disconnect</button>' +
+          '<button type="button" class="danger" data-act="delete">Delete bot</button>' +
         '</div>' +
         '<div><h3>' + Z.escapeHtml(b.botName) +
         '</h3><div class="bot-meta">' + Z.escapeHtml(b.sessionId) +
-        '</div></div><div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px">' +
+        '</div></div><div class="bot-card-status">' +
         '<span class="badge ' + Z.escapeHtml(b.status) + '" title="' + Z.escapeHtml(b.lastError || '') + '">' +
           Z.escapeHtml(b.statusLabel || b.status) + '</span>' +
         (b.plan === 'premium' ? '<span class="badge premium">Premium</span>' : '<span class="badge">Free</span>') +
@@ -64,25 +117,25 @@
         try {
           if (act === 'restart') {
             await Z.restartBot(botId)
-            Z.toast('Bot berhasil di-restart.', 'success')
-          }
-          else if (act === 'power') {
-            var enable = btn.textContent === 'Nyalakan'
+            Z.toast('Bot restarted successfully.', 'success')
+          } else if (act === 'power') {
+            var enable = btn.textContent === 'Enable'
             await Z.api('/bots/' + botId + '/power', { method: 'POST', body: { enabled: enable }, timeoutMs: 30000 })
-            Z.toast(enable ? 'Bot berhasil diaktifkan.' : 'Bot berhasil dimatikan.', 'success')
+            Z.toast(enable ? 'Bot enabled.' : 'Bot disabled.', 'success')
           } else if (act === 'disconnect') {
-            if (!confirm('Putuskan koneksi bot ini?')) return
+            if (!confirm('Disconnect this bot?')) return
             await Z.api('/bots/' + botId + '/disconnect', { method: 'POST' })
-            Z.toast('Koneksi bot berhasil diputuskan.', 'success')
+            Z.toast('Bot disconnected.', 'success')
           } else if (act === 'delete') {
-            if (!confirm('Hapus bot ini? Semua data, sesi, dan pengaturan bot akan hilang permanen.')) return
+            if (!confirm('Delete this bot? Session data and settings will be permanently removed.')) return
             await Z.api('/bots/' + botId, { method: 'DELETE' })
-            Z.toast('Bot berhasil dihapus.', 'success')
+            Z.toast('Bot deleted.', 'success')
           }
           var data = await Z.api('/bots')
           Z.state.bots = data.bots || []
           limits = data.limits || limits
           renderBots()
+          loadMetrics()
         } catch (e2) { Z.toast(e2.message, 'error') }
       }
     })
@@ -102,8 +155,7 @@
     if (!dismissed && !anyConnected) {
       box.classList.remove('hidden')
       requestAnimationFrame(function () { box.classList.remove('is-closing') })
-    }
-    else box.classList.add('hidden')
+    } else box.classList.add('hidden')
     var btn = Z.$('#onboard-dismiss')
     if (btn) btn.onclick = function () {
       localStorage.setItem('zora_onboard_v1', '1')
@@ -116,14 +168,20 @@
     if (Z.state.limits) limits = Z.state.limits
     renderBots()
     setupOnboarding()
+    loadMetrics()
+    if (metricsTimer) clearInterval(metricsTimer)
+    metricsTimer = setInterval(loadMetrics, 30000)
+
     var btn = Z.$('#create-bot-btn')
     if (!btn) return
     btn.onclick = async function () {
       if (limits.used >= limits.max) {
-        Z.toast(limits.plan === 'premium' ? 'Batas Premium: maksimal 3 bot.' : 'Batas Free: maksimal 1 bot. Upgrade ke Premium untuk 3 bot.', 'warning')
+        Z.toast(limits.plan === 'premium'
+          ? 'Premium limit: maximum 3 bots.'
+          : 'Free limit: maximum 1 bot. Upgrade to Premium for 3 bots.', 'warning')
         return
       }
-      var name = prompt('Nama bot:', 'ZoraBot')
+      var name = prompt('Bot name:', 'ZoraBot')
       if (name === null) return
       try {
         var res = await Z.api('/bots', { method: 'POST', body: { botName: name || 'ZoraBot' } })
@@ -132,7 +190,7 @@
         Z.state.bots = data.bots || []
         limits = data.limits || limits
         renderBots()
-        Z.toast('Bot berhasil dibuat.', 'success')
+        Z.toast('Bot created successfully.', 'success')
       } catch (e) { Z.toast(e.message, 'error') }
     }
   })

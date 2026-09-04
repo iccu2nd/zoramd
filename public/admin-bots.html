@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin Bots — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=24" />
+  <link rel="stylesheet" href="/css/style.css?v=26" />
 </head>
 <body data-page="admin-bots">
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
@@ -17,7 +17,7 @@
         <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
         <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
       </div>
-      <p class="loading-text" id="loading-text">Memuat...</p>
+      <p class="loading-text" id="loading-text">Loading...</p>
     </div>
   </div>
 
@@ -36,12 +36,13 @@
         <a href="/admin" class="nav-item"><i class="fa-solid fa-gauge-high"></i><span>Overview</span></a>
         <a href="/admin/users" class="nav-item"><i class="fa-solid fa-users"></i><span>Users</span></a>
         <a href="/admin/bots" class="nav-item active"><i class="fa-solid fa-robot"></i><span>Bots</span></a>
-<a href="/admin/ads" class="nav-item"><i class="fa-solid fa-bullhorn"></i><span>Ads / Iklan</span></a>
-        <div class="nav-label">Kembali</div>
+<a href="/admin/ads" class="nav-item"><i class="fa-solid fa-bullhorn"></i><span>Ads</span></a>
+        <a href="/admin/errors" class="nav-item"><i class="fa-solid fa-bug"></i><span>Error logs</span></a>
+        <div class="nav-label">Back</div>
         <a href="/dashboard" class="nav-item"><i class="fa-solid fa-arrow-left"></i><span>Dashboard</span></a>
         <a href="/account" class="nav-item"><i class="fa-solid fa-user"></i><span>Account</span></a>
       </nav>
-      <button id="logout-btn" class="btn outline logout"><i class="fa-solid fa-right-from-bracket"></i><span>Keluar</span></button>
+      <button id="logout-btn" class="btn outline logout"><i class="fa-solid fa-right-from-bracket"></i><span>Log out</span></button>
     </aside>
     <div id="sidebar-overlay" class="overlay"></div>
 
@@ -55,9 +56,9 @@
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=17"></script>
-  <script src="/js/common.js?v=24"></script>
-  <script src="/js/admin.js?v=23"></script>
+  <script src="/js/bg-pattern.js?v=26"></script>
+  <script src="/js/common.js?v=26"></script>
+  <script src="/js/admin.js?v=26"></script>
   <script>
   setTimeout(function () {
     var lv = document.getElementById('loading-view');

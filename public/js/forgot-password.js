@@ -48,7 +48,7 @@ $('#reset-form').onsubmit = async (e) => {
       })
     })
     const notice = $('#notice')
-    notice.textContent = 'Password berhasil direset. Mengalihkan ke halaman masuk...'
+    notice.textContent = 'Password reset successfully. Redirecting to sign in...'
     show(notice)
     await new Promise(r => setTimeout(r, 1200))
     location.href = '/login'
@@ -63,7 +63,7 @@ $('#resend-link').onclick = async (e) => {
   try {
     await api('/auth/password/forgot', { method: 'POST', body: JSON.stringify({ email: currentEmail }) })
     const notice = $('#notice')
-    notice.textContent = 'Kode baru sudah dikirim (kalau belum lewat 1 menit dari permintaan sebelumnya).'
+    notice.textContent = 'A new code was sent (if at least one minute has passed since the last request).'
     show(notice)
   } catch (err) {
     $('#reset-error').textContent = err.message

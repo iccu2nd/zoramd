@@ -27,9 +27,9 @@
     }
     el.innerHTML =
       '<p><i class="fa-solid fa-circle-exclamation" style="color:#eab308"></i> Email belum diverifikasi</p>' +
-      '<button type="button" class="btn outline" id="verify-request-btn" style="margin-top:10px">Kirim Kode Verifikasi</button>' +
+      '<button type="button" class="btn outline" id="verify-request-btn" style="margin-top:10px">Send verification code</button>' +
       '<div id="verify-code-wrap" class="hidden" style="margin-top:12px">' +
-      '  <label>Kode OTP (dikirim ke email)</label>' +
+      '  <label>OTP code (sent to your email)</label>' +
       '  <input type="text" id="verify-code-input" inputmode="numeric" maxlength="6" />' +
       '  <button type="button" class="btn primary" id="verify-confirm-btn" style="margin-top:10px">Konfirmasi</button>' +
       '</div>' +
@@ -44,7 +44,7 @@
         await Z.api('/auth/verify-email/request', { method: 'POST', timeoutMs: 8000 })
         Z.show(Z.$('#verify-code-wrap'))
         var notice = Z.$('#verify-notice')
-        notice.textContent = 'Kode sudah dikirim ke email kamu.'
+        notice.textContent = 'A code was sent to your email.'
         Z.show(notice)
       } catch (e) {
         Z.$('#verify-error').textContent = e.message

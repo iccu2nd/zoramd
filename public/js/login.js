@@ -71,10 +71,10 @@ function redirectToApp() {
 
 // Jika sudah login, langsung ke dashboard
 async function checkExistingSession() {
-  setLoading(true, 'Memeriksa sesi...')
+  setLoading(true, 'Checking session...')
   try {
     await api('/auth/me')
-    setLoading(true, 'Sudah masuk, mengalihkan...')
+    setLoading(true, 'Already signed in, redirecting...')
     await new Promise(r => setTimeout(r, 300))
     redirectToApp()
   } catch {
@@ -88,13 +88,13 @@ function showNoticeFromQuery() {
   const notice = $('#auth-notice')
   if (!notice) return
   if (reason === 'connect') {
-    notice.textContent = 'Silakan masuk dulu untuk menghubungkan bot.'
+    notice.textContent = 'Please sign in first untuk menghubungkan bot.'
     show(notice)
   } else if (reason === 'required') {
-    notice.textContent = 'Silakan masuk dulu untuk melanjutkan.'
+    notice.textContent = 'Please sign in first untuk melanjutkan.'
     show(notice)
   } else if (reason === 'session') {
-    notice.textContent = 'Sesi berakhir. Silakan masuk lagi.'
+    notice.textContent = 'Your session expired. Please sign in again.'
     show(notice)
   } else {
     hide(notice)
@@ -112,7 +112,7 @@ function startOtpCountdown() {
     const left = Math.max(0, expiresAt - Date.now())
     const m = Math.floor(left / 60000)
     const s = Math.floor((left % 60000) / 1000)
-    if (el) el.textContent = left > 0 ? `Kode berlaku ${m}:${String(s).padStart(2, '0')} lagi` : 'Kode sudah kadaluarsa, klik "Kirim ulang kode"'
+    if (el) el.textContent = left > 0 ? `Code valid for ${m}:${String(s).padStart(2, '0')} left` : 'Code expired. Click "Resend code"'
     if (left <= 0) clearInterval(otpTimerInterval)
   }
   tick()
@@ -205,7 +205,7 @@ $('#login-form').onsubmit = async (e) => {
       })
     })
     persistToken(data.token)
-    setLoading(true, 'Berhasil masuk...')
+    setLoading(true, 'Signed in...')
     await new Promise(r => setTimeout(r, 400))
     redirectToApp()
   } catch (err) {
@@ -222,14 +222,14 @@ $('#register-form').onsubmit = async (e) => {
   e.preventDefault()
   $('#reg-error').textContent = ''
   if (!$('#reg-terms').checked) {
-    $('#reg-error').textContent = 'Kamu harus menyetujui Syarat & Ketentuan dulu'
+    $('#reg-error').textContent = 'You must accept the Terms of Service'
     return
   }
   const name = ($('#reg-name').value || '').trim()
   const email = ($('#reg-email').value || '').trim()
   const password = $('#reg-password').value
   if (!name) {
-    $('#reg-error').textContent = 'Nama wajib diisi'
+    $('#reg-error').textContent = 'Name is required'
     return
   }
   const btn = $('#reg-submit')
@@ -241,7 +241,7 @@ $('#register-form').onsubmit = async (e) => {
     })
     pendingReg = { name, email, password }
     const hint = $('#otp-hint')
-    if (hint) hint.textContent = 'Kode 6 digit dikirim ke ' + email
+    if (hint) hint.textContent = '6-digit code sent to ' + email
     clearOtpBoxes()
     startOtpCountdown()
     showForm('otp-form')
@@ -259,13 +259,13 @@ if (otpForm) {
     const errEl = $('#otp-error')
     if (errEl) errEl.textContent = ''
     if (!pendingReg) {
-      if (errEl) errEl.textContent = 'Sesi daftar habis, isi form lagi'
+      if (errEl) errEl.textContent = 'Registration session expired. Fill the form again.'
       showForm('register-form')
       return
     }
     const code = getOtpCode()
     if (code.length !== 6) {
-      if (errEl) errEl.textContent = 'Masukkan 6 digit kode'
+      if (errEl) errEl.textContent = 'Enter the 6-digit code'
       return
     }
     const btn = $('#otp-submit')
@@ -278,11 +278,11 @@ if (otpForm) {
       persistToken(data.token)
       pendingReg = null
       if (otpTimerInterval) clearInterval(otpTimerInterval)
-      setLoading(true, 'Akun dibuat...')
+      setLoading(true, 'Account created...')
       await new Promise(r => setTimeout(r, 400))
       redirectToApp()
     } catch (err) {
-      if (errEl) errEl.textContent = err.message === 'Kode salah' ? 'Kode salah. Pastikan pakai kode dari email TERBARU — kode lama otomatis tidak berlaku kalau kamu minta kirim ulang.' : err.message
+      if (errEl) errEl.textContent = err.message === 'Incorrect code' ? 'Incorrect code. Use the latest code from your email — older codes stop working after a resend.' : err.message
       if (btn) btn.disabled = false
     }
   }
@@ -293,7 +293,7 @@ if (otpResend) {
   otpResend.onclick = async () => {
     const errEl = $('#otp-error')
     if (!pendingReg) {
-      if (errEl) errEl.textContent = 'Sesi daftar habis, isi form lagi'
+      if (errEl) errEl.textContent = 'Registration session expired. Fill the form again.'
       showForm('register-form')
       return
     }
@@ -303,7 +303,7 @@ if (otpResend) {
         method: 'POST',
         body: JSON.stringify(pendingReg)
       })
-      if (errEl) { errEl.textContent = 'Kode baru dikirim, kode lama sudah tidak berlaku.'; errEl.style.color = '#166534' }
+      if (errEl) { errEl.textContent = 'A new code was sent. Previous codes are no longer valid.'; errEl.style.color = '#166534' }
       clearOtpBoxes()
       startOtpCountdown()
     } catch (err) {

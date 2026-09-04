@@ -8,7 +8,7 @@ import {
 } from '../auth.js'
 import {
     createBot, findBotsByOwner, findOwnedBot, updateOwnedBot, findBotBySessionId, setBotStatus,
-    listAllAccounts, listAllBots, setAccountRole, deleteBotById, updateAccount, findAccountById
+    listAllAccounts, listAllBots, listAccountsPaged, listBotsPaged, setAccountRole, deleteBotById, updateAccount, findAccountById
 } from '../../lib/db/accounts.js'
 import { getSubscription, isBotPremium, activatePremium, isAccountPremium, activateAccountPremium, getAccountSubscription } from '../../lib/db/subscription.js'
 import { getAllFeatureSettings, setFeatureSetting, getFeatureSetting, ACCESS_FLAGS } from '../../lib/db/featureSettings.js'
@@ -24,7 +24,8 @@ import { rateLimit, clientIp } from '../../lib/rateLimit.js'
 import { AUTH_COOKIE_NAME, authCookieOptions, clearAuthCookies, publicError } from '../../lib/security.js'
 import { getChatLog } from '../../lib/liveChatlog.js'
 import { pushNotification, listNotifications, markNotificationsRead, countUnread } from '../../lib/notifications.js'
-import { listCommandErrors } from '../../lib/commandErrors.js'
+import { listCommandErrors, listCommandErrorsAdmin } from '../../lib/commandErrors.js'
+import { getSessionMetrics, getAggregateMetrics } from '../../lib/botMetrics.js'
 
 const router = Router()
 
@@ -62,14 +63,14 @@ function resolvePlan(duration) { return PREMIUM_PLANS[duration] || PREMIUM_PLANS
 
 function statusLabel(s) {
     const map = {
-        connected: 'Terhubung',
-        connecting: 'Menghubungkan...',
-        pairing: 'Menunggu pairing',
-        qr: 'Menunggu scan QR',
-        disconnected: 'Terputus',
-        logged_out: 'Logout dari WA'
+        connected: 'Connected',
+        connecting: 'Connecting...',
+        pairing: 'Waiting for pairing',
+        qr: 'Waiting for QR scan',
+        disconnected: 'Disconnected',
+        logged_out: 'Logged out of WhatsApp'
     }
-    return map[s] || s || 'Terputus'
+    return map[s] || s || 'Disconnected'
 }
 
 /** Normalize & validate international WhatsApp number (e.g. 628xxx). Returns digits-only or null. */
@@ -88,7 +89,8 @@ function normalizePhone(raw) {
 
 
 function requireAdmin(req, res, next) {
-    if (!isAdminAccount(req.account)) {
+    // Hide admin surface from non-admins (404, not 403)
+    if (!req.account || !isAdminAccount(req.account)) {
         return res.status(404).json({ error: 'Not found' })
     }
     next()
@@ -289,8 +291,8 @@ router.post('/bots', authMiddleware, loadAccount, async (req, res) => {
         if (existing.length >= maxBots) {
             return res.status(403).json({
                 error: anyPremium
-                    ? 'Batas Premium: maksimal 3 bot. Hapus bot lain dulu.'
-                    : 'Batas Free: maksimal 1 bot. Upgrade Premium untuk hingga 3 bot.'
+                    ? 'Premium limit: maximum 3 bots. Delete another bot first.'
+                    : 'Free limit: maximum 1 bot. Upgrade to Premium for up to 3 bots.'
             })
         }
 
@@ -1059,6 +1061,39 @@ router.post('/bots/:botId/database/import', authMiddleware, loadAccount, async (
     }
 })
 
+// ---------- Dashboard metrics (owner-scoped, in-memory) ----------
+router.get('/bots/:botId/metrics', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const bot = await findOwnedBot(req.params.botId, req.account._id)
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
+        res.json({ metrics: getSessionMetrics(bot.sessionId) })
+    } catch (e) {
+        res.status(500).json({ error: publicError(e, 'Failed to load metrics') })
+    }
+})
+
+router.get('/metrics', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const bots = await findBotsByOwner(req.account._id)
+        const sessionIds = bots.map(b => b.sessionId).filter(Boolean)
+        const metrics = getAggregateMetrics(sessionIds)
+        const anyPremium = await isAccountPremium(req.account._id.toString())
+        res.json({
+            metrics,
+            plan: anyPremium ? 'premium' : 'free',
+            bots: bots.map(b => ({
+                id: b._id.toString(),
+                sessionId: b.sessionId,
+                botName: b.botName,
+                status: b.status,
+                metrics: getSessionMetrics(b.sessionId)
+            }))
+        })
+    } catch (e) {
+        res.status(500).json({ error: publicError(e, 'Failed to load metrics') })
+    }
+})
+
 // ---------- Admin panel ----------
 
 router.get('/admin/platform', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
@@ -1066,7 +1101,7 @@ router.get('/admin/platform', authMiddleware, loadAccount, requireAdmin, async (
         const settings = await getPlatformSettings()
         res.json({ settings })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Failed to load platform settings') })
     }
 })
 
@@ -1089,8 +1124,8 @@ router.post('/admin/ads/send', authMiddleware, loadAccount, requireAdmin, adsSen
         const body = req.body || {}
         const target = body.target || 'all' // 'all' atau sessionId bot tertentu
         const text = (body.text || '').trim()
-        if (!text) return res.status(400).json({ error: 'Teks iklan tidak boleh kosong' })
-        if (text.length > 4000) return res.status(400).json({ error: 'Teks iklan terlalu panjang (max 4000)' })
+        if (!text) return res.status(400).json({ error: 'Ad text is required' })
+        if (text.length > 4000) return res.status(400).json({ error: 'Ad text is too long (max 4000 characters)' })
 
         const results = await sendAdsManually({
             target,
@@ -1098,7 +1133,7 @@ router.post('/admin/ads/send', authMiddleware, loadAccount, requireAdmin, adsSen
             skipPremium: body.skipPremium !== false
         })
 
-        if (!results.length) return res.status(404).json({ error: 'Tidak ada bot yang cocok / terhubung' })
+        if (!results.length) return res.status(404).json({ error: 'No matching connected bots' })
 
         res.json({
             ok: true,
@@ -1113,33 +1148,20 @@ router.post('/admin/ads/send', authMiddleware, loadAccount, requireAdmin, adsSen
 router.get('/admin/overview', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
     try {
         const db = await getMongoDb()
-        const [accounts, bots, orders] = await Promise.all([
-            listAllAccounts(300),
-            listAllBots(500),
-            db.collection(COLLECTIONS.ORDERS).find({}).sort({ createdAt: -1 }).limit(100).toArray()
+        const [userCount, botCount, orderCount, connectedCount, orders] = await Promise.all([
+            db.collection(COLLECTIONS.ACCOUNTS).countDocuments({}),
+            db.collection(COLLECTIONS.BOTS).countDocuments({}),
+            db.collection(COLLECTIONS.ORDERS).countDocuments({}),
+            db.collection(COLLECTIONS.BOTS).countDocuments({ status: 'connected' }),
+            db.collection(COLLECTIONS.ORDERS).find({}).sort({ createdAt: -1 }).limit(30).toArray()
         ])
         res.json({
             stats: {
-                users: accounts.length,
-                bots: bots.length,
-                orders: orders.length,
-                connected: bots.filter(b => b.status === 'connected').length
+                users: userCount,
+                bots: botCount,
+                orders: orderCount,
+                connected: connectedCount
             },
-            accounts: accounts.map(a => ({
-                id: a._id.toString(),
-                email: a.email,
-                name: a.name,
-                role: a.role || 'user',
-                createdAt: a.createdAt
-            })),
-            bots: bots.map(b => ({
-                id: b._id.toString(),
-                sessionId: b.sessionId,
-                botName: b.botName,
-                ownerId: b.ownerId?.toString(),
-                status: b.status,
-                createdAt: b.createdAt
-            })),
             orders: orders.map(o => ({
                 orderId: o.orderId,
                 accountId: o.accountId,
@@ -1150,13 +1172,82 @@ router.get('/admin/overview', authMiddleware, loadAccount, requireAdmin, async (
             }))
         })
     } catch (e) {
-        res.status(500).json({ error: e.message })
+        res.status(500).json({ error: publicError(e, 'Failed to load overview') })
+    }
+})
+
+router.get('/admin/users', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        const result = await listAccountsPaged({
+            page: req.query.page,
+            limit: req.query.limit,
+            q: req.query.q,
+            role: req.query.role,
+            sort: req.query.sort
+        })
+        // Attach bot counts + premium (bounded)
+        const db = await getMongoDb()
+        const ids = result.accounts.map(a => {
+            try { return new ObjectId(a.id) } catch { return null }
+        }).filter(Boolean)
+        let botCounts = {}
+        let premiumSet = new Set()
+        if (ids.length) {
+            const bots = await db.collection(COLLECTIONS.BOTS).aggregate([
+                { $match: { ownerId: { $in: ids } } },
+                { $group: { _id: '$ownerId', count: { $sum: 1 } } }
+            ]).toArray()
+            for (const b of bots) botCounts[b._id.toString()] = b.count
+            const subs = await db.collection(COLLECTIONS.SUBSCRIPTIONS).find({
+                accountId: { $in: ids.map(i => i.toString()) },
+                plan: 'premium',
+                expiresAt: { $gt: new Date() }
+            }).project({ accountId: 1 }).toArray()
+            for (const s of subs) if (s.accountId) premiumSet.add(String(s.accountId))
+        }
+        result.accounts = result.accounts.map(a => ({
+            ...a,
+            botCount: botCounts[a.id] || 0,
+            plan: premiumSet.has(a.id) ? 'premium' : 'free'
+        }))
+        res.json(result)
+    } catch (e) {
+        res.status(500).json({ error: publicError(e, 'Failed to list users') })
+    }
+})
+
+router.get('/admin/bots', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        const result = await listBotsPaged({
+            page: req.query.page,
+            limit: req.query.limit,
+            q: req.query.q,
+            status: req.query.status,
+            sort: req.query.sort
+        })
+        res.json(result)
+    } catch (e) {
+        res.status(500).json({ error: publicError(e, 'Failed to list bots') })
+    }
+})
+
+router.get('/admin/errors', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        const result = await listCommandErrorsAdmin({
+            page: req.query.page,
+            limit: req.query.limit,
+            q: req.query.q,
+            botId: req.query.botId
+        })
+        res.json(result)
+    } catch (e) {
+        res.status(500).json({ error: publicError(e, 'Failed to list errors') })
     }
 })
 
 router.post('/admin/accounts/:id/role', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
     try {
-        if (!safeObjectId(req.params.id)) return res.status(400).json({ error: 'ID tidak valid' })
+        if (!safeObjectId(req.params.id)) return res.status(400).json({ error: 'Invalid ID' })
         const role = req.body?.role === 'admin' ? 'admin' : 'user'
         await setAccountRole(req.params.id, role)
         res.json({ ok: true, role })
@@ -1167,7 +1258,7 @@ router.post('/admin/accounts/:id/role', authMiddleware, loadAccount, requireAdmi
 
 router.post('/admin/bots/:id/premium', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
     try {
-        if (!safeObjectId(req.params.id)) return res.status(400).json({ error: 'ID tidak valid' })
+        if (!safeObjectId(req.params.id)) return res.status(400).json({ error: 'Invalid ID' })
         const months = Math.min(24, Math.max(1, Number(req.body?.months) || 1))
         await activatePremium(req.params.id, { months })
         res.json({ ok: true })
@@ -1179,7 +1270,7 @@ router.post('/admin/bots/:id/premium', authMiddleware, loadAccount, requireAdmin
 router.delete('/admin/bots/:id', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
     try {
         const oid = safeObjectId(req.params.id)
-        if (!oid) return res.status(400).json({ error: 'ID tidak valid' })
+        if (!oid) return res.status(400).json({ error: 'Invalid ID' })
         const db = await getMongoDb()
         const bot = await db.collection(COLLECTIONS.BOTS).findOne({ _id: oid })
         if (bot?.sessionId) {
@@ -1195,7 +1286,7 @@ router.delete('/admin/bots/:id', authMiddleware, loadAccount, requireAdmin, asyn
 router.post('/admin/bots/:id/status', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
     try {
         const oid = safeObjectId(req.params.id)
-        if (!oid) return res.status(400).json({ error: 'ID tidak valid' })
+        if (!oid) return res.status(400).json({ error: 'Invalid ID' })
         const db = await getMongoDb()
         const bot = await db.collection(COLLECTIONS.BOTS).findOne({ _id: oid })
         if (!bot) return res.status(404).json({ error: 'Bot tidak ditemukan' })

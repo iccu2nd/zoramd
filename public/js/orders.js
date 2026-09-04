@@ -13,7 +13,7 @@
   Z.bootPage(async function () {
     var wrap = Z.$('#orders-list')
     if (!wrap) return
-    wrap.innerHTML = '<p class="hint">Memuat...</p>'
+    wrap.innerHTML = '<p class="hint">Loading...</p>'
     try {
       var data = await Z.api('/orders', { timeoutMs: 12000 })
       var list = data.orders || []

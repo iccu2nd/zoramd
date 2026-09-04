@@ -1,31 +1,23 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dashboard — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=24" />
+  <link rel="stylesheet" href="/css/style.css?v=26" />
 </head>
 <body data-page="dashboard">
-  <div id="loading-view" class="loading-wrap hidden" style="display:none">
+  <div id="loading-view" class="loading-wrap hidden" style="display:none" aria-hidden="true">
     <div class="loading-card">
       <div class="loading-logo">ZoraBot</div>
-            <div class="spinner center" aria-hidden="true">
-        <div class="spinner-blade"></div>
-        <div class="spinner-blade"></div>
-        <div class="spinner-blade"></div>
-        <div class="spinner-blade"></div>
-        <div class="spinner-blade"></div>
-        <div class="spinner-blade"></div>
-        <div class="spinner-blade"></div>
-        <div class="spinner-blade"></div>
-        <div class="spinner-blade"></div>
-        <div class="spinner-blade"></div>
-        <div class="spinner-blade"></div>
-        <div class="spinner-blade"></div>
+      <div class="spinner center" aria-hidden="true">
+        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
       </div>
-      <p class="loading-text" id="loading-text">Memuat...</p>
+      <p class="loading-text" id="loading-text">Loading...</p>
     </div>
   </div>
 
@@ -39,67 +31,69 @@
     </header>
 
     <aside id="sidebar" class="sidebar">
-            <nav>
+      <nav>
         <div class="nav-label">Menu</div>
         <a href="/dashboard" class="nav-item active"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
         <a href="/connect" class="nav-item"><i class="fa-solid fa-qrcode"></i><span>Connect Bot</span></a>
         <a href="/bot-settings" class="nav-item"><i class="fa-solid fa-sliders"></i><span>Bot Settings</span></a>
         <a href="/feature-settings" class="nav-item"><i class="fa-solid fa-puzzle-piece"></i><span>Feature Settings</span></a>
-<a href="/database" class="nav-item"><i class="fa-solid fa-database"></i><span>Database</span></a>
-        <a href="/chatlog" class="nav-item"><i class="fa-solid fa-comments"></i><span>Live Chatlog</span></a>
-<div class="nav-label">Premium</div>
-        <a href="/upgrade" class="nav-item"><i class="fa-solid fa-crown"></i><span>Order Plan Premium</span></a>
-        <a href="/orders" class="nav-item"><i class="fa-solid fa-receipt"></i><span>Riwayat Order</span></a>
-        <div class="nav-label">Akun</div>
+        <a href="/database" class="nav-item"><i class="fa-solid fa-database"></i><span>Database</span></a>
+        <a href="/chatlog" class="nav-item"><i class="fa-solid fa-comments"></i><span>Live Chat Log</span></a>
+        <div class="nav-label">Premium</div>
+        <a href="/upgrade" class="nav-item"><i class="fa-solid fa-crown"></i><span>Upgrade</span></a>
+        <a href="/orders" class="nav-item"><i class="fa-solid fa-receipt"></i><span>Orders</span></a>
+        <div class="nav-label">Account</div>
         <a href="/account" class="nav-item"><i class="fa-solid fa-user"></i><span>Account</span></a>
-        <a href="/admin" class="nav-item nav-admin hidden" id="nav-admin"><i class="fa-solid fa-shield-halved"></i><span>Admin Panel</span></a>
+        <a href="/admin" class="nav-item nav-admin hidden" id="nav-admin"><i class="fa-solid fa-shield-halved"></i><span>Admin</span></a>
       </nav>
-      <button id="logout-btn" class="btn outline logout"><i class="fa-solid fa-right-from-bracket"></i><span>Keluar</span></button>
+      <button id="logout-btn" class="btn outline logout"><i class="fa-solid fa-right-from-bracket"></i><span>Log out</span></button>
     </aside>
     <div id="sidebar-overlay" class="overlay"></div>
 
     <main class="content">
       <h2>Dashboard</h2>
-      <p class="hint">Kelola bot WhatsApp. Buat bot, hubungkan, lalu atur dari menu.</p>
+      <p class="hint">Monitor your WhatsApp bots and manage connections.</p>
+
+      <div id="metrics-grid" class="metrics-grid">
+        <div class="metric-card"><div class="metric-label">Messages in</div><div class="metric-value" id="m-in">—</div></div>
+        <div class="metric-card"><div class="metric-label">Messages out</div><div class="metric-value" id="m-out">—</div></div>
+        <div class="metric-card"><div class="metric-label">Commands</div><div class="metric-value" id="m-cmds">—</div></div>
+        <div class="metric-card"><div class="metric-label">Success / Failed</div><div class="metric-value" id="m-okfail">—</div></div>
+        <div class="metric-card"><div class="metric-label">Active users (24h)</div><div class="metric-value" id="m-users">—</div></div>
+        <div class="metric-card"><div class="metric-label">Avg response</div><div class="metric-value" id="m-rt">—</div></div>
+        <div class="metric-card"><div class="metric-label">Error rate</div><div class="metric-value" id="m-err">—</div></div>
+        <div class="metric-card"><div class="metric-label">Plan</div><div class="metric-value" id="m-plan">—</div></div>
+      </div>
+
+      <div class="chart-card">
+        <h3>Commands (last 24h)</h3>
+        <div id="cmd-chart" class="mini-chart" role="img" aria-label="Commands over time"></div>
+      </div>
 
       <div id="onboarding" class="onboard-card hidden">
-        <button type="button" id="onboard-dismiss" class="onboard-close" aria-label="Tutup Mulai cepat">
+        <button type="button" id="onboard-dismiss" class="onboard-close" aria-label="Dismiss">
           <i class="fa-solid fa-xmark" aria-hidden="true"></i>
         </button>
-        <h3>Mulai cepat</h3>
+        <h3>Quick start</h3>
         <ol class="onboard-steps">
-          <li><a href="/connect">Hubungkan bot</a> (QR / pairing)</li>
-          <li>Uji di WhatsApp: ketik <code>.menu</code></li>
-          <li>Atur di <a href="/bot-settings">Bot Settings</a></li>
+          <li><a href="/connect">Connect a bot</a> (QR or pairing code)</li>
+          <li>Test on WhatsApp: type <code>.menu</code></li>
+          <li>Configure in <a href="/bot-settings">Bot Settings</a></li>
         </ol>
       </div>
 
       <div id="limits-bar" class="limits-bar"></div>
-      <div class="row" style="gap:8px;flex-wrap:wrap">
-        <button id="create-bot-btn" class="btn primary">Buat Bot Baru</button>
-        <a href="/orders" class="btn outline">Riwayat Order</a>
-        <a href="/connect" class="btn outline">Connect Bot</a>
+      <div class="row actions-row">
+        <button id="create-bot-btn" class="btn primary">Create bot</button>
+        <a href="/orders" class="btn outline">Orders</a>
+        <a href="/connect" class="btn outline">Connect bot</a>
       </div>
       <div id="bots-list" class="bots-list"></div>
-
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=20"></script>
-  <script src="/js/common.js?v=24"></script>
-  <script src="/js/dashboard.js?v=23"></script>
-
-  <script>
-  // Safety net: jangan pernah stuck loading > 6 detik
-  setTimeout(function () {
-    var lv = document.getElementById('loading-view');
-    var mv = document.getElementById('main-view');
-    if (lv && !lv.classList.contains('hidden') && getComputedStyle(lv).display !== 'none') {
-      lv.classList.add('hidden');
-      lv.style.display = 'none';
-      if (mv) { mv.classList.remove('hidden'); mv.style.display = ''; }
-    }
-  }, 1500);
-  </script>
+  <script src="/js/bg-pattern.js?v=26"></script>
+  <script src="/js/common.js?v=26"></script>
+  <script src="/js/dashboard.js?v=26"></script>
 </body>
 </html>
