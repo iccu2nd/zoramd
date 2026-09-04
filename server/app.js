@@ -105,7 +105,7 @@ export function createApp() {
     app.use(cors({
         origin: buildCorsOrigin(),
         credentials: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization']
     }))
     app.use(express.json({ limit: '1mb' }))

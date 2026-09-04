@@ -8,12 +8,12 @@ import {
 } from '../auth.js'
 import {
     createBot, findBotsByOwner, findOwnedBot, updateOwnedBot, findBotBySessionId, setBotStatus,
-    listAllAccounts, listAllBots, listAccountsPaged, listBotsPaged, setAccountRole, deleteBotById, updateAccount, findAccountById
+    listAllAccounts, listAllBots, listAccountsPaged, listBotsPaged, setAccountRole, deleteBotById, deleteAccountById, updateAccount, findAccountById
 } from '../../lib/db/accounts.js'
 import { getSubscription, isBotPremium, activatePremium, isAccountPremium, activateAccountPremium, getAccountSubscription } from '../../lib/db/subscription.js'
 import { getAllFeatureSettings, setFeatureSetting, getFeatureSetting, ACCESS_FLAGS } from '../../lib/db/featureSettings.js'
 import { DEFAULT_ACCESS_RULES } from '../../lib/db/defaultAccessRules.js'
-import { createOrder, findOrder, findOrdersByAccount, markOrderChecked, cancelOrder, isOrderExpired } from '../../lib/db/orders.js'
+import { createOrder, findOrder, findOrdersByAccount, markOrderChecked, cancelOrder, deleteOrder, isOrderExpired } from '../../lib/db/orders.js'
 import { getMongoDb } from '../../lib/db/mongo.js'
 import { COLLECTIONS } from '../../lib/db/schema.js'
 import botManager from '../../lib/botManager.js'
@@ -397,6 +397,28 @@ router.delete('/bots/:botId', authMiddleware, loadAccount, async (req, res) => {
         res.json({ ok: true })
     } catch (e) {
         res.status(500).json({ error: e.message })
+    }
+})
+
+
+router.patch('/bots/:botId', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const bot = await findOwnedBot(req.params.botId, req.account._id)
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
+        const name = String(req.body?.botName || '').trim().slice(0, 64)
+        if (!name) return res.status(400).json({ error: 'Bot name is required' })
+        const ok = await updateOwnedBot(bot._id.toString(), req.account._id.toString(), { botName: name })
+        if (!ok) return res.status(404).json({ error: 'Bot not found' })
+        // Keep runtime config in sync when bot is live
+        try {
+            const state = botManager.getState(bot.sessionId)
+            if (state?.sock) {
+                state.sock.botConfig = { ...(state.sock.botConfig || {}), botName: name }
+            }
+        } catch {}
+        res.json({ ok: true, botName: name })
+    } catch (e) {
+        res.status(500).json({ error: publicError(e, 'Failed to rename bot') })
     }
 })
 
@@ -1225,9 +1247,56 @@ router.get('/admin/bots', authMiddleware, loadAccount, requireAdmin, async (req,
             status: req.query.status,
             sort: req.query.sort
         })
+        // Enrich with live session state (WhatsApp number + real connection status)
+        result.bots = (result.bots || []).map((b) => {
+            const state = botManager.getState(b.sessionId) || {}
+            const liveStatus = state.status || b.status || 'disconnected'
+            return {
+                ...b,
+                status: liveStatus,
+                statusLabel: statusLabel(liveStatus),
+                waNumber: state.waNumber || null,
+                waName: state.waName || null,
+                lastError: state.lastError || null,
+                enabled: b.enabled !== false
+            }
+        })
         res.json(result)
     } catch (e) {
         res.status(500).json({ error: publicError(e, 'Failed to list bots') })
+    }
+})
+
+/** Admin: view one bot's stored settings (by bot document id). Scoped to that bot only. */
+router.get('/admin/bots/:id/settings', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        const oid = safeObjectId(req.params.id)
+        if (!oid) return res.status(400).json({ error: 'Invalid ID' })
+        const db = await getMongoDb()
+        const bot = await db.collection(COLLECTIONS.BOTS).findOne({ _id: oid })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
+        const settingsDoc = await db.collection(COLLECTIONS.BOT_SETTINGS).findOne({ botId: bot.sessionId })
+        const state = botManager.getState(bot.sessionId) || {}
+        const liveStatus = state.status || bot.status || 'disconnected'
+        res.json({
+            bot: {
+                id: bot._id.toString(),
+                sessionId: bot.sessionId,
+                botName: bot.botName,
+                ownerId: bot.ownerId?.toString?.() || null,
+                ownerNumber: bot.ownerNumber || null,
+                status: liveStatus,
+                statusLabel: statusLabel(liveStatus),
+                waNumber: state.waNumber || null,
+                waName: state.waName || null,
+                enabled: bot.enabled !== false,
+                identity: bot.identity || null,
+                createdAt: bot.createdAt
+            },
+            settings: settingsDoc || {}
+        })
+    } catch (e) {
+        res.status(500).json({ error: publicError(e, 'Failed to load bot settings') })
     }
 })
 
@@ -1253,6 +1322,21 @@ router.post('/admin/accounts/:id/role', authMiddleware, loadAccount, requireAdmi
         res.json({ ok: true, role })
     } catch (e) {
         res.status(500).json({ error: publicError(e) })
+    }
+})
+
+
+router.delete('/admin/accounts/:id', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
+    try {
+        if (!safeObjectId(req.params.id)) return res.status(400).json({ error: 'Invalid ID' })
+        if (String(req.params.id) === String(req.account._id)) {
+            return res.status(400).json({ error: 'You cannot delete your own account' })
+        }
+        const ok = await deleteAccountById(req.params.id)
+        if (!ok) return res.status(404).json({ error: 'Account not found' })
+        res.json({ ok: true })
+    } catch (e) {
+        res.status(500).json({ error: publicError(e, 'Failed to delete account') })
     }
 })
 
@@ -1363,6 +1447,18 @@ router.get('/orders', authMiddleware, loadAccount, async (req, res) => {
 })
 
 // ---------- Command errors ----------
+router.delete('/orders/:orderId', authMiddleware, loadAccount, async (req, res) => {
+    try {
+        const orderId = String(req.params.orderId || '').trim()
+        if (!orderId) return res.status(400).json({ error: 'Order ID is required' })
+        const result = await deleteOrder(orderId, req.account._id.toString())
+        if (!result.ok) return res.status(404).json({ error: result.error || 'Order not found' })
+        res.json({ ok: true })
+    } catch (e) {
+        res.status(500).json({ error: publicError(e, 'Failed to delete order') })
+    }
+})
+
 router.get('/bots/:botId/errors', authMiddleware, loadAccount, async (req, res) => {
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)

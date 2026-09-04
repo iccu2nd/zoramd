@@ -82,6 +82,7 @@
       return '<div class="bot-card" data-id="' + Z.escapeHtml(b.id) + '">' +
         '<button type="button" class="bot-menu-btn" aria-label="Menu">&#8942;</button>' +
         '<div class="bot-menu-dropdown hidden">' +
+          '<button type="button" data-act="rename">Rename bot</button>' +
           '<button type="button" data-act="settings">Bot settings</button>' +
           '<button type="button" data-act="restart">Restart</button>' +
           '<button type="button" data-act="power">' + (b.enabled !== false ? 'Disable' : 'Enable') + '</button>' +
@@ -115,7 +116,16 @@
         closeAllMenus()
         if (act === 'settings') { location.href = '/bot-settings'; return }
         try {
-          if (act === 'restart') {
+          if (act === 'rename') {
+            var card = btn.closest('.bot-card')
+            var current = (card && card.querySelector('h3') && card.querySelector('h3').textContent) || 'ZoraBot'
+            var name = prompt('Bot name:', current)
+            if (name === null) return
+            name = String(name).trim()
+            if (!name) { Z.toast('Bot name is required.', 'warning'); return }
+            await Z.api('/bots/' + botId, { method: 'PATCH', body: { botName: name } })
+            Z.toast('Bot name updated successfully.', 'success')
+          } else if (act === 'restart') {
             await Z.restartBot(botId)
             Z.toast('Bot restarted successfully.', 'success')
           } else if (act === 'power') {

@@ -40,69 +40,175 @@
     var usersEl = document.getElementById('admin-users')
     if (!usersEl) return
     usersEl.innerHTML = (data.accounts || []).map(function (a) {
-      return '<div class="bot-card"><div><h3>' + esc(a.email || '(no email)') + '</h3>' +
+      return '<div class="bot-card" data-id="' + esc(a.id) + '">' +
+        '<button type="button" class="bot-menu-btn" aria-label="Menu">&#8942;</button>' +
+        '<div class="bot-menu-dropdown hidden">' +
+          '<button type="button" data-act="role" data-role="' + (a.role === 'admin' ? 'user' : 'admin') + '">' +
+            (a.role === 'admin' ? 'Make user' : 'Make admin') + '</button>' +
+          '<button type="button" class="danger" data-act="delete">Delete account</button>' +
+        '</div>' +
+        '<div><h3>' + esc(a.email || '(no email)') + '</h3>' +
         '<div class="bot-meta">' + esc(a.name || '') + ' · bots: ' + (a.botCount || 0) +
         ' · ' + (a.plan === 'premium' ? 'Premium' : 'Free') +
         (a.emailVerified ? ' · verified' : '') + '</div></div>' +
         '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">' +
         '<span class="badge ' + (a.role === 'admin' ? 'premium' : '') + '">' + esc(a.role || 'user') + '</span>' +
-        '<button type="button" class="btn outline btn-sm admin-role" data-id="' + esc(a.id) + '" data-role="' +
-        (a.role === 'admin' ? 'user' : 'admin') + '">' +
-        (a.role === 'admin' ? 'Make user' : 'Make admin') + '</button></div></div>'
+        '</div></div>'
     }).join('') || '<p class="hint">No users found.</p>'
-    usersEl.querySelectorAll('.admin-role').forEach(function (btn) {
-      btn.onclick = async function () {
-        try {
-          await Z.api('/admin/accounts/' + btn.dataset.id + '/role', { method: 'POST', body: { role: btn.dataset.role } })
-          Z.toast('Role updated successfully.', 'success')
-          loadUsers(data.page)
-        } catch (e) { Z.toast(e.message, 'error') }
+
+    function closeMenus() {
+      usersEl.querySelectorAll('.bot-menu-dropdown').forEach(function (d) { d.classList.add('hidden') })
+    }
+    usersEl.querySelectorAll('.bot-menu-btn').forEach(function (btn) {
+      btn.onclick = function (e) {
+        e.stopPropagation()
+        var dd = btn.nextElementSibling
+        var open = !dd.classList.contains('hidden')
+        closeMenus()
+        if (!open) dd.classList.remove('hidden')
       }
     })
+    usersEl.querySelectorAll('.bot-menu-dropdown button').forEach(function (btn) {
+      btn.onclick = async function (e) {
+        e.stopPropagation()
+        var card = btn.closest('.bot-card')
+        var id = card && card.dataset.id
+        var act = btn.dataset.act
+        closeMenus()
+        if (!id) return
+        try {
+          if (act === 'role') {
+            await Z.api('/admin/accounts/' + id + '/role', { method: 'POST', body: { role: btn.dataset.role } })
+            Z.toast('Role updated successfully.', 'success')
+            loadUsers(data.page)
+          } else if (act === 'delete') {
+            if (!confirm('Permanently delete this account and all of its bots?')) return
+            await Z.api('/admin/accounts/' + id, { method: 'DELETE' })
+            Z.toast('Account deleted successfully.', 'success')
+            loadUsers(data.page)
+          }
+        } catch (err) { Z.toast(err.message, 'error') }
+      }
+    })
+    document.addEventListener('click', closeMenus)
     renderPager(document.getElementById('users-pager'), data.page, data.pages, loadUsers)
   }
-  async function loadBots(page) {
+
+async function loadBots(page) {
     var data = await Z.api('/admin/bots?page=' + (page || 1) + '&limit=20&sort=newest', { timeoutMs: 20000 })
     var botsEl = document.getElementById('admin-bots')
     if (!botsEl) return
     botsEl.innerHTML = (data.bots || []).map(function (b) {
-      return '<div class="bot-card"><div><h3>' + esc(b.botName) + '</h3>' +
-        '<div class="bot-meta">' + esc(b.sessionId) + ' · owner ' + esc(b.ownerId) + '</div></div>' +
+      var wa = b.waNumber ? ('+' + String(b.waNumber).replace(/^\+/, '')) : 'Not linked'
+      var st = b.statusLabel || b.status || 'disconnected'
+      return '<div class="bot-card" data-id="' + esc(b.id) + '" data-session="' + esc(b.sessionId || '') + '">' +
+        '<button type="button" class="bot-menu-btn" aria-label="Menu">&#8942;</button>' +
+        '<div class="bot-menu-dropdown hidden">' +
+          '<button type="button" data-act="settings">Settings</button>' +
+          '<button type="button" data-act="premium">+1 month Premium</button>' +
+          '<button type="button" data-act="stop">Stop</button>' +
+          '<button type="button" class="danger" data-act="delete">Delete</button>' +
+        '</div>' +
+        '<div><h3>' + esc(b.botName || 'Bot') + '</h3>' +
+        '<div class="bot-meta">WA: <strong>' + esc(wa) + '</strong>' +
+          (b.waName ? (' · ' + esc(b.waName)) : '') + '</div>' +
+        '<div class="bot-meta">Session: ' + esc(b.sessionId || '') +
+          ' · owner ' + esc(b.ownerId || '-') + '</div></div>' +
         '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">' +
-        '<span class="badge ' + esc(b.status || '') + '">' + esc(b.status || '-') + '</span>' +
-        '<button type="button" class="btn outline admin-prem" data-id="' + esc(b.id) + '">+1 month Premium</button>' +
-        '<button type="button" class="btn outline admin-stop" data-id="' + esc(b.id) + '">Stop</button>' +
-        '<button type="button" class="btn danger admin-del" data-id="' + esc(b.id) + '">Delete</button></div></div>'
+        '<span class="badge ' + esc(b.status || '') + '">' + esc(st) + '</span>' +
+        '<button type="button" class="btn outline btn-sm admin-bot-settings" data-id="' + esc(b.id) + '">Settings</button>' +
+        '</div></div>'
     }).join('') || '<p class="hint">No bots found.</p>'
-    botsEl.querySelectorAll('.admin-prem').forEach(function (btn) {
-      btn.onclick = async function () {
-        try {
-          await Z.api('/admin/bots/' + btn.dataset.id + '/premium', { method: 'POST', body: { months: 1 } })
-          Z.toast('Premium activated for 1 month.', 'success')
-        } catch (e) { Z.toast(e.message, 'error') }
+
+    function closeMenus() {
+      botsEl.querySelectorAll('.bot-menu-dropdown').forEach(function (d) { d.classList.add('hidden') })
+    }
+    botsEl.querySelectorAll('.bot-menu-btn').forEach(function (btn) {
+      btn.onclick = function (e) {
+        e.stopPropagation()
+        var dd = btn.nextElementSibling
+        var open = !dd.classList.contains('hidden')
+        closeMenus()
+        if (!open) dd.classList.remove('hidden')
       }
     })
-    botsEl.querySelectorAll('.admin-stop').forEach(function (btn) {
-      btn.onclick = async function () {
-        try {
-          await Z.api('/admin/bots/' + btn.dataset.id + '/status', { method: 'POST', body: { action: 'stop' } })
-          Z.toast('Bot stopped successfully.', 'success')
-          loadBots(data.page)
-        } catch (e) { Z.toast(e.message, 'error') }
+    document.addEventListener('click', closeMenus)
+
+    async function openSettings(botId) {
+      var panel = document.getElementById('admin-bot-settings-panel')
+      var body = document.getElementById('admin-bot-settings-body')
+      if (!panel || !body) {
+        Z.toast('Settings panel not available.', 'error')
+        return
+      }
+      body.innerHTML = '<p class="hint">Loading settings...</p>'
+      panel.classList.remove('hidden')
+      try {
+        var data = await Z.api('/admin/bots/' + encodeURIComponent(botId) + '/settings', { timeoutMs: 15000 })
+        var bot = data.bot || {}
+        var settings = data.settings || {}
+        // Strip internal Mongo fields for display
+        var clean = {}
+        Object.keys(settings).forEach(function (k) {
+          if (k === '_id' || k === 'botId') return
+          clean[k] = settings[k]
+        })
+        var wa = bot.waNumber ? ('+' + String(bot.waNumber).replace(/^\+/, '')) : 'Not linked'
+        body.innerHTML =
+          '<div class="bot-meta" style="margin-bottom:12px">' +
+            '<div><strong>' + esc(bot.botName || '') + '</strong></div>' +
+            '<div>WhatsApp: <strong>' + esc(wa) + '</strong>' + (bot.waName ? (' · ' + esc(bot.waName)) : '') + '</div>' +
+            '<div>Status: ' + esc(bot.statusLabel || bot.status || '-') + '</div>' +
+            '<div>Session: ' + esc(bot.sessionId || '') + '</div>' +
+            '<div>Owner account: ' + esc(bot.ownerId || '-') + '</div>' +
+            (bot.ownerNumber ? ('<div class="hint">Owner number (account): ' + esc(bot.ownerNumber) + '</div>') : '') +
+          '</div>' +
+          '<h3 style="margin:12px 0 8px">Stored settings</h3>' +
+          (Object.keys(clean).length
+            ? '<pre class="settings-pre" style="white-space:pre-wrap;word-break:break-word;background:var(--bg-soft);padding:12px;border-radius:12px;font-size:0.82rem;max-height:360px;overflow:auto">' +
+                esc(JSON.stringify(clean, null, 2)) + '</pre>'
+            : '<p class="hint">No custom settings saved for this bot yet (defaults apply).</p>')
+      } catch (e) {
+        body.innerHTML = '<p class="error">' + esc(e.message) + '</p>'
+      }
+    }
+
+    botsEl.querySelectorAll('.admin-bot-settings').forEach(function (btn) {
+      btn.onclick = function (e) {
+        e.stopPropagation()
+        openSettings(btn.dataset.id)
       }
     })
-    botsEl.querySelectorAll('.admin-del').forEach(function (btn) {
-      btn.onclick = async function () {
-        if (!confirm('Permanently delete this bot?')) return
+    botsEl.querySelectorAll('.bot-menu-dropdown button').forEach(function (btn) {
+      btn.onclick = async function (e) {
+        e.stopPropagation()
+        var card = btn.closest('.bot-card')
+        var id = card && card.dataset.id
+        var act = btn.dataset.act
+        closeMenus()
+        if (!id) return
         try {
-          await Z.api('/admin/bots/' + btn.dataset.id, { method: 'DELETE' })
-          Z.toast('Bot deleted successfully.', 'success')
-          loadBots(data.page)
-        } catch (e) { Z.toast(e.message, 'error') }
+          if (act === 'settings') {
+            openSettings(id)
+          } else if (act === 'premium') {
+            await Z.api('/admin/bots/' + id + '/premium', { method: 'POST', body: { months: 1 } })
+            Z.toast('Premium activated for 1 month.', 'success')
+          } else if (act === 'stop') {
+            await Z.api('/admin/bots/' + id + '/status', { method: 'POST', body: { action: 'stop' } })
+            Z.toast('Bot stopped successfully.', 'success')
+            loadBots(data.page)
+          } else if (act === 'delete') {
+            if (!confirm('Permanently delete this bot?')) return
+            await Z.api('/admin/bots/' + id, { method: 'DELETE' })
+            Z.toast('Bot deleted successfully.', 'success')
+            loadBots(data.page)
+          }
+        } catch (err) { Z.toast(err.message, 'error') }
       }
     })
   }
-  async function loadErrors(page) {
+
+async function loadErrors(page) {
     var q = (document.getElementById('errors-q') || {}).value || ''
     var botId = (document.getElementById('errors-bot') || {}).value || ''
     var qs = '?page=' + (page || 1) + '&limit=20'
@@ -230,8 +336,16 @@
         if (page === 'admin') renderOrders(overview.orders)
       }
       if (page === 'admin-users') {
-        var searchBtn = document.getElementById('users-search')
-        if (searchBtn) searchBtn.onclick = function () { loadUsers(1) }
+        var debounceTimer = null
+        function scheduleSearch() {
+          if (debounceTimer) clearTimeout(debounceTimer)
+          debounceTimer = setTimeout(function () { loadUsers(1) }, 350)
+        }
+        ;['users-q', 'users-role', 'users-sort'].forEach(function (id) {
+          var el = document.getElementById(id)
+          if (!el) return
+          el.addEventListener(id === 'users-q' ? 'input' : 'change', scheduleSearch)
+        })
         await loadUsers(1)
       }
       if (page === 'admin-bots') await loadBots(1)
