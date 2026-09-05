@@ -45,9 +45,6 @@
       '</div><label class="switch"><input type="checkbox" class="feat-enabled" ' +
       (f.enabled !== false ? 'checked' : '') + '/><span class="slider"></span></label></div>' +
       '<div class="feature-detail">' +
-      '<div class="toggle-row feat-premium-row"><div class="toggle-meta"><strong>Premium Only</strong><span>User free tidak bisa memakai fitur ini</span></div>' +
-      '<label class="switch"><input type="checkbox" class="feat-premium-only" ' +
-      (f.premiumOnly ? 'checked' : '') + (isPremium ? '' : ' disabled') + '/><span class="slider"></span></label></div>' +
       '<div class="field"><label>Access Rule</label>' +
       '<div class="access-checks">' + checks + '</div>' +
       '<span class="field-hint">Centang satu atau lebih. Kosong = semua boleh. Lebih dari satu = yang cocok salah satu boleh pakai.</span></div>' +
@@ -134,7 +131,6 @@
               method: 'PUT',
               body: {
                 enabled: item.querySelector('.feat-enabled').checked,
-                premiumOnly: !!(item.querySelector('.feat-premium-only') && item.querySelector('.feat-premium-only').checked),
                 accessRules: Array.prototype.map.call(item.querySelectorAll('.feat-access-flag:checked'), function (c) { return c.value }),
                 customResponse: (item.querySelector('.feat-response') || {}).value || null,
                 customCommand: customCommand
@@ -153,26 +149,10 @@
     }
   }
 
-  var SELECTED_KEY = 'zora_selected_bot'
-  Z.bootPage(async function () {
-    await Z.loadBots()
-    var bots = Z.state.bots || []
-    var sel = Z.$('#feature-bot-select')
-    if (!bots.length) {
-      var wrap = Z.$('#features-list')
-      if (wrap) wrap.innerHTML = '<p class="hint">Select a bot to manage its features</p>'
-      return
-    }
+  Z.bootPage(function () {
     Z.fillBotSelect('feature-bot-select')
-    try {
-      var saved = localStorage.getItem(SELECTED_KEY)
-      var ids = bots.map(function (b) { return b.id })
-      if (saved && ids.indexOf(saved) >= 0 && sel) sel.value = saved
-    } catch (e) {}
     loadFeatures()
-    if (sel) sel.onchange = function () {
-      try { localStorage.setItem(SELECTED_KEY, sel.value) } catch (e) {}
-      loadFeatures()
-    }
+    var sel = Z.$('#feature-bot-select')
+    if (sel) sel.onchange = loadFeatures
   })
 })()

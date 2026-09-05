@@ -73,39 +73,7 @@
     return { close: dismiss }
   }
 
-  
-  var THEME_KEY = 'zora_theme'
-  function getPreferredTheme() {
-    try {
-      var saved = localStorage.getItem(THEME_KEY)
-      if (saved === 'dark' || saved === 'light') return saved
-    } catch (e) {}
-    try {
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark'
-    } catch (e) {}
-    return 'light'
-  }
-  function applyTheme(theme, persist) {
-    var t = theme === 'dark' ? 'dark' : 'light'
-    document.documentElement.setAttribute('data-theme', t)
-    document.documentElement.classList.add('theme-ready')
-    if (persist !== false) {
-      try { localStorage.setItem(THEME_KEY, t) } catch (e) {}
-    }
-    var btn = document.getElementById('theme-toggle')
-    if (btn) {
-      btn.setAttribute('aria-label', t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode')
-      btn.innerHTML = t === 'dark' ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>'
-    }
-  }
-  function toggleTheme() {
-    var cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
-    applyTheme(cur === 'dark' ? 'light' : 'dark', true)
-  }
-  // Apply ASAP (also duplicated in head inline script to prevent FOUC)
-  try { applyTheme(getPreferredTheme(), false) } catch (e) {}
-
-var state = {
+  var state = {
     user: null,
     bots: [],
     limits: null
@@ -351,22 +319,6 @@ var state = {
       if (href === path) a.classList.add('active')
       else a.classList.remove('active')
     })
-    try {
-      var top = document.querySelector('.topbar')
-      if (top && !document.getElementById('theme-toggle')) {
-        var tb = document.createElement('button')
-        tb.type = 'button'
-        tb.id = 'theme-toggle'
-        tb.className = 'theme-toggle'
-        tb.addEventListener('click', toggleTheme)
-        var chip = document.getElementById('user-chip')
-        var notif = document.getElementById('notif-wrap')
-        if (notif && notif.parentNode) notif.parentNode.insertBefore(tb, notif)
-        else if (chip && chip.parentNode) chip.parentNode.insertBefore(tb, chip)
-        else top.appendChild(tb)
-      }
-      applyTheme(getPreferredTheme(), false)
-    } catch (e) {}
   }
 
   async function loadBots() {
@@ -436,7 +388,6 @@ var state = {
   global.Zora = {
     $, $$, show, hide, escapeHtml, toast, state, api, goToLogin,
     setLoading, showMainApp, bindShell, ensureSiteFooter, loadBots, fillBotSelect, bootPage, restartBot,
-    applyTheme, toggleTheme, getPreferredTheme,
     getStoredToken, setStoredToken, clearSessionCache
   }
 })(window)

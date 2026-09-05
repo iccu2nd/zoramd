@@ -1,10 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script>
-  (function(){try{var t=localStorage.getItem('zora_theme');if(t!=='dark'&&t!=='light'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}document.documentElement.setAttribute('data-theme',t)}catch(e){}})();
-  </script>
-
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bot Settings — ZoraBot</title>
@@ -79,7 +75,7 @@
             <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
           </div>
         </div>
-        <div id="settings-empty" class="panel-loading"><span>Select a bot to manage its settings</span></div>
+        <div id="settings-empty" class="panel-loading hidden"><span>Belum ada bot tersambung.</span></div>
         <div id="settings-content" class="hidden">
         <div class="toggle-list">
           <div class="toggle-row">
@@ -178,27 +174,6 @@
           <label>Group ID</label>
           <input type="text" id="set-groupid" placeholder="1203xxxxx@g.us" />
         </div>
-        <hr />
-        <h3 class="section-title">Response</h3>
-        <div class="toggle-list">
-          <div class="toggle-row">
-            <div class="toggle-meta">
-              <strong>Error Report</strong>
-              <span>Kirim log error command ke owner</span>
-            </div>
-            <label class="switch"><input type="checkbox" id="set-errorreport" checked /><span class="slider"></span></label>
-          </div>
-        </div>
-        <hr />
-        <h3 class="section-title">Custom Messages <span class="opt-tag">Premium</span></h3>
-        <p class="hint">Kosongkan untuk memakai teks bawaan bot.</p>
-        <div class="field"><label>Registration required</label><textarea id="msg-notRegistered" rows="2" placeholder="Default: pesan belum terdaftar"></textarea></div>
-        <div class="field"><label>Command not found (did you mean)</label><textarea id="msg-didYouMean" rows="2" placeholder="Gunakan {cmd} {prefix} {suggestions}"></textarea></div>
-        <div class="field"><label>Premium required</label><textarea id="msg-premiumRequired" rows="2" placeholder="Fitur ini khusus member premium."></textarea></div>
-        <div class="field"><label>Permission denied</label><textarea id="msg-permissionDenied" rows="2"></textarea></div>
-        <div class="field"><label>Feature disabled</label><textarea id="msg-featureDisabled" rows="2"></textarea></div>
-        <div class="field"><label>Command blocked</label><textarea id="msg-commandBlocked" rows="2"></textarea></div>
-        <div class="field"><label>Generic error</label><textarea id="msg-errorGeneric" rows="2"></textarea></div>
         <button id="save-settings-btn" class="btn primary">Save</button>
         <p id="settings-msg" class="msg"></p>
         </div>
