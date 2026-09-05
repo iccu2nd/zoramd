@@ -26,6 +26,36 @@
     }
   }
 
+  function syncThemeSegment() {
+    var cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+    var light = Z.$('#theme-set-light')
+    var dark = Z.$('#theme-set-dark')
+    if (light) light.classList.toggle('active', cur === 'light')
+    if (dark) dark.classList.toggle('active', cur === 'dark')
+  }
+
+  function bindThemeSegment() {
+    var light = Z.$('#theme-set-light')
+    var dark = Z.$('#theme-set-dark')
+    if (light) light.onclick = function () {
+      if (Z.applyTheme) Z.applyTheme('light', true)
+      else {
+        document.documentElement.setAttribute('data-theme', 'light')
+        try { localStorage.setItem('zora_theme', 'light') } catch (e) {}
+      }
+      syncThemeSegment()
+    }
+    if (dark) dark.onclick = function () {
+      if (Z.applyTheme) Z.applyTheme('dark', true)
+      else {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        try { localStorage.setItem('zora_theme', 'dark') } catch (e) {}
+      }
+      syncThemeSegment()
+    }
+    syncThemeSegment()
+  }
+
   async function doRestart(botId) {
     if (!botId) return Z.toast('Select a bot first.', 'warning')
     try {
@@ -100,6 +130,7 @@
       if (Z.$('#set-fastrespon')) Z.$('#set-fastrespon').checked = !!s.fastrespon
       if (Z.$('#set-noprefix')) Z.$('#set-noprefix').checked = !!s.noprefix
       if (Z.$('#set-gconly')) Z.$('#set-gconly').checked = !!(s.gconly === true || s.gconly === 'join' || s.gconly === 'closed')
+      if (Z.$('#set-gconly-bypass')) Z.$('#set-gconly-bypass').checked = !!s.gconlyPremiumBypass
       if (Z.$('#set-errorreport')) Z.$('#set-errorreport').checked = s.errorReport !== false
       if (Z.$('#set-botname')) Z.$('#set-botname').value = data.botName || ''
       if (Z.$('#set-ownernumber')) Z.$('#set-ownernumber').value = data.ownerNumber || ''
@@ -117,6 +148,7 @@
       var disabled = !data.isPremium
       ;['set-botname', 'set-ownernumber', 'set-author', 'set-packname', 'set-title', 'set-body',
         'set-thumbnail', 'set-channelurl', 'set-idch', 'set-groupurl', 'set-groupid',
+        'set-gconly-bypass',
         'msg-notRegistered', 'msg-didYouMean', 'msg-premiumRequired', 'msg-permissionDenied',
         'msg-featureDisabled', 'msg-commandBlocked', 'msg-errorGeneric'].forEach(function (i) {
         var el = Z.$('#' + i)
@@ -124,7 +156,7 @@
       })
       if (Z.$('#premium-hint')) {
         Z.$('#premium-hint').textContent = data.isPremium
-          ? 'Premium aktif — identity & custom messages tersedia.'
+          ? 'Premium aktif — identity & custom messages bisa diubah.'
           : 'Identity & custom messages hanya Premium. Upgrade di menu Upgrade.'
       }
     } catch (e) {
@@ -137,6 +169,7 @@
   }
 
   Z.bootPage(async function () {
+    bindThemeSegment()
     await Z.loadBots()
     var bots = Z.state.bots || []
     var sel = Z.$('#settings-bot-select')
@@ -199,7 +232,10 @@
     if (save) save.onclick = async function () {
       var botId = Z.$('#settings-bot-select') && Z.$('#settings-bot-select').value
       if (!botId) return Z.toast('Select a bot first.', 'warning')
-      if (Z.$('#settings-msg')) Z.$('#settings-msg').textContent = 'Saving...'
+      if (Z.$('#settings-msg')) {
+        Z.$('#settings-msg').textContent = 'Saving...'
+        Z.$('#settings-msg').className = 'msg'
+      }
       try {
         var gconlyOn = Z.$('#set-gconly') && Z.$('#set-gconly').checked
         var res = await Z.api('/bots/' + botId + '/settings', {
@@ -211,6 +247,7 @@
             fastrespon: Z.$('#set-fastrespon') && Z.$('#set-fastrespon').checked,
             noprefix: Z.$('#set-noprefix') && Z.$('#set-noprefix').checked,
             gconly: gconlyOn ? 'join' : false,
+            gconlyPremiumBypass: Z.$('#set-gconly-bypass') && Z.$('#set-gconly-bypass').checked,
             errorReport: Z.$('#set-errorreport') ? Z.$('#set-errorreport').checked : true,
             botName: Z.$('#set-botname') && Z.$('#set-botname').value,
             ownerNumber: Z.$('#set-ownernumber') && Z.$('#set-ownernumber').value,
@@ -233,7 +270,6 @@
           Z.$('#settings-msg').className = 'msg ok'
         }
         Z.toast('Bot Settings tersimpan untuk bot ini.', 'success')
-        // Source of truth from server
         if (res && res.settings) fillMessages(res.settings.messages)
       } catch (e) {
         if (Z.$('#settings-msg')) {
