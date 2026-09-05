@@ -83,7 +83,10 @@ async function antiDelete(sock, raw) {
     }
 }
 
+const PROFILE_MSG = process.env.PROFILE_MSG === '1' || process.env.PROFILE_MSG === 'true'
+
 export async function handleMessage(sock, config, { messages, type }) {
+    const tRecv = Date.now()
     // Selalu pakai identity live dari sock.botConfig (Bot Settings premium)
     config = resolveBotConfig(sock, config || {})
     if (type !== 'notify') return
@@ -98,7 +101,9 @@ export async function handleMessage(sock, config, { messages, type }) {
     }
     if (rawType === 'senderKeyDistributionMessage' || rawType === 'reactionMessage' || rawType === 'pollUpdateMessage') return
 
+    const tSer0 = Date.now()
     const m = await serialize(sock, raw)
+    const tSer1 = Date.now()
     if (!m || !m.message) return
 
     if (settings.mode === 'self') {
@@ -123,6 +128,7 @@ export async function handleMessage(sock, config, { messages, type }) {
     }
 
     if (m.isGroup && !m.key.fromMe && global.db.data.chats[m.from]?.antidelete) cacheForDelete(m)
+    // Non-blocking side effects — never hold the command path
     if (settings.autoread) sock.readMessages([m.key]).catch(() => {})
 
     // eval / shell owner (=>, >, $) dihapus demi keamanan
@@ -140,40 +146,49 @@ export async function handleMessage(sock, config, { messages, type }) {
         plugin = getPlugin(cmd)
     }
 
-    // Custom Command (Feature Settings): command hasil ganti nama MENGGANTI command
-    // asli -- command lama otomatis berhenti berfungsi begitu diganti (bukan alias tambahan).
-    // Bisa lebih dari 1 command custom sekaligus (dipisah koma), buat plugin yang aslinya
-    // punya 2+ alias (mis. "donate, donasi").
+    // Resolve feature once and reuse. Custom-command check + gate share the same fetch
+    // (featureGate has long TTL + singleflight so idle bursts do not stampede Mongo).
+    let feat = null
     if (plugin) {
         const featKey = (plugin.cmd && plugin.cmd[0]) || cmd
-        const feat = await resolveFeature(botIdForGate, featKey)
+        feat = await resolveFeature(botIdForGate, featKey)
         const customList = parseCustomCommands(feat.customCommand)
         if (customList.length && !customList.includes(cmd)) {
             plugin = null
+            feat = null
         }
     }
     if (!plugin && cmd) {
         const customMap = await getCustomCommandMap(botIdForGate)
         const mappedKey = customMap.get(cmd)
-        if (mappedKey) plugin = getPlugin(mappedKey)
+        if (mappedKey) {
+            plugin = getPlugin(mappedKey)
+            if (plugin) {
+                feat = await resolveFeature(botIdForGate, (plugin.cmd && plugin.cmd[0]) || mappedKey)
+            }
+        }
     }
 
     m.pluginName = plugin ? cmd : undefined
     printChatLog(m, sock?.sessionId)
 
-    // onMessage plugins: respect Feature Settings OFF (backend, not just UI)
-    for (const handler of getOnMessageHandlers()) {
-        try {
-            const fKey = (handler.cmd && handler.cmd[0]) || handler.featureKey
-            if (fKey) {
-                const feat = await resolveFeature(botIdForGate, fKey)
-                if (!feat.enabled) continue
-                if (!checkAccessRule(feat.accessRules || feat.accessRule, m)) continue
+    // onMessage plugins: run without serializing the whole command pipeline.
+    // Feature checks still apply; handlers that claim the message short-circuit.
+    const onMsgHandlers = getOnMessageHandlers()
+    if (onMsgHandlers.length) {
+        for (const handler of onMsgHandlers) {
+            try {
+                const fKey = (handler.cmd && handler.cmd[0]) || handler.featureKey
+                if (fKey) {
+                    const onFeat = await resolveFeature(botIdForGate, fKey)
+                    if (!onFeat.enabled) continue
+                    if (!checkAccessRule(onFeat.accessRules || onFeat.accessRule, m)) continue
+                }
+                const isHandled = await handler.onMessage(m, { sock, config })
+                if (isHandled) return
+            } catch (e) {
+                console.error(e)
             }
-            const isHandled = await handler.onMessage(m, { sock, config })
-            if (isHandled) return
-        } catch (e) {
-            console.error(e)
         }
     }
 
@@ -217,12 +232,15 @@ export async function handleMessage(sock, config, { messages, type }) {
         }, { quoted: m }).catch(() => m.reply(config.text.notRegistered))
     }
 
-    // Feature Settings gate: if OFF, do not run plugin logic at all
-    const botId = config.botId || sock.sessionId || 'default'
-    const featureKey = (plugin.cmd && plugin.cmd[0]) || cmd
-    const feat = await resolveFeature(botId, featureKey)
+    // Feature Settings gate — reuse earlier resolve when possible
+    if (!feat) {
+        const featureKey = (plugin.cmd && plugin.cmd[0]) || cmd
+        feat = await resolveFeature(botIdForGate, featureKey)
+    }
     if (!feat.enabled) return
     if (!checkAccessRule(feat.accessRules || feat.accessRule, m)) return
+
+    const tGate = Date.now()
 
     try {
         const textWithoutCmd = afterPrefix.slice(cmd.length).trim()
@@ -242,16 +260,19 @@ export async function handleMessage(sock, config, { messages, type }) {
             }
         }
 
-        // Premium fast path: use cached plan on sock when present (set at connect/resume).
-        // Avoid a DB round-trip on every command when possible.
+        // Premium: prefer socket-level cache set at connect. Refresh at most every 5 min
+        // so idle/first-command path is not a Mongo round-trip, without freezing plan forever.
+        const PREMIUM_SOCK_TTL_MS = 5 * 60_000
+        const premAge = Date.now() - (sock._premiumCheckedAt || 0)
         let premiumUser = !!(sock.botConfig?.isPremiumAccount || sock.isPremiumAccount)
-        if (!premiumUser) {
+        if (sock._premiumCheckedAt == null || premAge > PREMIUM_SOCK_TTL_MS) {
             try {
                 const ownerId = sock.botConfig?.ownerAccountId || config.ownerAccountId
                 if (ownerId) {
                     premiumUser = await isAccountPremium(String(ownerId))
                     if (sock.botConfig) sock.botConfig.isPremiumAccount = premiumUser
                     sock.isPremiumAccount = premiumUser
+                    sock._premiumCheckedAt = Date.now()
                 }
             } catch {}
         }
@@ -262,7 +283,11 @@ export async function handleMessage(sock, config, { messages, type }) {
         const t0 = Date.now()
         let cmdOk = true
         try {
+            // Per-chat concurrency only — independent chats never wait on each other.
+            // Heavy commands keep their own timeout tier; they do not block light commands
+            // in other chats, and same-chat slots free as soon as each job settles/timeouts.
             await runWithFreeQueue(isPremiumLane, async () => {
+                const tPlugin0 = Date.now()
                 await plugin.run(m, {
                     sock,
                     config,
@@ -274,6 +299,11 @@ export async function handleMessage(sock, config, { messages, type }) {
                     isAdmin: m.isAdmin,
                     isBotAdmin: m.isBotAdmin
                 })
+                if (PROFILE_MSG) {
+                    console.log(chalk.gray(
+                        `[prof] ${cmd} recv→ser=${tSer1 - tSer0}ms ser→gate=${tGate - tSer1}ms gate→run=${tPlugin0 - t0}ms run=${Date.now() - tPlugin0}ms total=${Date.now() - tRecv}ms`
+                    ))
+                }
             }, {
                 key: `${sessionKey}:${m.from || 'unknown'}`,
                 category: plugin.category,

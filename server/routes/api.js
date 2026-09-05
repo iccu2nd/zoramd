@@ -12,6 +12,7 @@ import {
 } from '../../lib/db/accounts.js'
 import { getSubscription, isBotPremium, activatePremium, isAccountPremium, activateAccountPremium, getAccountSubscription } from '../../lib/db/subscription.js'
 import { getAllFeatureSettings, setFeatureSetting, getFeatureSetting, ACCESS_FLAGS } from '../../lib/db/featureSettings.js'
+import { invalidateFeatureCache } from '../../lib/featureGate.js'
 import { DEFAULT_ACCESS_RULES } from '../../lib/db/defaultAccessRules.js'
 import { createOrder, findOrder, findOrdersByAccount, markOrderChecked, cancelOrder, deleteOrder, isOrderExpired } from '../../lib/db/orders.js'
 import { getMongoDb } from '../../lib/db/mongo.js'
@@ -619,6 +620,7 @@ router.put('/bots/:botId/features/:featureKey', authMiddleware, loadAccount, asy
         }
 
         await setFeatureSetting(bot.sessionId, req.params.featureKey, patch)
+        invalidateFeatureCache(bot.sessionId, req.params.featureKey)
         const updated = await getFeatureSetting(bot.sessionId, req.params.featureKey)
         res.json({ feature: updated })
     } catch (e) {
