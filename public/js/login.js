@@ -1,4 +1,5 @@
 const $ = (s, el = document) => el.querySelector(s)
+let googleIdentity = null
 
 function show(el) { el?.classList.remove('hidden') }
 function hide(el) { el?.classList.add('hidden') }
@@ -179,8 +180,7 @@ function waitForGoogleIdentityServices(timeoutMs = 8000) {
 
 async function initGoogleSignIn() {
   const fallback = $('#google-fallback')
-  const mounted = $('#google-signin-button')
-  if (!fallback || !mounted) return
+  if (!fallback) return
   try {
     const config = await api('/auth/google/config')
     if (!config.enabled || !config.clientId) {
@@ -195,16 +195,10 @@ async function initGoogleSignIn() {
       auto_select: false,
       cancel_on_tap_outside: true
     })
-    googleId.renderButton(mounted, {
-      type: 'standard',
-      theme: 'outline',
-      size: 'large',
-      text: 'signin_with',
-      shape: 'rectangular',
-      width: Math.min(344, Math.max(240, Math.floor($('#google-button-shell').clientWidth || 344)))
-    })
-    fallback.classList.add('hidden')
-    mounted.classList.remove('hidden')
+    // Keep the visual button custom, but let GIS own the account chooser and
+    // ID-token callback. No frontend user data is trusted.
+    googleIdentity = googleId
+    fallback.disabled = false
   } catch (err) {
     fallback.disabled = true
     googleError(err.message || 'Google Sign-In tidak dapat dimuat. Gunakan email dan password.')
@@ -213,7 +207,18 @@ async function initGoogleSignIn() {
 
 if ($('#google-fallback')) {
   $('#google-fallback').onclick = () => {
-    googleError('Google Sign-In sedang dimuat. Coba lagi sebentar.')
+    if (!googleIdentity) {
+      googleError('Google Sign-In sedang dimuat. Coba lagi sebentar.')
+      return
+    }
+    googleError('')
+    setGoogleBusy(true)
+    googleIdentity.prompt((notification) => {
+      if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
+        setGoogleBusy(false)
+        googleError('Google Sign-In tidak dapat dibuka. Coba lagi atau gunakan email dan password.')
+      }
+    })
   }
 }
 
