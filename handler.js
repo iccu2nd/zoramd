@@ -274,7 +274,11 @@ export async function handleMessage(sock, config, { messages, type }) {
                     isAdmin: m.isAdmin,
                     isBotAdmin: m.isBotAdmin
                 })
-            }, { key: `${sessionKey}:${m.from || 'unknown'}` })
+            }, {
+                key: `${sessionKey}:${m.from || 'unknown'}`,
+                category: plugin.category,
+                timeoutMs: plugin.timeoutMs
+            })
         } catch (cmdErr) {
             cmdOk = false
             throw cmdErr
