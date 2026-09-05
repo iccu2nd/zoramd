@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { ObjectId } from 'mongodb'
 import { v4 as uuidv4 } from 'uuid'
 import {
-    authMiddleware, loadAccount, register, login, loginWithGoogle, isGoogleSignInEnabled, getGoogleClientId, startRegister, completeRegister, isAdminAccount,
+    authMiddleware, loadAccount, register, login, startRegister, completeRegister, isAdminAccount,
     requestEmailVerification, confirmEmailVerification,
     requestPasswordReset, resetPassword
 } from '../auth.js'
@@ -170,38 +170,6 @@ router.post('/auth/register/resend', authStrictLimit, async (req, res) => {
         res.json({ pending: true, email: result.email, message: 'Kode OTP dikirim ulang' })
     } catch (e) {
         res.status(400).json({ error: publicError(e, 'Failed to resend OTP') })
-    }
-})
-
-// The client ID is public by design. Client secrets never leave the server.
-router.get('/auth/google/config', (req, res) => {
-    // Read through the same getGoogleClientId() the backend verifier uses,
-    // instead of re-reading process.env here, so the frontend can never end
-    // up initializing GIS with a client ID that differs from the one the
-    // server verifies tokens against.
-    const enabled = isGoogleSignInEnabled()
-    res.json({
-        enabled,
-        clientId: enabled ? getGoogleClientId() : null
-    })
-})
-
-router.post('/auth/google', authStrictLimit, async (req, res) => {
-    try {
-        const { credential, termsAccepted } = req.body || {}
-        const { account, token } = await loginWithGoogle(credential, { termsAccepted: termsAccepted === true })
-        res.cookie(AUTH_COOKIE_NAME, token, authCookieOptions(req))
-        res.json({
-            token,
-            user: {
-                id: account._id,
-                email: account.email,
-                name: account.name,
-                emailVerified: !!account.emailVerified
-            }
-        })
-    } catch (e) {
-        res.status(400).json({ error: publicError(e, 'Google sign-in failed') })
     }
 })
 
@@ -398,15 +366,6 @@ router.post('/bots/:botId/connect', authMiddleware, loadAccount, async (req, res
             }
         }
         const inst = await botManager.ensure(bot.sessionId, bot)
-        // Reuse an already-issued, still-valid pairing code/QR instead of
-        // tearing the session down and asking WhatsApp for a new one on
-        // every click/poll -- one user request should map to one pairing
-        // code/QR, not a fresh one each time.
-        const reusingPairing = forcePairing && inst.status === 'pairing'
-        const reusingQr = !forcePairing && inst.status === 'qr'
-        if ((reusingPairing || reusingQr) && inst.isPendingFresh()) {
-            return res.json({ state: inst.getPublicState() })
-        }
         // JANGAN await sampai selesai -- requestPairingCode ke WhatsApp bisa lama
         // (bahkan macet). Kalau di-await di sini, request HTTP ini ikut nunggu lama
         // dan dashboard keliatan "loading" terus. Lempar ke background, biarkan
@@ -1042,20 +1001,6 @@ router.post('/bots/:botId/database/import', authMiddleware, loadAccount, async (
         }
         if (!body || typeof body !== 'object' || Array.isArray(body) || !validateImportValue(body)) {
             return res.status(400).json({ error: 'Data import terlalu besar, terlalu dalam, atau memiliki key yang tidak valid' })
-        }
-        const premium = (await isAccountPremium(req.account._id.toString())) || (await isBotPremium(bot._id.toString()))
-        const allowedFreeSettings = ['mode', 'autoread', 'autotyping', 'noprefix', 'gconly', 'fastrespon', 'enabled']
-        if (!premium) {
-            if (body.botSettings && typeof body.botSettings === 'object') {
-                const filtered = {}
-                for (const k of allowedFreeSettings) {
-                    if (body.botSettings[k] !== undefined) filtered[k] = body.botSettings[k]
-                }
-                body.botSettings = filtered
-            }
-            if (body.bot && (body.bot.botName || body.bot.identity || body.bot.ownerNumber)) {
-                return res.status(403).json({ error: 'Custom identity is available for Premium only' })
-            }
         }
         const db = await getMongoDb()
         const sid = bot.sessionId

@@ -29,7 +29,6 @@ Buka `http://localhost:3000` → `/login` → dashboard.
 ```
 MONGODB_URI=mongodb+srv://...
 JWT_SECRET=long-random-string
-GOOGLE_CLIENT_ID=your-google-web-client-id.apps.googleusercontent.com
 PORT=3000
 APP_URL=http://localhost:3000
 SOCIABUZZ_USERNAME=reyzdesu
@@ -69,11 +68,8 @@ Rp25.000/bulan via SociaBuzz. Status dicek **manual** (tombol Cek Status), tanpa
 2. Set `MONGODB_URI`, `APP_URL` (https), `NODE_ENV=production`.
 3. Prefer `FORCE_SECURE_COOKIE=1` only when the site is fully HTTPS.
 4. Set `ADMIN_EMAILS` for bootstrap admin access (comma-separated).
-5. Set `GOOGLE_CLIENT_ID` to the Web application client ID from Google Cloud
-   Console to enable Sign in with Google. Configure the same site origins in
-   Google Identity Services; never put a client secret in the frontend.
-6. Optional concurrency: `CMD_CONCURRENCY_FREE`, `CMD_CONCURRENCY_PREMIUM`.
-7. Health: `GET /api/health`
-8. Deploy needs a **persistent** Node process (not pure serverless) for Baileys sessions.
+5. Optional concurrency: `CMD_CONCURRENCY_FREE`, `CMD_CONCURRENCY_PREMIUM`.
+6. Health: `GET /api/health`
+7. Deploy needs a **persistent** Node process (not pure serverless) for Baileys sessions.
 
 See `.env.example` for all variables.

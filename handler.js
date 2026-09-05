@@ -274,15 +274,7 @@ export async function handleMessage(sock, config, { messages, type }) {
                     isAdmin: m.isAdmin,
                     isBotAdmin: m.isBotAdmin
                 })
-            }, {
-                key: `${sessionKey}:${m.from || 'unknown'}`,
-                // Lets long-running categories (downloader/converter/ai/tools)
-                // get a bigger timeout budget instead of sharing one fixed
-                // 45s window with quick commands; a plugin can still set its
-                // own `timeout` (ms) to override on top of that.
-                category: plugin.category,
-                timeoutMs: plugin.timeout
-            })
+            }, { key: `${sessionKey}:${m.from || 'unknown'}` })
         } catch (cmdErr) {
             cmdOk = false
             throw cmdErr

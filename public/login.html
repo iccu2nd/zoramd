@@ -6,9 +6,6 @@
   <title>Sign in — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="/css/style.css?v=26" />
-  <script id="gsi-script" src="https://accounts.google.com/gsi/client" async defer
-    onload="window.__gsiScriptState='loaded'"
-    onerror="window.__gsiScriptState='error'"></script>
   <style>
     .terms-row{display:flex;align-items:flex-start;gap:8px;margin:14px 0;font-size:13px;line-height:1.5;color:#888;cursor:pointer}
     .terms-row input[type="checkbox"]{margin-top:4px;width:16px;height:16px;flex:none;cursor:pointer}
@@ -20,21 +17,6 @@
       border:1px solid #e5e7eb;border-radius:12px;background:#fff;color:#111;
     }
     .otp-digit:focus{outline:2px solid #7c3aed;border-color:#7c3aed}
-
-    .google-auth{margin:18px 0 20px}
-    .auth-divider{display:flex;align-items:center;gap:12px;color:#aaa;font-size:12px;margin:0 0 14px}
-    .auth-divider::before,.auth-divider::after{content:"";height:1px;background:#e8e6f5;flex:1}
-    .google-button-shell{min-height:44px;display:flex;justify-content:center;width:100%}
-    .google-fallback{
-      width:100%;height:44px;border:1px solid #dadce0;border-radius:12px;background:#fff;
-      color:#3c4043;font:500 14px Arial,sans-serif;display:flex;align-items:center;justify-content:center;
-      gap:10px;cursor:pointer;box-shadow:0 1px 2px rgba(60,64,67,.12)
-    }
-    .google-fallback:hover{background:#f8fafd;box-shadow:0 1px 3px rgba(60,64,67,.2)}
-    .google-fallback:disabled{opacity:.65;cursor:wait}
-    .google-logo{width:18px;height:18px;display:block;flex:none}
-    .google-error{color:#b42318;font-size:12px;text-align:center;margin:8px 0 0}
-    .google-terms-hint{color:#b42318;font-size:12px;text-align:center;margin:8px 0 0}
     </style>
 </head>
 <body>
@@ -64,21 +46,6 @@
       <h1>ZoraBot</h1>
       <p class="subtitle">WhatsApp JadiBot Platform</p>
       <p id="auth-notice" class="auth-notice hidden"></p>
-      <div id="google-auth" class="google-auth" aria-label="Google Sign-In">
-        <div class="auth-divider"><span>atau lanjutkan dengan</span></div>
-        <div id="google-button-shell" class="google-button-shell">
-          <button type="button" id="google-fallback" class="google-fallback" disabled data-default-label="Sign in with Google">
-            <svg class="google-logo" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
-              <path fill="#EA4335" d="M17.64 9.205c0-.638-.057-1.252-.164-1.841H9v3.482h4.844a4.14 4.14 0 0 1-1.796 2.715v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.614Z"/>
-              <path fill="#4285F4" d="M9 18c2.43 0 4.467-.806 5.956-2.181l-2.908-2.258c-.806.54-1.834.859-3.048.859-2.344 0-4.33-1.584-5.04-3.715H.955v2.332A9 9 0 0 0 9 18Z"/>
-              <path fill="#FBBC05" d="M3.96 10.705A5.41 5.41 0 0 1 3.68 9c0-.592.102-1.167.28-1.705V4.963H.955A9 9 0 0 0 0 9c0 1.454.348 2.827.955 4.037l3.005-2.332Z"/>
-              <path fill="#34A853" d="M9 3.58c1.321 0 2.508.454 3.441 1.345l2.582-2.582C13.463.892 11.426 0 9 0a9 9 0 0 0-8.045 4.963L3.96 7.295C4.67 5.164 6.656 3.58 9 3.58Z"/>
-            </svg>
-            <span>Loading Google Sign-In…</span>
-          </button>
-        </div>
-        <p id="google-error" class="google-error" role="alert"></p>
-      </div>
       <form id="login-form" class="auth-form">
         <label>Email</label>
         <input type="email" id="login-email" required autocomplete="email" />
@@ -127,7 +94,7 @@
   </div>
 
   <script src="/js/bg-pattern.js?v=26"></script>
-  <script src="/js/login.js?v=27"></script>
+  <script src="/js/login.js?v=26"></script>
 
 <footer id="site-footer" class="site-footer">
   <div class="site-footer-links">
