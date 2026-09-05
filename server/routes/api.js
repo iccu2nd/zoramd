@@ -714,7 +714,7 @@ router.post('/premium/check', authMiddleware, loadAccount, async (req, res) => {
                 const st = (result?.status || result?.payment_status || '').toString().toLowerCase()
                 paid = st === 'paid' || st === 'success' || st === 'settlement' || result?.paid === true
             } else {
-                const trx = typeof sociabuzz.getTransaction === 'function' ? sociabuzz.getTransaction(orderId) : null
+                const trx = typeof sociabuzz.getTransaction === 'function' ? await sociabuzz.getTransaction(orderId) : null
                 if (trx) {
                     const st = (trx.status || '').toString().toLowerCase()
                     paid = st === 'paid' || st === 'success' || trx.paid === true
@@ -834,7 +834,7 @@ router.post('/bots/:botId/premium/check', authMiddleware, loadAccount, async (re
                 const st = (result?.status || result?.payment_status || '').toString().toLowerCase()
                 paid = st === 'paid' || st === 'success' || st === 'settlement' || result?.paid === true
             } else {
-                const trx = typeof sociabuzz.getTransaction === 'function' ? sociabuzz.getTransaction(orderId) : null
+                const trx = typeof sociabuzz.getTransaction === 'function' ? await sociabuzz.getTransaction(orderId) : null
                 if (trx) {
                     const st = (trx.status || '').toString().toLowerCase()
                     paid = st === 'paid' || st === 'success' || trx.paid === true

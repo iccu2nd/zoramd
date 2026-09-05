@@ -85,6 +85,23 @@ async function antiDelete(sock, raw) {
 
 const PROFILE_MSG = process.env.PROFILE_MSG === '1' || process.env.PROFILE_MSG === 'true'
 
+// Ambang untuk warning "WA network delay" -- selisih besar antara timestamp yang
+// distempel WhatsApp saat pesan dikirim (raw.messageTimestamp) dan saat event
+// messages.upsert benar-benar sampai ke process ini (tRecv). Ini SEBELUM baris
+// kode kita mana pun sempat jalan, jadi kalau angka ini yang besar (bukan
+// ser->gate->run di bawah), root cause-nya ada di sisi WhatsApp/Baileys
+// (retry receipt karena signal session decrypt gagal, socket idle, dsb),
+// BUKAN di handler/queue/database yang kita audit.
+const WA_NETWORK_DELAY_WARN_MS = Number(process.env.WA_NETWORK_DELAY_WARN_MS || 4000)
+
+function waMessageTimestampMs(raw) {
+    const ts = raw?.messageTimestamp
+    if (ts == null) return null
+    // Baileys mengembalikan Long (punya .toNumber()) atau number biasa, tergantung versi/transport.
+    const seconds = typeof ts === 'object' && typeof ts.toNumber === 'function' ? ts.toNumber() : Number(ts)
+    return Number.isFinite(seconds) ? seconds * 1000 : null
+}
+
 export async function handleMessage(sock, config, { messages, type }) {
     const tRecv = Date.now()
     // Selalu pakai identity live dari sock.botConfig (Bot Settings premium)
@@ -93,6 +110,18 @@ export async function handleMessage(sock, config, { messages, type }) {
     const raw = messages[0]
     if (!raw?.message) return
     if (isDuplicateMessage(sock, raw)) return
+
+    // Ukur delay SEBELUM proses kita mana pun jalan: waktu antara WhatsApp
+    // menstempel pesan dan event messages.upsert sampai ke sini. Kalau ini besar,
+    // pesan sudah "telat" sebelum masuk handler -- bukan queue/db/plugin kita.
+    const waMsgTsMs = waMessageTimestampMs(raw)
+    const waNetworkDelayMs = waMsgTsMs != null ? Math.max(0, tRecv - waMsgTsMs) : null
+    if (waNetworkDelayMs != null && waNetworkDelayMs > WA_NETWORK_DELAY_WARN_MS) {
+        console.warn(chalk.yellowBright(
+            `[wa-delay] Pesan telat ${waNetworkDelayMs}ms sebelum sampai ke handler (dari timestamp WA ke messages.upsert). ` +
+            `Ini terjadi di luar kode bot (socket/WA-side), bukan di handler/queue/database.`
+        ))
+    }
 
     const rawType = getContentType(raw.message)
     if (rawType === 'protocolMessage') {
@@ -105,6 +134,11 @@ export async function handleMessage(sock, config, { messages, type }) {
     const m = await serialize(sock, raw)
     const tSer1 = Date.now()
     if (!m || !m.message) return
+
+    // Dipakai plugin (mis. .ping) untuk membedah latency: berapa dari
+    // WA/jaringan (di luar kendali kode kita) vs berapa dari proses internal bot.
+    m.tRecv = tRecv
+    m.waNetworkDelayMs = waNetworkDelayMs
 
     if (settings.mode === 'self') {
         const botJid = jidNormalizedUser(sock.user.id)
@@ -300,8 +334,9 @@ export async function handleMessage(sock, config, { messages, type }) {
                     isBotAdmin: m.isBotAdmin
                 })
                 if (PROFILE_MSG) {
+                    const netPart = waNetworkDelayMs != null ? `wa-network=${waNetworkDelayMs}ms ` : ''
                     console.log(chalk.gray(
-                        `[prof] ${cmd} recv→ser=${tSer1 - tSer0}ms ser→gate=${tGate - tSer1}ms gate→run=${tPlugin0 - t0}ms run=${Date.now() - tPlugin0}ms total=${Date.now() - tRecv}ms`
+                        `[prof] ${cmd} ${netPart}recv→ser=${tSer1 - tSer0}ms ser→gate=${tGate - tSer1}ms gate→run=${tPlugin0 - t0}ms run=${Date.now() - tPlugin0}ms internal-total=${Date.now() - tRecv}ms`
                     ))
                 }
             }, {
