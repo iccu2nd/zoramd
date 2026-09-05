@@ -13,6 +13,7 @@ import {
 import { getSubscription, isBotPremium, activatePremium, isAccountPremium, activateAccountPremium, getAccountSubscription } from '../../lib/db/subscription.js'
 import { getAllFeatureSettings, setFeatureSetting, getFeatureSetting, ACCESS_FLAGS } from '../../lib/db/featureSettings.js'
 import { invalidateFeatureCache } from '../../lib/featureGate.js'
+import { applyRuntimeSettingsToSock, invalidateRuntimeSettings, mergeRuntimeSettings } from '../../lib/botRuntimeSettings.js'
 import { DEFAULT_ACCESS_RULES } from '../../lib/db/defaultAccessRules.js'
 import { createOrder, findOrder, findOrdersByAccount, markOrderChecked, cancelOrder, deleteOrder, isOrderExpired } from '../../lib/db/orders.js'
 import { getMongoDb } from '../../lib/db/mongo.js'
@@ -454,6 +455,7 @@ router.get('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
             identity: bot.identity || {},
             botName: bot.botName,
             ownerNumber: bot.ownerNumber,
+            enabled: bot.enabled !== false,
             isPremium: premium
         })
     } catch (e) {
@@ -468,18 +470,29 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
         const premium = ((await isAccountPremium(req.account._id.toString())) || (await isBotPremium(bot._id.toString())))
         const body = req.body || {}
 
-        // Free users: limited settings only
-        const allowedFree = ['mode', 'autoread', 'autotyping', 'noprefix', 'gconly', 'fastrespon', 'enabled']
+        // Whitelist only — never accept arbitrary fields from the client.
+        const allowedFree = ['mode', 'autoread', 'autotyping', 'noprefix', 'gconly', 'fastrespon', 'errorReport']
         const patchSettings = {}
         for (const k of allowedFree) {
             if (body[k] !== undefined) patchSettings[k] = body[k]
         }
 
         if (premium) {
-            // Premium: full bot settings + identity
-            const extra = ['errorReport', 'gconly', 'gconlyPremiumBypass']
+            const extra = ['gconlyPremiumBypass']
             for (const k of extra) {
                 if (body[k] !== undefined) patchSettings[k] = body[k]
+            }
+            // Custom bot messages (optional strings; empty → fallback default)
+            if (body.messages && typeof body.messages === 'object') {
+                const msgKeys = ['notRegistered', 'didYouMean', 'premiumRequired', 'permissionDenied', 'featureDisabled', 'commandBlocked', 'errorGeneric']
+                const messages = {}
+                for (const mk of msgKeys) {
+                    if (body.messages[mk] !== undefined) {
+                        const v = body.messages[mk]
+                        messages[mk] = (v == null || String(v).trim() === '') ? null : String(v).slice(0, 2000)
+                    }
+                }
+                if (Object.keys(messages).length) patchSettings.messages = messages
             }
             if (body.identity || body.botName || body.ownerNumber) {
                 const identity = { ...(bot.identity || {}), ...(body.identity || {}) }
@@ -506,15 +519,20 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
 
         if (Object.keys(patchSettings).length) {
             const db = await getMongoDb()
+            // Merge messages object if partial patch
+            if (patchSettings.messages) {
+                const prev = await db.collection(COLLECTIONS.BOT_SETTINGS).findOne({ botId: bot.sessionId })
+                patchSettings.messages = { ...(prev?.messages || {}), ...patchSettings.messages }
+            }
             await db.collection(COLLECTIONS.BOT_SETTINGS).updateOne(
                 { botId: bot.sessionId },
-                { $set: { ...patchSettings, updatedAt: new Date() } },
+                { $set: { botId: bot.sessionId, ...patchSettings, updatedAt: new Date() } },
                 { upsert: true }
             )
+            invalidateRuntimeSettings(bot.sessionId)
         }
 
-        // Refresh identity/config di instance yang sedang running agar sticker & plugin
-        // langsung ikut Bot Settings tanpa wajib restart manual.
+        // Refresh identity + per-bot runtime settings on live socket (isolated per bot).
         try {
             const fresh = await findOwnedBot(req.params.botId, req.account._id)
             if (fresh) {
@@ -526,6 +544,7 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
                         cfg.ownerAccountId = fresh.ownerId?.toString?.() || fresh.ownerId || null
                         inst.sock.botConfig = cfg
                         inst.sock.sessionId = fresh.sessionId
+                        await applyRuntimeSettingsToSock(inst.sock, fresh.sessionId)
                     }
                 }
             }
@@ -533,7 +552,14 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
             console.error('[settings] refresh botConfig:', e.message)
         }
 
-        res.json({ ok: true })
+        const db2 = await getMongoDb()
+        const settingsDoc = await db2.collection(COLLECTIONS.BOT_SETTINGS).findOne({ botId: bot.sessionId })
+        res.json({
+            ok: true,
+            settings: settingsDoc || {},
+            identity: (await findOwnedBot(req.params.botId, req.account._id))?.identity || {},
+            isPremium: premium
+        })
     } catch (e) {
         res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
@@ -573,6 +599,7 @@ router.get('/bots/:botId/features', authMiddleware, loadAccount, async (req, res
                 aliases: cmds,
                 description: plugin.description || plugin.help || '',
                 enabled: s ? s.enabled !== false : true,
+                premiumOnly: !!(s && s.premiumOnly),
                 customResponse: (s && s.customResponse) || null,
                 customCommand: (s && s.customCommand) || null,
                 accessRule: accessRules.length ? accessRules.join('+') : 'public',
@@ -607,6 +634,7 @@ router.put('/bots/:botId/features/:featureKey', authMiddleware, loadAccount, asy
         if (body.enabled !== undefined) patch.enabled = !!body.enabled
 
         if (premium) {
+            if (body.premiumOnly !== undefined) patch.premiumOnly = !!body.premiumOnly
             if (body.customResponse !== undefined) patch.customResponse = body.customResponse
             if (body.customCommand !== undefined) patch.customCommand = body.customCommand
             if (body.accessRules !== undefined || body.accessRule !== undefined) {
@@ -615,8 +643,8 @@ router.put('/bots/:botId/features/:featureKey', authMiddleware, loadAccount, asy
                     : body.accessRule
                 patch.accessRules = rules
             }
-        } else if (body.customResponse || body.customCommand || body.accessRule || body.accessRules) {
-            return res.status(403).json({ error: 'Custom response/command/access rule hanya Premium' })
+        } else if (body.premiumOnly !== undefined || body.customResponse || body.customCommand || body.accessRule || body.accessRules) {
+            return res.status(403).json({ error: 'Premium Only / custom response/command/access rule hanya Premium' })
         }
 
         await setFeatureSetting(bot.sessionId, req.params.featureKey, patch)

@@ -14,7 +14,8 @@ import { isPremiumActive } from './lib/plugins.js'
 import { setBotStatus } from './lib/db/accounts.js'
 import { resolveFeature, checkAccessRule, getCustomCommandMap, parseCustomCommands } from './lib/featureGate.js'
 import { runWithFreeQueue } from './lib/freeQueue.js'
-import { isAccountPremium } from './lib/db/subscription.js'
+import { getAccountPremiumState, applyPremiumStateToSock, readSockPremium } from './lib/db/subscription.js'
+import { getRuntimeSettings, msgOr, applyRuntimeSettingsToSock } from './lib/botRuntimeSettings.js'
 import { resolveBotConfig } from './lib/botConfig.js'
 import { logCommandError } from './lib/commandErrors.js'
 import { trackMessageIn, trackCommand } from './lib/botMetrics.js'
@@ -89,6 +90,11 @@ export async function handleMessage(sock, config, { messages, type }) {
     const tRecv = Date.now()
     // Selalu pakai identity live dari sock.botConfig (Bot Settings premium)
     config = resolveBotConfig(sock, config || {})
+    // Per-bot settings (isolated). Lazy-load once if missing on sock.
+    if (!sock.botSettings && sock.sessionId) {
+        try { await applyRuntimeSettingsToSock(sock, sock.sessionId) } catch {}
+    }
+    const rt = getRuntimeSettings(sock, settings)
     if (type !== 'notify') return
     const raw = messages[0]
     if (!raw?.message) return
@@ -106,19 +112,19 @@ export async function handleMessage(sock, config, { messages, type }) {
     const tSer1 = Date.now()
     if (!m || !m.message) return
 
-    if (settings.mode === 'self') {
+    if (rt.mode === 'self') {
         const botJid = jidNormalizedUser(sock.user.id)
         if (!m.isOwner && m.sender !== botJid) return
     }
 
     m.userInit = loadUser(m)
 
-    const gconlyPremiumExempt = settings.gconlyPremiumBypass && isPremiumActive(global.db.data.users[m.sender])
+    const gconlyPremiumExempt = rt.gconlyPremiumBypass && isPremiumActive(global.db.data.users[m.sender])
 
-    if (settings.gconly && !sock.isJadibotSession && !m.isGroup && !m.isOwner && !hasActiveMenfesSession(m.sender) && !gconlyPremiumExempt) {
-        if (settings.gconly === 'closed') return
+    if (rt.gconly && !sock.isJadibotSession && !m.isGroup && !m.isOwner && !hasActiveMenfesSession(m.sender) && !gconlyPremiumExempt) {
+        if (rt.gconly === 'closed') return
 
-        if (settings.gconly === 'join') {
+        if (rt.gconly === 'join') {
             const allowed = await checkGconlyAccess(sock, m.sender)
             if (!allowed) {
                 await notifyGconlyOnce(sock, m)
@@ -129,7 +135,7 @@ export async function handleMessage(sock, config, { messages, type }) {
 
     if (m.isGroup && !m.key.fromMe && global.db.data.chats[m.from]?.antidelete) cacheForDelete(m)
     // Non-blocking side effects — never hold the command path
-    if (settings.autoread) sock.readMessages([m.key]).catch(() => {})
+    if (rt.autoread) sock.readMessages([m.key]).catch(() => {})
 
     // eval / shell owner (=>, >, $) dihapus demi keamanan
     const botIdForGate = config.botId || sock.sessionId || 'default'
@@ -140,7 +146,7 @@ export async function handleMessage(sock, config, { messages, type }) {
         afterPrefix = m.body.slice(prefix.length).trim()
         cmd = afterPrefix.split(/ +/).shift().toLowerCase()
         plugin = getPlugin(cmd)
-    } else if (settings.noprefix) {
+    } else if (rt.noprefix) {
         afterPrefix = m.body.trim()
         cmd = afterPrefix.split(/ +/).shift().toLowerCase()
         plugin = getPlugin(cmd)
@@ -198,14 +204,20 @@ export async function handleMessage(sock, config, { messages, type }) {
             if (m.isOwner || !bannedUser) {
                 const candidates = getCommandNames(m.isOwner)
                 const suggestions = findClosestCommands(cmd, candidates)
-                if (suggestions.length) return m.reply(config.text.didyoumean(prefix, cmd, suggestions))
+                if (suggestions.length) {
+                    const dy = msgOr(rt, 'didYouMean', null)
+                    if (dy) return m.reply(dy.replace(/\{cmd\}/g, cmd).replace(/\{prefix\}/g, prefix || '.').replace(/\{suggestions\}/g, suggestions.join(', ')))
+                    return m.reply(config.text.didyoumean(prefix, cmd, suggestions))
+                }
             }
         }
         return
     }
 
     const canonicalCmd = plugin.cmd[0]
-    if (!m.isOwner && settings.blockedCmds.includes(canonicalCmd)) return m.reply(config.text.blockedCmd(canonicalCmd))
+    if (!m.isOwner && (rt.blockedCmds || []).includes(canonicalCmd)) {
+        return m.reply(msgOr(rt, 'commandBlocked', config.text.blockedCmd(canonicalCmd)))
+    }
 
     if (!m.isOwner && m.isGroup && plugin.category === 'rpg' && global.db.data.chats[m.from]?.rpgOff) {
         return m.reply('Fitur RPG sedang dimatikan di grup ini.')
@@ -222,14 +234,15 @@ export async function handleMessage(sock, config, { messages, type }) {
         } catch {
             pp = null
         }
+        const notReg = msgOr(rt, 'notRegistered', config.text.notRegistered)
         return sock.sendInteractiveButton(m.from, {
-            body: config.text.notRegistered,
+            body: notReg,
             footer: 'Registration Message',
             ...(pp ? { image: pp } : {}),
             buttons: [
                 { type: 'reply', label: 'Verifikasi Sekarang', id: `${prefix || '.'}verify` }
             ]
-        }, { quoted: m }).catch(() => m.reply(config.text.notRegistered))
+        }, { quoted: m }).catch(() => m.reply(notReg))
     }
 
     // Feature Settings gate — reuse earlier resolve when possible
@@ -237,14 +250,26 @@ export async function handleMessage(sock, config, { messages, type }) {
         const featureKey = (plugin.cmd && plugin.cmd[0]) || cmd
         feat = await resolveFeature(botIdForGate, featureKey)
     }
-    if (!feat.enabled) return
-    if (!checkAccessRule(feat.accessRules || feat.accessRule, m)) return
+    if (!feat.enabled) {
+        const offMsg = msgOr(rt, 'featureDisabled', null)
+        if (offMsg) return m.reply(offMsg)
+        return
+    }
+    if (!checkAccessRule(feat.accessRules || feat.accessRule, m)) {
+        const denied = msgOr(rt, 'permissionDenied', null)
+        if (denied) return m.reply(denied)
+        return
+    }
+    // Premium Only (Feature Settings): free users cannot use this feature.
+    if (feat.premiumOnly && !m.isOwner && !isPremiumActive(global.db.data.users[m.sender])) {
+        return m.reply(msgOr(rt, 'premiumRequired', 'Fitur ini khusus member premium.'))
+    }
 
     const tGate = Date.now()
 
     try {
         const textWithoutCmd = afterPrefix.slice(cmd.length).trim()
-        if (settings.autotyping) sock.sendPresenceUpdate('composing', m.from).catch(() => {})
+        if (rt.autotyping) sock.sendPresenceUpdate('composing', m.from).catch(() => {})
 
         // Custom Response (Feature Settings): timpa balasan pertama plugin dengan teks custom.
         if (feat.customResponse) {
@@ -260,24 +285,33 @@ export async function handleMessage(sock, config, { messages, type }) {
             }
         }
 
-        // Premium: prefer socket-level cache set at connect. Refresh at most every 5 min
-        // so idle/first-command path is not a Mongo round-trip, without freezing plan forever.
+        // Premium lane: local sock cache first (zero await).
+        // - If expiresAt already passed → immediately FREE (no DB wait).
+        // - If never checked → await once (connect path usually pre-warms this).
+        // - If cache stale but still valid → use cache, refresh in background.
+        // So when masa premium habis, concurrency/lane kembali ke free tanpa menunggu restart.
         const PREMIUM_SOCK_TTL_MS = 5 * 60_000
-        const premAge = Date.now() - (sock._premiumCheckedAt || 0)
-        let premiumUser = !!(sock.botConfig?.isPremiumAccount || sock.isPremiumAccount)
-        if (sock._premiumCheckedAt == null || premAge > PREMIUM_SOCK_TTL_MS) {
-            try {
-                const ownerId = sock.botConfig?.ownerAccountId || config.ownerAccountId
-                if (ownerId) {
-                    premiumUser = await isAccountPremium(String(ownerId))
-                    if (sock.botConfig) sock.botConfig.isPremiumAccount = premiumUser
-                    sock.isPremiumAccount = premiumUser
-                    sock._premiumCheckedAt = Date.now()
-                }
-            } catch {}
+        let { isPremium: premiumUser, needsRefresh } = readSockPremium(sock, PREMIUM_SOCK_TTL_MS)
+        const ownerId = sock.botConfig?.ownerAccountId || config.ownerAccountId
+        if (needsRefresh && ownerId) {
+            if (sock._premiumCheckedAt == null) {
+                // First time on this socket: must know plan before choosing lane.
+                try {
+                    const state = await getAccountPremiumState(String(ownerId))
+                    applyPremiumStateToSock(sock, state)
+                    premiumUser = state.isPremium
+                } catch {}
+            } else {
+                // Background refresh — do not delay this command.
+                setImmediate(() => {
+                    getAccountPremiumState(String(ownerId))
+                        .then((state) => applyPremiumStateToSock(sock, state))
+                        .catch(() => {})
+                })
+            }
         }
 
-        const isPremiumLane = premiumUser || !!settings.fastrespon
+        const isPremiumLane = premiumUser || !!rt.fastrespon
         const sessionKey = sock.sessionId || config.botId || 'default'
         trackMessageIn(sessionKey, m.sender)
         const t0 = Date.now()
@@ -315,7 +349,7 @@ export async function handleMessage(sock, config, { messages, type }) {
         } finally {
             trackCommand(sessionKey, cmdOk, Date.now() - t0)
         }
-        if (settings.autotyping) sock.sendPresenceUpdate('paused', m.from).catch(() => {})
+        if (rt.autotyping) sock.sendPresenceUpdate('paused', m.from).catch(() => {})
     } catch (e) {
         console.error(chalk.redBright(e))
         logCommandError({
@@ -325,7 +359,7 @@ export async function handleMessage(sock, config, { messages, type }) {
             message: e?.message || String(e),
             stack: e?.stack
         }).catch(() => {})
-        if (settings.errorReport) reportPluginError({ sock, config, m, cmd, prefix: prefix || '', text: afterPrefix.slice(cmd.length).trim(), e })
+        if (rt.errorReport) reportPluginError({ sock, config, m, cmd, prefix: prefix || '', text: afterPrefix.slice(cmd.length).trim(), e })
     }
 }
 
