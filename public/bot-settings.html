@@ -4,20 +4,30 @@
   <script>
   (function(){try{var t=localStorage.getItem('zora_theme');if(t!=='dark'&&t!=='light'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}document.documentElement.setAttribute('data-theme',t)}catch(e){}})();
   </script>
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bot Settings — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=29" />
+  <link rel="stylesheet" href="/css/style.css?v=26" />
 </head>
 <body data-page="bot-settings">
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
     <div class="loading-card">
       <div class="loading-logo">ZoraBot</div>
-      <div class="spinner center" aria-hidden="true">
-        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
-        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
-        <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
+            <div class="spinner center" aria-hidden="true">
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
+        <div class="spinner-blade"></div>
       </div>
       <p class="loading-text" id="loading-text">Loading...</p>
     </div>
@@ -33,15 +43,15 @@
     </header>
 
     <aside id="sidebar" class="sidebar">
-      <nav>
+            <nav>
         <div class="nav-label">Menu</div>
         <a href="/dashboard" class="nav-item"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
         <a href="/connect" class="nav-item"><i class="fa-solid fa-qrcode"></i><span>Connect Bot</span></a>
         <a href="/bot-settings" class="nav-item active"><i class="fa-solid fa-sliders"></i><span>Bot Settings</span></a>
         <a href="/feature-settings" class="nav-item"><i class="fa-solid fa-puzzle-piece"></i><span>Feature Settings</span></a>
-        <a href="/database" class="nav-item"><i class="fa-solid fa-database"></i><span>Database</span></a>
+<a href="/database" class="nav-item"><i class="fa-solid fa-database"></i><span>Database</span></a>
         <a href="/chatlog" class="nav-item"><i class="fa-solid fa-comments"></i><span>Live Chat Log</span></a>
-        <div class="nav-label">Premium</div>
+<div class="nav-label">Premium</div>
         <a href="/upgrade" class="nav-item"><i class="fa-solid fa-crown"></i><span>Upgrade</span></a>
         <a href="/orders" class="nav-item"><i class="fa-solid fa-receipt"></i><span>Orders</span></a>
         <div class="nav-label">Account</div>
@@ -52,46 +62,15 @@
     </aside>
     <div id="sidebar-overlay" class="overlay"></div>
 
-    <main class="content settings-page">
-      <div class="settings-header">
-        <div>
-          <h2>Bot Settings</h2>
-          <p class="page-sub">Kelola perilaku dan identitas bot. Setiap bot punya konfigurasi sendiri.</p>
-        </div>
+    <main class="content">
+      <h2>Bot Settings</h2>
+      <div class="field">
+        <label>Select bot</label>
+        <select id="settings-bot-select"></select>
       </div>
-
-      <!-- Appearance (dashboard theme — not per-bot) -->
-      <section class="settings-card">
-        <div class="settings-card-head">
-          <h3>Appearance</h3>
-          <p class="settings-card-desc">Tampilan dashboard (bukan pengaturan bot). Disimpan di browser ini.</p>
-        </div>
-        <div class="theme-segment" role="group" aria-label="Theme">
-          <button type="button" class="theme-seg-btn" data-theme-set="light" id="theme-set-light">
-            <i class="fa-solid fa-sun"></i> Light
-          </button>
-          <button type="button" class="theme-seg-btn" data-theme-set="dark" id="theme-set-dark">
-            <i class="fa-solid fa-moon"></i> Dark
-          </button>
-        </div>
-        <p class="field-hint">Default: mengikuti preferensi sistem. Perubahan langsung terlihat di seluruh halaman.</p>
-      </section>
-
-      <!-- Bot picker -->
-      <section class="settings-card">
-        <div class="settings-card-head">
-          <h3>Select bot</h3>
-          <p class="settings-card-desc">Pilih bot dulu. Setting di bawah hanya berlaku untuk bot yang dipilih.</p>
-        </div>
-        <div class="settings-bot-row">
-          <div class="field grow">
-            <label for="settings-bot-select">Bot</label>
-            <select id="settings-bot-select"></select>
-          </div>
-          <button type="button" id="restart-bot-btn" class="btn outline" title="Restart koneksi bot">Restart</button>
-        </div>
-      </section>
-
+      <div class="row">
+        <button type="button" id="restart-bot-btn" class="btn outline" title="Restart bot">Restart</button>
+      </div>
       <div id="settings-form" class="form-grid">
         <div id="settings-loading" class="panel-loading">
           <div class="spinner center" aria-hidden="true">
@@ -100,235 +79,144 @@
             <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
           </div>
         </div>
-        <div id="settings-empty" class="panel-loading">
-          <span>Select a bot to manage its settings</span>
-        </div>
-
+        <div id="settings-empty" class="panel-loading"><span>Select a bot to manage its settings</span></div>
         <div id="settings-content" class="hidden">
-
-          <!-- General -->
-          <section class="settings-card">
-            <div class="settings-card-head">
-              <h3>General</h3>
-              <p class="settings-card-desc">Status dan mode dasar bot.</p>
+        <div class="toggle-list">
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <strong>Bot Aktif</strong>
+              <span>Disable without logging out or re-pairing</span>
             </div>
-            <div class="toggle-list">
-              <div class="toggle-row">
-                <div class="toggle-meta">
-                  <strong>Bot aktif</strong>
-                  <span>Matikan bot tanpa logout / hapus session. Default: <em>ON</em>.</span>
-                </div>
-                <label class="switch"><input type="checkbox" id="set-enabled" checked /><span class="slider"></span></label>
-              </div>
+            <label class="switch"><input type="checkbox" id="set-enabled" checked /><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <strong>Autoread</strong>
+              <span>Tandai pesan terbaca otomatis</span>
             </div>
-            <div class="field">
-              <label for="set-mode">Mode</label>
-              <select id="set-mode">
-                <option value="public">Public — semua user boleh pakai command</option>
-                <option value="self">Self — hanya owner (dan akun bot sendiri)</option>
-              </select>
-              <span class="field-hint">Default: <em>Public</em>. Self cocok untuk testing pribadi.</span>
+            <label class="switch"><input type="checkbox" id="set-autoread" /><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <strong>Autotyping</strong>
+              <span>Tampilkan status mengetik</span>
             </div>
-          </section>
-
-          <!-- Response behavior -->
-          <section class="settings-card">
-            <div class="settings-card-head">
-              <h3>Response</h3>
-              <p class="settings-card-desc">Cara bot membaca pesan dan menampilkan status di WhatsApp.</p>
+            <label class="switch"><input type="checkbox" id="set-autotyping" /><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <strong>Fast Respon</strong>
+              <span>Balas user lebih cepat, lewati antrian proses</span>
             </div>
-            <div class="toggle-list">
-              <div class="toggle-row">
-                <div class="toggle-meta">
-                  <strong>Auto read</strong>
-                  <span>Tandai chat sebagai sudah dibaca saat pesan masuk. Default: <em>OFF</em>.</span>
-                </div>
-                <label class="switch"><input type="checkbox" id="set-autoread" /><span class="slider"></span></label>
-              </div>
-              <div class="toggle-row">
-                <div class="toggle-meta">
-                  <strong>Typing indicator</strong>
-                  <span>Tampilkan “sedang mengetik…” saat command diproses. Default: <em>OFF</em>.</span>
-                </div>
-                <label class="switch"><input type="checkbox" id="set-autotyping" /><span class="slider"></span></label>
-              </div>
-              <div class="toggle-row">
-                <div class="toggle-meta">
-                  <strong>Fast response</strong>
-                  <span>Pakai jalur concurrency premium (antrian lebih longgar). Default: <em>OFF</em>.</span>
-                </div>
-                <label class="switch"><input type="checkbox" id="set-fastrespon" /><span class="slider"></span></label>
-              </div>
-              <div class="toggle-row">
-                <div class="toggle-meta">
-                  <strong>No prefix</strong>
-                  <span>Izinkan command tanpa awalan <code>.</code> <code>/</code> <code>#</code> <code>!</code>. Default: <em>OFF</em>.</span>
-                </div>
-                <label class="switch"><input type="checkbox" id="set-noprefix" /><span class="slider"></span></label>
-              </div>
-              <div class="toggle-row">
-                <div class="toggle-meta">
-                  <strong>Error report</strong>
-                  <span>Kirim log error plugin ke nomor owner. Default: <em>ON</em>.</span>
-                </div>
-                <label class="switch"><input type="checkbox" id="set-errorreport" checked /><span class="slider"></span></label>
-              </div>
+            <label class="switch"><input type="checkbox" id="set-fastrespon" /><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <strong>No Prefix</strong>
+              <span>Perintah tanpa awalan . / #</span>
             </div>
-          </section>
-
-          <!-- Access / group -->
-          <section class="settings-card">
-            <div class="settings-card-head">
-              <h3>Access</h3>
-              <p class="settings-card-desc">Batasi di mana bot boleh merespons (khusus bot non–jadi-bot platform jika gconly aktif).</p>
+            <label class="switch"><input type="checkbox" id="set-noprefix" /><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <strong>Gconly</strong>
+              <span>Hanya respons di groups</span>
             </div>
-            <div class="toggle-list">
-              <div class="toggle-row">
-                <div class="toggle-meta">
-                  <strong>Group only (gconly)</strong>
-                  <span>Private chat dibatasi; user perlu join grup resmi dulu. Default: <em>OFF</em>.</span>
-                </div>
-                <label class="switch"><input type="checkbox" id="set-gconly" /><span class="slider"></span></label>
-              </div>
-              <div class="toggle-row">
-                <div class="toggle-meta">
-                  <strong>Premium bypass gconly</strong>
-                  <span>User premium bot tetap bisa chat pribadi meski gconly ON. Default: <em>OFF</em>.</span>
-                </div>
-                <label class="switch"><input type="checkbox" id="set-gconly-bypass" /><span class="slider"></span></label>
-              </div>
-            </div>
-          </section>
-
-          <!-- Identity (premium) -->
-          <section class="settings-card">
-            <div class="settings-card-head">
-              <h3>Identity <span class="opt-tag">Premium</span></h3>
-              <p class="settings-card-desc" id="premium-hint">Nama, stiker, dan link resmi bot. Hanya akun Premium yang bisa mengubahnya.</p>
-            </div>
-            <div class="settings-grid-2">
-              <div class="field">
-                <label for="set-botname">Bot name</label>
-                <input type="text" id="set-botname" placeholder="ZoraBot" />
-                <span class="field-hint">Nama yang tampil di UI &amp; beberapa pesan. Default: dari bot saat dibuat.</span>
-              </div>
-              <div class="field">
-                <label for="set-ownernumber">Owner number</label>
-                <input type="text" id="set-ownernumber" placeholder="628xxxxxxxxx" />
-                <span class="field-hint">Nomor owner (angka saja). Dipakai untuk cek isOwner.</span>
-              </div>
-              <div class="field">
-                <label for="set-author">Author</label>
-                <input type="text" id="set-author" placeholder="Nama / brand" />
-                <span class="field-hint">Author stiker &amp; metadata. Default: sama dengan bot name.</span>
-              </div>
-              <div class="field">
-                <label for="set-packname">Packname (sticker)</label>
-                <input type="text" id="set-packname" placeholder="Nama pack stiker" />
-                <span class="field-hint">Nama pack yang muncul di stiker WhatsApp.</span>
-              </div>
-              <div class="field">
-                <label for="set-title">Title</label>
-                <input type="text" id="set-title" placeholder="© ZoraBot" />
-                <span class="field-hint">Judul singkat di beberapa template pesan.</span>
-              </div>
-              <div class="field">
-                <label for="set-body">Body / tagline</label>
-                <input type="text" id="set-body" placeholder="powered by ZoraBot" />
-                <span class="field-hint">Tagline di footer / interactive message.</span>
-              </div>
-              <div class="field full">
-                <label for="set-thumbnail">Thumbnail URL</label>
-                <input type="text" id="set-thumbnail" placeholder="https://..." />
-                <span class="field-hint">Gambar default (welcome, dll.) jika tidak ada foto profil.</span>
-              </div>
-              <div class="field">
-                <label for="set-channelurl">Channel URL</label>
-                <input type="text" id="set-channelurl" placeholder="https://whatsapp.com/channel/..." />
-                <span class="field-hint">Link saluran resmi (gconly / tombol).</span>
-              </div>
-              <div class="field">
-                <label for="set-idch">Channel ID</label>
-                <input type="text" id="set-idch" placeholder="1203xxxxx@newsletter" />
-                <span class="field-hint">JID newsletter WhatsApp.</span>
-              </div>
-              <div class="field">
-                <label for="set-groupurl">Group URL</label>
-                <input type="text" id="set-groupurl" placeholder="https://chat.whatsapp.com/..." />
-                <span class="field-hint">Invite link grup resmi.</span>
-              </div>
-              <div class="field">
-                <label for="set-groupid">Group ID</label>
-                <input type="text" id="set-groupid" placeholder="1203xxxxx@g.us" />
-                <span class="field-hint">JID grup untuk cek membership gconly.</span>
-              </div>
-            </div>
-          </section>
-
-          <!-- Custom messages -->
-          <section class="settings-card">
-            <div class="settings-card-head">
-              <h3>Custom messages <span class="opt-tag">Premium</span></h3>
-              <p class="settings-card-desc">Kosongkan field untuk memakai teks bawaan bot. Placeholder: <code>{cmd}</code> <code>{prefix}</code> <code>{suggestions}</code>.</p>
-            </div>
-            <div class="field">
-              <label for="msg-notRegistered">Registration required</label>
-              <textarea id="msg-notRegistered" rows="2" placeholder="Pesan saat user belum verify"></textarea>
-              <span class="field-hint">Default: teks notRegistered dari config bot.</span>
-            </div>
-            <div class="field">
-              <label for="msg-didYouMean">Command not found</label>
-              <textarea id="msg-didYouMean" rows="2" placeholder="Contoh: Perintah {prefix}{cmd} tidak ada. Maksudnya: {suggestions}"></textarea>
-              <span class="field-hint">Default: didyoumean bawaan. Variabel: {cmd}, {prefix}, {suggestions}.</span>
-            </div>
-            <div class="field">
-              <label for="msg-premiumRequired">Premium required</label>
-              <textarea id="msg-premiumRequired" rows="2" placeholder="Fitur ini khusus member premium."></textarea>
-              <span class="field-hint">Default: “Fitur ini khusus member premium.”</span>
-            </div>
-            <div class="field">
-              <label for="msg-permissionDenied">Permission denied</label>
-              <textarea id="msg-permissionDenied" rows="2" placeholder="Opsional — kosong = diam / tidak reply"></textarea>
-              <span class="field-hint">Saat access rule menolak. Kosong = tidak mengirim pesan.</span>
-            </div>
-            <div class="field">
-              <label for="msg-featureDisabled">Feature disabled</label>
-              <textarea id="msg-featureDisabled" rows="2" placeholder="Opsional — kosong = diam"></textarea>
-              <span class="field-hint">Saat fitur OFF di Feature Settings. Kosong = diam.</span>
-            </div>
-            <div class="field">
-              <label for="msg-commandBlocked">Command blocked</label>
-              <textarea id="msg-commandBlocked" rows="2" placeholder="Opsional"></textarea>
-              <span class="field-hint">Saat command ada di blockedCmds. Default: teks blockedCmd config.</span>
-            </div>
-            <div class="field">
-              <label for="msg-errorGeneric">Generic error (cadangan)</label>
-              <textarea id="msg-errorGeneric" rows="2" placeholder="Opsional"></textarea>
-              <span class="field-hint">Cadangan untuk pesan error generik (jika dipakai plugin/handler).</span>
-            </div>
-          </section>
-
-          <div class="settings-actions">
-            <button id="save-settings-btn" class="btn primary">Save settings</button>
-            <p id="settings-msg" class="msg"></p>
+            <label class="switch"><input type="checkbox" id="set-gconly" /><span class="slider"></span></label>
           </div>
         </div>
-      </div>
-
-      <section class="settings-card error-log-card">
-        <div class="settings-card-head">
-          <h3>Command error log</h3>
-          <p class="settings-card-desc">Error terakhir dari plugin bot yang dipilih — untuk debug.</p>
+        <div class="field" style="margin-top:16px">
+          <label>Mode</label>
+          <select id="set-mode">
+            <option value="public">Public</option>
+            <option value="self">Self</option>
+          </select>
         </div>
+        <hr />
+        <p class="hint" id="premium-hint">Fitur di bawah hanya untuk Premium.</p>
+        <div class="field">
+          <label>Nama Bot</label>
+          <input type="text" id="set-botname" />
+        </div>
+        <div class="field">
+          <label>Owner Number</label>
+          <input type="text" id="set-ownernumber" placeholder="628xxxxxxxxx" />
+        </div>
+        <div class="field">
+          <label>Author</label>
+          <input type="text" id="set-author" placeholder="Nama kamu / brand bot" />
+        </div>
+        <div class="field">
+          <label>Packname (Sticker)</label>
+          <input type="text" id="set-packname" placeholder="Nama pack yang muncul di stiker" />
+        </div>
+        <div class="field">
+          <label>Title</label>
+          <input type="text" id="set-title" placeholder="© ZoraBot" />
+        </div>
+        <div class="field">
+          <label>Body / Tagline</label>
+          <input type="text" id="set-body" placeholder="powered by ZoraBot" />
+        </div>
+        <div class="field">
+          <label>Thumbnail URL</label>
+          <input type="text" id="set-thumbnail" placeholder="https://..." />
+        </div>
+        <div class="field">
+          <label>Channel URL</label>
+          <input type="text" id="set-channelurl" />
+        </div>
+        <div class="field">
+          <label>Channel ID</label>
+          <input type="text" id="set-idch" placeholder="1203xxxxx@newsletter" />
+        </div>
+        <div class="field">
+          <label>Group URL</label>
+          <input type="text" id="set-groupurl" />
+        </div>
+        <div class="field">
+          <label>Group ID</label>
+          <input type="text" id="set-groupid" placeholder="1203xxxxx@g.us" />
+        </div>
+        <hr />
+        <h3 class="section-title">Response</h3>
+        <div class="toggle-list">
+          <div class="toggle-row">
+            <div class="toggle-meta">
+              <strong>Error Report</strong>
+              <span>Kirim log error command ke owner</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="set-errorreport" checked /><span class="slider"></span></label>
+          </div>
+        </div>
+        <hr />
+        <h3 class="section-title">Custom Messages <span class="opt-tag">Premium</span></h3>
+        <p class="hint">Kosongkan untuk memakai teks bawaan bot.</p>
+        <div class="field"><label>Registration required</label><textarea id="msg-notRegistered" rows="2" placeholder="Default: pesan belum terdaftar"></textarea></div>
+        <div class="field"><label>Command not found (did you mean)</label><textarea id="msg-didYouMean" rows="2" placeholder="Gunakan {cmd} {prefix} {suggestions}"></textarea></div>
+        <div class="field"><label>Premium required</label><textarea id="msg-premiumRequired" rows="2" placeholder="Fitur ini khusus member premium."></textarea></div>
+        <div class="field"><label>Permission denied</label><textarea id="msg-permissionDenied" rows="2"></textarea></div>
+        <div class="field"><label>Feature disabled</label><textarea id="msg-featureDisabled" rows="2"></textarea></div>
+        <div class="field"><label>Command blocked</label><textarea id="msg-commandBlocked" rows="2"></textarea></div>
+        <div class="field"><label>Generic error</label><textarea id="msg-errorGeneric" rows="2"></textarea></div>
+        <button id="save-settings-btn" class="btn primary">Save</button>
+        <p id="settings-msg" class="msg"></p>
+        </div>
+      </div>
+      <section class="plan-card error-log-card">
+        <h3>Log error command</h3>
+        <p class="hint">Error terakhir dari plugin untuk membantu proses debug.</p>
         <div id="settings-err-list" class="err-list"></div>
       </section>
     </main>
   </div>
 
-  <script src="/js/bg-pattern.js?v=29"></script>
-  <script src="/js/common.js?v=29"></script>
-  <script src="/js/bot-settings.js?v=29"></script>
+  <script src="/js/bg-pattern.js?v=26"></script>
+  <script src="/js/common.js?v=26"></script>
+  <script src="/js/bot-settings.js?v=26"></script>
+
   <script>
+  // Safety net: jangan pernah stuck loading > 6 detik
   setTimeout(function () {
     var lv = document.getElementById('loading-view');
     var mv = document.getElementById('main-view');
