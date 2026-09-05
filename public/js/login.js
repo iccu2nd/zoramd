@@ -1,5 +1,7 @@
 const $ = (s, el = document) => el.querySelector(s)
 let googleIdentity = null
+let googleInitState = 'idle' // idle | loading | ready | failed | unavailable
+let googleInitInFlight = null
 
 function show(el) { el?.classList.remove('hidden') }
 function hide(el) { el?.classList.add('hidden') }
@@ -21,9 +23,35 @@ function setGoogleBusy(on) {
   const fallback = $('#google-fallback')
   if (fallback) {
     fallback.disabled = on
-    if (on) fallback.querySelector('span:last-child').textContent = 'Signing in...'
-    else fallback.querySelector('span:last-child').textContent = 'Sign in with Google'
+    const label = fallback.querySelector('span:last-child')
+    const defaultLabel = fallback.dataset.defaultLabel || 'Sign in with Google'
+    if (label) label.textContent = on ? 'Signing in...' : defaultLabel
   }
+}
+
+// Single place that controls the Google button's visual/interaction state so
+// it can never end up permanently stuck: 'loading' disables it briefly while
+// the SDK/config are fetched, 'ready' hands control to GIS, and 'failed'
+// re-enables the button as a retry trigger instead of a dead end.
+function setGoogleButtonState(state, message) {
+  const fallback = $('#google-fallback')
+  if (!fallback) return
+  const label = fallback.querySelector('span:last-child')
+  const defaultLabel = fallback.dataset.defaultLabel || 'Sign in with Google'
+  if (state === 'loading') {
+    fallback.disabled = true
+    if (label) label.textContent = 'Loading Google Sign-In…'
+  } else if (state === 'ready') {
+    fallback.disabled = false
+    if (label) label.textContent = defaultLabel
+  } else if (state === 'failed') {
+    fallback.disabled = false
+    if (label) label.textContent = 'Retry Google Sign-In'
+  } else if (state === 'unavailable') {
+    fallback.disabled = true
+    if (label) label.textContent = defaultLabel
+  }
+  if (message !== undefined) googleError(message)
 }
 
 function persistToken(token) {
@@ -166,59 +194,103 @@ async function handleGoogleCredential(response) {
   }
 }
 
+// The <script> tag uses async (with defer kept only as a legacy fallback for
+// very old browsers that don't support async — async wins when both are
+// supported, so this never blocks parsing and never guarantees ordering
+// relative to login.js). Because of that we cannot assume the SDK is ready
+// by any fixed point in time: we poll for window.google.accounts.id, but we
+// also listen for the script's own load/error events (set on window by
+// inline onload/onerror handlers in login.html) so a real network/ad-blocker
+// failure is detected immediately instead of only after the full timeout.
 function waitForGoogleIdentityServices(timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
     const started = Date.now()
+    let settled = false
+    const finish = (fn, val) => {
+      if (settled) return
+      settled = true
+      fn(val)
+    }
     const check = () => {
-      if (window.google?.accounts?.id) return resolve(window.google.accounts.id)
-      if (Date.now() - started >= timeoutMs) return reject(new Error('Google Sign-In tidak dapat dimuat'))
-      setTimeout(check, 50)
+      if (window.google?.accounts?.id) return finish(resolve, window.google.accounts.id)
+      if (window.__gsiScriptState === 'error') {
+        return finish(reject, new Error('Skrip Google Sign-In gagal dimuat (mungkin diblokir jaringan/ad-blocker)'))
+      }
+      if (Date.now() - started >= timeoutMs) {
+        return finish(reject, new Error('Google Sign-In tidak merespons (timeout)'))
+      }
+      setTimeout(check, 100)
     }
     check()
   })
 }
 
+// Loads config + the GIS SDK and initializes it. Safe to call more than once
+// (page load, then a user retry click): concurrent calls share one in-flight
+// attempt instead of racing/duplicating google.accounts.id.initialize().
 async function initGoogleSignIn() {
   const fallback = $('#google-fallback')
   if (!fallback) return
-  try {
-    const config = await api('/auth/google/config')
-    if (!config.enabled || !config.clientId) {
-      fallback.disabled = true
-      googleError('Google Sign-In belum tersedia. Gunakan email dan password.')
-      return
+  if (googleInitInFlight) return googleInitInFlight
+
+  googleInitState = 'loading'
+  setGoogleButtonState('loading', '')
+
+  googleInitInFlight = (async () => {
+    try {
+      const config = await api('/auth/google/config')
+      if (!config.enabled || !config.clientId) {
+        googleIdentity = null
+        googleInitState = 'unavailable'
+        setGoogleButtonState('unavailable', 'Google Sign-In belum tersedia. Gunakan email dan password.')
+        return
+      }
+      const googleId = await waitForGoogleIdentityServices()
+      // Keep the visual button custom, but let GIS own the account chooser
+      // and ID-token callback. No frontend user data is trusted — the token
+      // is verified server-side in /api/auth/google.
+      googleId.initialize({
+        client_id: config.clientId,
+        callback: handleGoogleCredential,
+        auto_select: false,
+        cancel_on_tap_outside: true
+      })
+      googleIdentity = googleId
+      googleInitState = 'ready'
+      setGoogleButtonState('ready', '')
+    } catch (err) {
+      googleIdentity = null
+      googleInitState = 'failed'
+      setGoogleButtonState('failed', (err?.message || 'Google Sign-In gagal dimuat.') + ' Klik tombol untuk mencoba lagi.')
+    } finally {
+      googleInitInFlight = null
     }
-    const googleId = await waitForGoogleIdentityServices()
-    googleId.initialize({
-      client_id: config.clientId,
-      callback: handleGoogleCredential,
-      auto_select: false,
-      cancel_on_tap_outside: true
-    })
-    // Keep the visual button custom, but let GIS own the account chooser and
-    // ID-token callback. No frontend user data is trusted.
-    googleIdentity = googleId
-    fallback.disabled = false
-  } catch (err) {
-    fallback.disabled = true
-    googleError(err.message || 'Google Sign-In tidak dapat dimuat. Gunakan email dan password.')
-  }
+  })()
+
+  return googleInitInFlight
 }
 
 if ($('#google-fallback')) {
   $('#google-fallback').onclick = () => {
-    if (!googleIdentity) {
-      googleError('Google Sign-In sedang dimuat. Coba lagi sebentar.')
+    if (googleInitState === 'ready' && googleIdentity) {
+      googleError('')
+      setGoogleBusy(true)
+      googleIdentity.prompt((notification) => {
+        if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
+          setGoogleBusy(false)
+          googleError('Google Sign-In tidak dapat dibuka. Coba lagi atau gunakan email dan password.')
+        }
+      })
       return
     }
-    googleError('')
-    setGoogleBusy(true)
-    googleIdentity.prompt((notification) => {
-      if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
-        setGoogleBusy(false)
-        googleError('Google Sign-In tidak dapat dibuka. Coba lagi atau gunakan email dan password.')
-      }
-    })
+    if (googleInitState === 'loading') {
+      // Button is disabled during 'loading', so reaching here shouldn't
+      // normally happen — but never dead-end if it does.
+      googleError('Google Sign-In sedang dimuat, tunggu sebentar...')
+      return
+    }
+    // 'failed' or 'idle': treat the click as a retry instead of a dead end.
+    initGoogleSignIn()
   }
 }
 

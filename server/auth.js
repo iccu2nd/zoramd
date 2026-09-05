@@ -10,11 +10,23 @@ assertJwtSecret()
 
 const JWT_SECRET = process.env.JWT_SECRET || 'zorabot-dev-secret-change-me'
 const TOKEN_TTL = '7d'
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID || ''
+// .trim() matters here: a copy-pasted env var with a stray trailing space or
+// newline (common when set via some hosting dashboards) makes the value
+// "look" set while never matching Google's `aud` claim, so every token
+// verification fails silently. Read once so the frontend (/auth/google/config)
+// and the backend verifier always agree on the exact same client ID.
+const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID || '').trim()
 let googleClient = null
 
 export function isGoogleSignInEnabled() {
     return !!GOOGLE_CLIENT_ID
+}
+
+// Single source of truth for the client ID, so every consumer (the public
+// /auth/google/config endpoint and the server-side token verifier) reads the
+// exact same value instead of each re-parsing process.env independently.
+export function getGoogleClientId() {
+    return GOOGLE_CLIENT_ID
 }
 
 function getGoogleClient() {

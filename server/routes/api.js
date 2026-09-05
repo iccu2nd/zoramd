@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { ObjectId } from 'mongodb'
 import { v4 as uuidv4 } from 'uuid'
 import {
-    authMiddleware, loadAccount, register, login, loginWithGoogle, isGoogleSignInEnabled, startRegister, completeRegister, isAdminAccount,
+    authMiddleware, loadAccount, register, login, loginWithGoogle, isGoogleSignInEnabled, getGoogleClientId, startRegister, completeRegister, isAdminAccount,
     requestEmailVerification, confirmEmailVerification,
     requestPasswordReset, resetPassword
 } from '../auth.js'
@@ -175,11 +175,14 @@ router.post('/auth/register/resend', authStrictLimit, async (req, res) => {
 
 // The client ID is public by design. Client secrets never leave the server.
 router.get('/auth/google/config', (req, res) => {
+    // Read through the same getGoogleClientId() the backend verifier uses,
+    // instead of re-reading process.env here, so the frontend can never end
+    // up initializing GIS with a client ID that differs from the one the
+    // server verifies tokens against.
+    const enabled = isGoogleSignInEnabled()
     res.json({
-        enabled: isGoogleSignInEnabled(),
-        clientId: isGoogleSignInEnabled()
-            ? (process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID)
-            : null
+        enabled,
+        clientId: enabled ? getGoogleClientId() : null
     })
 })
 
@@ -395,6 +398,15 @@ router.post('/bots/:botId/connect', authMiddleware, loadAccount, async (req, res
             }
         }
         const inst = await botManager.ensure(bot.sessionId, bot)
+        // Reuse an already-issued, still-valid pairing code/QR instead of
+        // tearing the session down and asking WhatsApp for a new one on
+        // every click/poll -- one user request should map to one pairing
+        // code/QR, not a fresh one each time.
+        const reusingPairing = forcePairing && inst.status === 'pairing'
+        const reusingQr = !forcePairing && inst.status === 'qr'
+        if ((reusingPairing || reusingQr) && inst.isPendingFresh()) {
+            return res.json({ state: inst.getPublicState() })
+        }
         // JANGAN await sampai selesai -- requestPairingCode ke WhatsApp bisa lama
         // (bahkan macet). Kalau di-await di sini, request HTTP ini ikut nunggu lama
         // dan dashboard keliatan "loading" terus. Lempar ke background, biarkan
