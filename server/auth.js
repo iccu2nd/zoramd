@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
-import { findAccountByEmail, findAccountById, createAccount, updateAccount } from '../lib/db/accounts.js'
+import { OAuth2Client } from 'google-auth-library'
+import { findAccountByEmail, findAccountByGoogleId, findAccountById, createAccount, updateAccount } from '../lib/db/accounts.js'
 import { issueOtp, verifyOtp } from '../lib/db/emailTokens.js'
 import { sendVerificationOtp, sendPasswordResetOtp } from '../lib/email.js'
 import { assertJwtSecret, publicError } from '../lib/security.js'
@@ -9,6 +10,18 @@ assertJwtSecret()
 
 const JWT_SECRET = process.env.JWT_SECRET || 'zorabot-dev-secret-change-me'
 const TOKEN_TTL = '7d'
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID || ''
+let googleClient = null
+
+export function isGoogleSignInEnabled() {
+    return !!GOOGLE_CLIENT_ID
+}
+
+function getGoogleClient() {
+    if (!GOOGLE_CLIENT_ID) return null
+    googleClient ||= new OAuth2Client(GOOGLE_CLIENT_ID)
+    return googleClient
+}
 
 export function signToken(account) {
     return jwt.sign(
@@ -93,6 +106,82 @@ export async function login({ email, password }) {
     if (!account || !account.passwordHash) throw new Error('Email atau password salah')
     const ok = await bcrypt.compare(password, account.passwordHash)
     if (!ok) throw new Error('Email atau password salah')
+    return { account, token: signToken(account) }
+}
+
+/**
+ * Verifies the Google Identity Services ID token on the server, then maps the
+ * Google subject to the existing account model. The Google subject is the
+ * stable provider identifier; the email is only used to safely link an
+ * existing email/password account once.
+ */
+export async function loginWithGoogle(credential, { termsAccepted = false } = {}) {
+    if (!isGoogleSignInEnabled()) {
+        throw new Error('Google Sign-In belum dikonfigurasi')
+    }
+    if (typeof credential !== 'string' || credential.length < 100 || credential.length > 10000) {
+        throw new Error('Token Google tidak valid')
+    }
+
+    const client = getGoogleClient()
+    let ticket
+    try {
+        ticket = await client.verifyIdToken({
+            idToken: credential,
+            audience: GOOGLE_CLIENT_ID
+        })
+    } catch {
+        throw new Error('Token Google tidak valid atau sudah kedaluwarsa')
+    }
+
+    const payload = ticket.getPayload()
+    const validIssuer = payload?.iss === 'accounts.google.com' || payload?.iss === 'https://accounts.google.com'
+    if (!payload?.sub || !validIssuer || payload.aud !== GOOGLE_CLIENT_ID || payload.email_verified !== true) {
+        throw new Error('Akun Google belum terverifikasi')
+    }
+
+    const googleId = String(payload.sub)
+    const email = String(payload.email || '').trim().toLowerCase()
+    if (!email || !email.includes('@')) throw new Error('Email Google tidak tersedia')
+    const name = String(payload.name || payload.given_name || email.split('@')[0]).trim().slice(0, 120)
+
+    // Prefer the immutable Google subject, then link by normalized email so an
+    // email/password user does not receive a second account.
+    let account = await findAccountByGoogleId(googleId)
+    if (!account) {
+        account = await findAccountByEmail(email)
+        if (account) {
+            if (account.googleId && account.googleId !== googleId) {
+                throw new Error('Email Google sudah tertaut ke akun lain')
+            }
+            const patch = { googleId, emailVerified: true }
+            if (!account.name) patch.name = name
+            await updateAccount(account._id, patch)
+            account = { ...account, ...patch }
+        } else {
+            if (!termsAccepted) {
+                throw new Error('Setujui Terms of Service dan Privacy Policy sebelum membuat akun')
+            }
+            try {
+                account = await createAccount({
+                    email,
+                    googleId,
+                    name
+                })
+                await updateAccount(account._id, { emailVerified: true })
+                account.emailVerified = true
+            } catch (error) {
+                // A concurrent first login may have won either unique index.
+                // Re-read instead of creating a duplicate or returning a
+                // database error to the browser.
+                if (error?.code !== 11000) throw error
+                account = await findAccountByGoogleId(googleId)
+                    || await findAccountByEmail(email)
+                if (!account) throw error
+            }
+        }
+    }
+
     return { account, token: signToken(account) }
 }
 

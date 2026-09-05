@@ -16,6 +16,15 @@ function setLoading(on, text) {
   }
 }
 
+function setGoogleBusy(on) {
+  const fallback = $('#google-fallback')
+  if (fallback) {
+    fallback.disabled = on
+    if (on) fallback.querySelector('span:last-child').textContent = 'Signing in...'
+    else fallback.querySelector('span:last-child').textContent = 'Sign in with Google'
+  }
+}
+
 function persistToken(token) {
   if (!token) return
   try {
@@ -71,16 +80,15 @@ function redirectToApp() {
 
 // Jika sudah login, langsung ke dashboard
 async function checkExistingSession() {
-  setLoading(true, 'Checking session...')
+  // Paint the auth UI immediately. Session validation runs in the background
+  // so the Google button is visible without waiting for an API round trip.
+  setLoading(false)
+  showNoticeFromQuery()
   try {
     await api('/auth/me')
     setLoading(true, 'Already signed in, redirecting...')
-    await new Promise(r => setTimeout(r, 300))
     redirectToApp()
-  } catch {
-    setLoading(false)
-    showNoticeFromQuery()
-  }
+  } catch {}
 }
 
 function showNoticeFromQuery() {
@@ -126,6 +134,87 @@ function showForm(id) {
     if (fid === id) show(el)
     else hide(el)
   })
+}
+
+function googleError(message = '') {
+  const el = $('#google-error')
+  if (el) el.textContent = message
+}
+
+async function handleGoogleCredential(response) {
+  googleError('')
+  if (!response?.credential) {
+    googleError('Google Sign-In dibatalkan atau tidak menghasilkan token.')
+    return
+  }
+  setGoogleBusy(true)
+  try {
+    const data = await api('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({
+        credential: response.credential,
+        termsAccepted: !!$('#reg-terms')?.checked
+      })
+    })
+    persistToken(data.token)
+    setLoading(true, 'Signed in with Google...')
+    redirectToApp()
+  } catch (err) {
+    googleError(err.message || 'Google Sign-In gagal. Coba lagi.')
+    setGoogleBusy(false)
+  }
+}
+
+function waitForGoogleIdentityServices(timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
+    const started = Date.now()
+    const check = () => {
+      if (window.google?.accounts?.id) return resolve(window.google.accounts.id)
+      if (Date.now() - started >= timeoutMs) return reject(new Error('Google Sign-In tidak dapat dimuat'))
+      setTimeout(check, 50)
+    }
+    check()
+  })
+}
+
+async function initGoogleSignIn() {
+  const fallback = $('#google-fallback')
+  const mounted = $('#google-signin-button')
+  if (!fallback || !mounted) return
+  try {
+    const config = await api('/auth/google/config')
+    if (!config.enabled || !config.clientId) {
+      fallback.disabled = true
+      googleError('Google Sign-In belum tersedia. Gunakan email dan password.')
+      return
+    }
+    const googleId = await waitForGoogleIdentityServices()
+    googleId.initialize({
+      client_id: config.clientId,
+      callback: handleGoogleCredential,
+      auto_select: false,
+      cancel_on_tap_outside: true
+    })
+    googleId.renderButton(mounted, {
+      type: 'standard',
+      theme: 'outline',
+      size: 'large',
+      text: 'signin_with',
+      shape: 'rectangular',
+      width: Math.min(344, Math.max(240, Math.floor($('#google-button-shell').clientWidth || 344)))
+    })
+    fallback.classList.add('hidden')
+    mounted.classList.remove('hidden')
+  } catch (err) {
+    fallback.disabled = true
+    googleError(err.message || 'Google Sign-In tidak dapat dimuat. Gunakan email dan password.')
+  }
+}
+
+if ($('#google-fallback')) {
+  $('#google-fallback').onclick = () => {
+    googleError('Google Sign-In sedang dimuat. Coba lagi sebentar.')
+  }
 }
 
 function getOtpCode() {
@@ -317,6 +406,7 @@ if (otpResend) {
 bindOtpBoxes()
 
 checkExistingSession()
+initGoogleSignIn()
 
 // Safety net: jangan pernah stuck di loading > 4 detik
 setTimeout(() => {

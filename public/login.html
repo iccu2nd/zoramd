@@ -6,6 +6,7 @@
   <title>Sign in — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="/css/style.css?v=26" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     .terms-row{display:flex;align-items:flex-start;gap:8px;margin:14px 0;font-size:13px;line-height:1.5;color:#888;cursor:pointer}
     .terms-row input[type="checkbox"]{margin-top:4px;width:16px;height:16px;flex:none;cursor:pointer}
@@ -17,6 +18,21 @@
       border:1px solid #e5e7eb;border-radius:12px;background:#fff;color:#111;
     }
     .otp-digit:focus{outline:2px solid #7c3aed;border-color:#7c3aed}
+
+    .google-auth{margin:18px 0 20px}
+    .auth-divider{display:flex;align-items:center;gap:12px;color:#aaa;font-size:12px;margin:0 0 14px}
+    .auth-divider::before,.auth-divider::after{content:"";height:1px;background:#e8e6f5;flex:1}
+    .google-button-shell{min-height:44px;display:flex;justify-content:center;width:100%}
+    .google-fallback{
+      width:100%;height:44px;border:1px solid #dadce0;border-radius:12px;background:#fff;
+      color:#3c4043;font:500 14px Arial,sans-serif;display:flex;align-items:center;justify-content:center;
+      gap:10px;cursor:pointer;box-shadow:0 1px 2px rgba(60,64,67,.12)
+    }
+    .google-fallback:hover{background:#f8fafd;box-shadow:0 1px 3px rgba(60,64,67,.2)}
+    .google-fallback:disabled{opacity:.65;cursor:wait}
+    .google-mark{font-weight:700;font-size:18px;color:#4285f4}
+    .google-error{color:#b42318;font-size:12px;text-align:center;margin:8px 0 0}
+    .google-terms-hint{color:#b42318;font-size:12px;text-align:center;margin:8px 0 0}
     </style>
 </head>
 <body>
@@ -46,6 +62,17 @@
       <h1>ZoraBot</h1>
       <p class="subtitle">WhatsApp JadiBot Platform</p>
       <p id="auth-notice" class="auth-notice hidden"></p>
+      <div id="google-auth" class="google-auth" aria-label="Google Sign-In">
+        <div class="auth-divider"><span>atau lanjutkan dengan</span></div>
+        <div id="google-button-shell" class="google-button-shell">
+          <button type="button" id="google-fallback" class="google-fallback">
+            <span class="google-mark" aria-hidden="true">G</span>
+            <span>Sign in with Google</span>
+          </button>
+          <div id="google-signin-button" class="hidden"></div>
+        </div>
+        <p id="google-error" class="google-error" role="alert"></p>
+      </div>
       <form id="login-form" class="auth-form">
         <label>Email</label>
         <input type="email" id="login-email" required autocomplete="email" />
@@ -94,7 +121,7 @@
   </div>
 
   <script src="/js/bg-pattern.js?v=26"></script>
-  <script src="/js/login.js?v=26"></script>
+  <script src="/js/login.js?v=27"></script>
 
 <footer id="site-footer" class="site-footer">
   <div class="site-footer-links">
