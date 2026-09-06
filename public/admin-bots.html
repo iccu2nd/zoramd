@@ -1,31 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script>
-    (function(){try{var t=localStorage.getItem('zora_theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');}catch(e){}})();
-  </script>
-
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin Bots — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=40" />
+  <link rel="stylesheet" href="/css/style.css?v=27" />
 </head>
 <body data-page="admin-bots">
   <div id="loading-view" class="loading-wrap hidden" style="display:none" aria-hidden="true">
     <div class="loading-card">
-      <div class="loading-logo">Zora<span>Bot</span></div>
+      <div class="loading-logo">ZoraBot</div>
       <p class="loading-text" id="loading-text">Loading...</p>
     </div>
   </div>
   <div id="main-view">
     <header class="topbar">
       <button id="menu-btn" class="icon-btn" aria-label="Menu"><span></span><span></span><span></span></button>
-      <div class="brand">Zora<span>Bot</span></div>
+      <div class="brand">ZoraBot</div>
       <div class="user-chip" id="user-chip"></div>
     </header>
     <aside id="sidebar" class="sidebar">
-      <div class="sidebar-brand">Zora<span>Bot</span></div>
       <nav>
         <div class="nav-label">Admin</div>
         <a href="/admin" class="nav-item"><i class="fa-solid fa-gauge-high"></i><span>Overview</span></a>
@@ -38,7 +33,7 @@
       </nav>
       <button id="logout-btn" class="btn outline logout"><i class="fa-solid fa-right-from-bracket"></i><span>Log out</span></button>
     </aside>
-    <div id="sidebar-overlay"></div>
+    <div id="sidebar-overlay" class="overlay"></div>
     <main class="content">
       <h2>Bots</h2>
       <p class="hint">All registered bots with live WhatsApp number and connection status. Admin only.</p>

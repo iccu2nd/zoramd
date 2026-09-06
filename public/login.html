@@ -1,26 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script>
-    (function(){try{var t=localStorage.getItem('zora_theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');}catch(e){}})();
-  </script>
-
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sign in — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=40" />
+  <link rel="stylesheet" href="/css/style.css?v=26" />
   <style>
-    .terms-row{display:flex;align-items:flex-start;gap:8px;margin:14px 0;font-size:13px;line-height:1.5;color:var(--muted);cursor:pointer}
+    .terms-row{display:flex;align-items:flex-start;gap:8px;margin:14px 0;font-size:13px;line-height:1.5;color:#888;cursor:pointer}
     .terms-row input[type="checkbox"]{margin-top:4px;width:16px;height:16px;flex:none;cursor:pointer}
-    .terms-row a{color:var(--accent);text-decoration:underline}
-    .auth-theme-btn{position:fixed;top:16px;right:16px;z-index:10}
-  </style>
+    .terms-row a{color:inherit;text-decoration:underline}
+  
+    .otp-boxes{display:flex;gap:8px;justify-content:center;margin:18px 0 16px}
+    .otp-digit{
+      width:44px;height:52px;text-align:center;font-size:1.35rem;font-weight:700;
+      border:1px solid #e5e7eb;border-radius:12px;background:#fff;color:#111;
+    }
+    .otp-digit:focus{outline:2px solid #7c3aed;border-color:#7c3aed}
+    </style>
 </head>
 <body>
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
     <div class="loading-card">
-      <div class="loading-logo">Zora<span>Bot</span></div>
+      <div class="loading-logo">ZoraBot</div>
             <div class="spinner center" aria-hidden="true">
         <div class="spinner-blade"></div>
         <div class="spinner-blade"></div>
@@ -39,12 +41,9 @@
     </div>
   </div>
 
-  <button type="button" class="theme-toggle auth-theme-btn" id="theme-toggle" aria-label="Toggle theme" onclick="window.Zora&&Zora.toggleTheme&&Zora.toggleTheme()">
-    <i class="fa-solid fa-moon" aria-hidden="true"></i><i class="fa-solid fa-sun" aria-hidden="true"></i>
-  </button>
   <div id="auth-view" class="auth-wrap hidden">
     <div class="auth-card">
-      <h1>Zora<span style="color:var(--accent)">Bot</span></h1>
+      <h1>ZoraBot</h1>
       <p class="subtitle">WhatsApp JadiBot Platform</p>
       <p id="auth-notice" class="auth-notice hidden"></p>
       <form id="login-form" class="auth-form">

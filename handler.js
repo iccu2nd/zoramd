@@ -320,6 +320,7 @@ export async function handleMessage(sock, config, { messages, type }) {
             // Per-chat concurrency only — independent chats never wait on each other.
             // Heavy commands keep their own timeout tier; they do not block light commands
             // in other chats, and same-chat slots free as soon as each job settles/timeouts.
+            // Light categories are preferred inside the same lane so .ping/menu/admin stay snappy.
             await runWithFreeQueue(isPremiumLane, async () => {
                 const tPlugin0 = Date.now()
                 await plugin.run(m, {
@@ -346,21 +347,37 @@ export async function handleMessage(sock, config, { messages, type }) {
             })
         } catch (cmdErr) {
             cmdOk = false
+            const msg = cmdErr?.message || String(cmdErr)
+            // User-facing soft errors — no stack spam, no owner report
+            if (msg.includes('Command timed out')) {
+                await m.reply('⏱ Command membutuhkan waktu terlalu lama. Coba lagi atau gunakan command lain.').catch(() => {})
+                return
+            }
+            if (msg.includes('Too many concurrent commands')) {
+                await m.reply('⏳ Bot sedang sibuk di chat ini. Tunggu sebentar lalu coba lagi.').catch(() => {})
+                return
+            }
             throw cmdErr
         } finally {
             trackCommand(sessionKey, cmdOk, Date.now() - t0)
         }
         if (settings.autotyping) sock.sendPresenceUpdate('paused', m.from).catch(() => {})
     } catch (e) {
-        console.error(chalk.redBright(e))
-        logCommandError({
-            botId: config.botId || sock.sessionId,
-            sessionId: sock.sessionId,
-            cmd,
-            message: e?.message || String(e),
-            stack: e?.stack
-        }).catch(() => {})
-        if (settings.errorReport) reportPluginError({ sock, config, m, cmd, prefix: prefix || '', text: afterPrefix.slice(cmd.length).trim(), e })
+        const msg = e?.message || String(e)
+        // Soft / expected errors already handled above; avoid noisy logs for them
+        if (!msg.includes('Command timed out') && !msg.includes('Too many concurrent commands')) {
+            console.error(chalk.redBright(e))
+            logCommandError({
+                botId: config.botId || sock.sessionId,
+                sessionId: sock.sessionId,
+                cmd,
+                message: msg,
+                stack: e?.stack
+            }).catch(() => {})
+            if (settings.errorReport) {
+                reportPluginError({ sock, config, m, cmd, prefix: prefix || '', text: afterPrefix?.slice(cmd.length).trim() || '', e }).catch(() => {})
+            }
+        }
     }
 }
 

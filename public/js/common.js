@@ -12,34 +12,6 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
   }
 
-  /* Theme: light / dark */
-  function getStoredTheme() {
-    try { return localStorage.getItem('zora_theme') || '' } catch (e) { return '' }
-  }
-  function applyTheme(theme) {
-    var t = theme === 'dark' ? 'dark' : 'light'
-    if (t === 'dark') document.documentElement.classList.add('dark')
-    else document.documentElement.classList.remove('dark')
-    try { localStorage.setItem('zora_theme', t) } catch (e) {}
-    var btns = document.querySelectorAll('.theme-toggle')
-    btns.forEach(function (btn) {
-      btn.setAttribute('aria-label', t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode')
-    })
-  }
-  function initTheme() {
-    var stored = getStoredTheme()
-    if (stored) applyTheme(stored)
-    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) applyTheme('dark')
-    else applyTheme('light')
-  }
-  function toggleTheme() {
-    var isDark = document.documentElement.classList.contains('dark')
-    applyTheme(isDark ? 'light' : 'dark')
-  }
-  // Apply ASAP to reduce flash (also recommend inline script in <head>)
-  try { initTheme() } catch (e) {}
-
-
   var toastTitles = {
     success: 'Success',
     error: 'Something went wrong',
@@ -347,23 +319,6 @@
       if (href === path) a.classList.add('active')
       else a.classList.remove('active')
     })
-    // Theme toggle: inject into topbar if missing
-    var top = document.querySelector('.topbar')
-    if (top && !document.getElementById('theme-toggle')) {
-      var chip = document.getElementById('user-chip')
-      var tbtn = document.createElement('button')
-      tbtn.type = 'button'
-      tbtn.className = 'theme-toggle'
-      tbtn.id = 'theme-toggle'
-      tbtn.setAttribute('aria-label', 'Toggle theme')
-      tbtn.innerHTML = '<i class="fa-solid fa-moon" aria-hidden="true"></i><i class="fa-solid fa-sun" aria-hidden="true"></i>'
-      tbtn.onclick = toggleTheme
-      if (chip && chip.parentNode) chip.parentNode.insertBefore(tbtn, chip)
-      else top.appendChild(tbtn)
-    } else {
-      $$('.theme-toggle').forEach(function (b) { b.onclick = toggleTheme })
-    }
-    try { initTheme() } catch (e) {}
   }
 
   async function loadBots() {
@@ -433,7 +388,6 @@
   global.Zora = {
     $, $$, show, hide, escapeHtml, toast, state, api, goToLogin,
     setLoading, showMainApp, bindShell, ensureSiteFooter, loadBots, fillBotSelect, bootPage, restartBot,
-    getStoredToken, setStoredToken, clearSessionCache,
-    initTheme, toggleTheme, applyTheme, getStoredTheme
+    getStoredToken, setStoredToken, clearSessionCache
   }
 })(window)
