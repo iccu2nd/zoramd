@@ -21,11 +21,9 @@
     var key = f.featureKey
     var flags = [
       ['owner', 'Owner'],
-      ['admin', 'Admin'],
-      ['premium', 'Premium'],
-      ['verified', 'Verified'],
-      ['group', 'Group'],
-      ['private', 'Private']
+      ['admin', 'Group admin'],
+      ['group', 'Group only'],
+      ['private', 'Private chat only']
     ]
     var selected = Array.isArray(f.accessRules) ? f.accessRules.slice() : []
     if (!selected.length && f.accessRule && f.accessRule !== 'public') {
@@ -60,17 +58,6 @@
       'data-default="' + Z.escapeHtml(aliases.join(', ')) + '" ' +
       (isPremium ? '' : 'disabled') + ' placeholder="Command"/>' +
       '<span class="field-hint">Command asli plugin: <code>' + Z.escapeHtml(aliases.join(', ')) + '</code>. Ubah langsung teksnya untuk mengganti command (command lama berhenti berfungsi). Kalau aslinya ada 2+ (mis. donate, donasi), pisahkan pakai koma buat ganti semuanya.</span>' +
-      '</div>' +
-      '<div class="field row gap" style="flex-wrap:wrap">' +
-      '<div class="field" style="flex:1;min-width:120px"><label>Cooldown (detik)</label>' +
-      '<input class="feat-cooldown" type="number" min="0" value="' + (f.cooldown || 0) + '" ' + (isPremium ? '' : 'disabled') + '/></div>' +
-      '<div class="field" style="flex:1;min-width:120px"><label>Limit Cost</label>' +
-      '<input class="feat-limitcost" type="number" min="0" value="' + (f.limitCost != null ? f.limitCost : 1) + '" ' + (isPremium ? '' : 'disabled') + '/></div></div>' +
-      '<div class="toggle-list" style="margin:8px 0">' +
-      '<div class="toggle-row"><div class="toggle-meta"><strong>Premium Only</strong></div>' +
-      '<label class="switch"><input type="checkbox" class="feat-premiumonly" ' + (f.premiumOnly ? 'checked' : '') + ' ' + (isPremium ? '' : 'disabled') + '/><span class="slider"></span></label></div>' +
-      '<div class="toggle-row"><div class="toggle-meta"><strong>Require Verified</strong></div>' +
-      '<label class="switch"><input type="checkbox" class="feat-requireverif" ' + (f.requireVerified ? 'checked' : '') + ' ' + (isPremium ? '' : 'disabled') + '/><span class="slider"></span></label></div>' +
       '</div>' +
       '<div class="row gap"><button type="button" class="btn outline feat-save">Save</button>' +
       '<span class="feat-saved msg ok"></span></div></div></div>'
@@ -146,11 +133,7 @@
                 enabled: item.querySelector('.feat-enabled').checked,
                 accessRules: Array.prototype.map.call(item.querySelectorAll('.feat-access-flag:checked'), function (c) { return c.value }),
                 customResponse: (item.querySelector('.feat-response') || {}).value || null,
-                customCommand: customCommand,
-                cooldown: Number((item.querySelector('.feat-cooldown') || {}).value || 0),
-                limitCost: Number((item.querySelector('.feat-limitcost') || {}).value || 1),
-                premiumOnly: !!(item.querySelector('.feat-premiumonly') || {}).checked,
-                requireVerified: !!(item.querySelector('.feat-requireverif') || {}).checked
+                customCommand: customCommand
               }
             })
             var msg = item.querySelector('.feat-saved')

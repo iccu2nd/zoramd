@@ -177,7 +177,7 @@
     return 'qris'
   }
 
-  var PLAN_PRICES = { basic: { price: 5000, label: 'Basic 30 hari' }, pro: { price: 15000, label: 'Pro 30 hari' }, ultimate: { price: 30000, label: 'Ultimate 30 hari' }, '7d': { price: 5000, label: '7 hari' }, '30d': { price: 15000, label: '30 hari' } }
+  var PLAN_PRICES = { '7d': { price: 5000, label: '7 hari' }, '30d': { price: 15000, label: '30 hari' } }
   function planDuration() {
     return (document.getElementById('plan-duration') && document.getElementById('plan-duration').value) || '30d'
   }

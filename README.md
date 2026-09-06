@@ -73,17 +73,3 @@ Rp25.000/bulan via SociaBuzz. Status dicek **manual** (tombol Cek Status), tanpa
 7. Deploy needs a **persistent** Node process (not pure serverless) for Baileys sessions.
 
 See `.env.example` for all variables.
-
-## Latency & concurrency (2026-09)
-
-Engine dirancang agar **seluruh fitur** tetap responsif:
-
-- **Per-chat lane** (`sessionId:chatJid`) — 1 chat tidak bisa memblokir chat lain.
-- **Light-command priority** di lane yang sama (tools/info/main/group/fun/owner) sehingga `.ping`, menu, admin tetap cepat meski ada downloader/RPG berjalan di chat yang sama.
-- **Category timeout**: light ~30s, medium (rpg/owo/games) ~60s, heavy (downloader/media) ~120s. Override lewat `plugin.timeoutMs`.
-- **Concurrency default**: free 6, premium 16 (atur via `CMD_CONCURRENCY_FREE` / `CMD_CONCURRENCY_PREMIUM`).
-- Feature settings & premium status di-cache + singleflight (hindari Mongo stampede setelah idle).
-- Runtime user/chat data in-memory + flush berkala.
-- Soft error untuk timeout / antrean penuh (user dapat pesan singkat, bukan stack trace).
-
-Target: heavy feature berjalan bersamaan dengan command ringan tanpa global delay / backlog.

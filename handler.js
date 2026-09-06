@@ -18,16 +18,8 @@ import { isAccountPremium } from './lib/db/subscription.js'
 import { resolveBotConfig } from './lib/botConfig.js'
 import { logCommandError } from './lib/commandErrors.js'
 import { trackMessageIn, trackCommand } from './lib/botMetrics.js'
-import {
-    resolveRuntimeSettings,
-    renderMessage,
-    ensureUserLimit,
-    consumeUserLimit,
-    checkCooldown
-} from './lib/botSettingsService.js'
-import { isPremiumActive as isUserPremiumActive } from './lib/plugins.js'
 
-const DEFAULT_PREFIXES = ['.', '/', '#', '!']
+const prefixes = ['.', '/', '#', '!']
 
 const DELETE_CACHE_MAX = 800
 const DELETE_CACHE_TTL_MS = 15 * 60 * 1000
@@ -148,50 +140,19 @@ export async function handleMessage(sock, config, { messages, type }) {
     m.tRecv = tRecv
     m.waNetworkDelayMs = waNetworkDelayMs
 
-    // Per-bot settings (cached). Live on sock after dashboard save.
-    const botIdForGate = config.botId || sock.sessionId || 'default'
-    const botSettings = await resolveRuntimeSettings(sock, botIdForGate)
-    m._botSettings = botSettings
-    // Recompute isOwner with per-bot extraOwners (serialize may have run before settings loaded)
-    if (botSettings.extraOwners?.length) {
-        const liveCfg = resolveBotConfig(sock, config)
-        const ownerNumbers = (liveCfg.ownerNumber || []).map(n => String(n).replace(/[^0-9]/g, '') + '@s.whatsapp.net')
-        m.isOwner = ownerNumbers.includes(m.sender) || botSettings.extraOwners.includes(m.sender)
-    }
-
-    // Bot disabled
-    if (botSettings.enabled === false && !m.isOwner) return
-
-    // Maintenance mode
-    if (botSettings.maintenance && !m.isOwner) {
-        const msg = renderMessage(
-            botSettings.messages?.maintenance || botSettings.maintenanceMessage || 'Bot sedang maintenance.',
-            { botName: config.botName, prefix: (botSettings.prefixes || DEFAULT_PREFIXES)[0], timezone: botSettings.timezone }
-        )
-        // Only reply if looks like a command to avoid spam on every chat message
-        const maybePrefix = (botSettings.prefixes || DEFAULT_PREFIXES).some(p => m.body?.startsWith(p))
-        if (maybePrefix || botSettings.noprefix) {
-            await m.reply(msg).catch(() => {})
-        }
-        return
-    }
-
-    // Mode self — prefer botSettings, fallback legacy settings
-    const mode = botSettings.mode || settings.mode || 'public'
-    if (mode === 'self') {
+    if (settings.mode === 'self') {
         const botJid = jidNormalizedUser(sock.user.id)
         if (!m.isOwner && m.sender !== botJid) return
     }
 
     m.userInit = loadUser(m)
 
-    const gconlyFlag = botSettings.gconly ?? settings.gconly
-    const gconlyPremBypass = botSettings.gconlyPremiumBypass ?? settings.gconlyPremiumBypass
-    const gconlyPremiumExempt = gconlyPremBypass && isPremiumActive(global.db.data.users[m.sender])
+    const gconlyPremiumExempt = settings.gconlyPremiumBypass && isPremiumActive(global.db.data.users[m.sender])
 
-    if (gconlyFlag && !sock.isJadibotSession && !m.isGroup && !m.isOwner && !hasActiveMenfesSession(m.sender) && !gconlyPremiumExempt) {
-        if (gconlyFlag === 'closed') return
-        if (gconlyFlag === 'join') {
+    if (settings.gconly && !sock.isJadibotSession && !m.isGroup && !m.isOwner && !hasActiveMenfesSession(m.sender) && !gconlyPremiumExempt) {
+        if (settings.gconly === 'closed') return
+
+        if (settings.gconly === 'join') {
             const allowed = await checkGconlyAccess(sock, m.sender)
             if (!allowed) {
                 await notifyGconlyOnce(sock, m)
@@ -201,20 +162,19 @@ export async function handleMessage(sock, config, { messages, type }) {
     }
 
     if (m.isGroup && !m.key.fromMe && global.db.data.chats[m.from]?.antidelete) cacheForDelete(m)
-    // Non-blocking side effects
-    if (botSettings.autoread ?? settings.autoread) sock.readMessages([m.key]).catch(() => {})
+    // Non-blocking side effects — never hold the command path
+    if (settings.autoread) sock.readMessages([m.key]).catch(() => {})
 
-    const activePrefixes = Array.isArray(botSettings.prefixes) && botSettings.prefixes.length
-        ? botSettings.prefixes
-        : DEFAULT_PREFIXES
-    const prefix = activePrefixes.find(p => m.body.startsWith(p))
+    // eval / shell owner (=>, >, $) dihapus demi keamanan
+    const botIdForGate = config.botId || sock.sessionId || 'default'
+    const prefix = prefixes.find(p => m.body.startsWith(p))
     let afterPrefix, cmd, plugin
 
     if (prefix) {
         afterPrefix = m.body.slice(prefix.length).trim()
         cmd = afterPrefix.split(/ +/).shift().toLowerCase()
         plugin = getPlugin(cmd)
-    } else if (botSettings.noprefix ?? settings.noprefix) {
+    } else if (settings.noprefix) {
         afterPrefix = m.body.trim()
         cmd = afterPrefix.split(/ +/).shift().toLowerCase()
         plugin = getPlugin(cmd)
@@ -266,74 +226,44 @@ export async function handleMessage(sock, config, { messages, type }) {
         }
     }
 
-    const user = global.db.data.users[m.sender]
-    const msgTpl = botSettings.messages || {}
-    const pfx = prefix || (activePrefixes[0] || '.')
-
     if (!plugin) {
         if (prefix && cmd) {
-            if (m.isOwner || !user?.banned) {
+            const bannedUser = global.db.data.users[m.sender]?.banned
+            if (m.isOwner || !bannedUser) {
                 const candidates = getCommandNames(m.isOwner)
                 const suggestions = findClosestCommands(cmd, candidates)
-                if (suggestions.length) {
-                    const unknownTpl = msgTpl.unknownCommand
-                    if (unknownTpl) {
-                        return m.reply(renderMessage(unknownTpl, {
-                            command: cmd, prefix: pfx, botName: config.botName,
-                            user: m.pushName, username: m.pushName, number: m.sender?.split('@')[0],
-                            timezone: botSettings.timezone
-                        }))
-                    }
-                    return m.reply(config.text.didyoumean(prefix, cmd, suggestions))
-                }
+                if (suggestions.length) return m.reply(config.text.didyoumean(prefix, cmd, suggestions))
             }
         }
         return
     }
 
     const canonicalCmd = plugin.cmd[0]
-    const blockedList = botSettings.blockedCmds?.length ? botSettings.blockedCmds : (settings.blockedCmds || [])
-    if (!m.isOwner && blockedList.includes(canonicalCmd)) {
-        return m.reply(config.text.blockedCmd(canonicalCmd))
-    }
+    if (!m.isOwner && settings.blockedCmds.includes(canonicalCmd)) return m.reply(config.text.blockedCmd(canonicalCmd))
 
     if (!m.isOwner && m.isGroup && plugin.category === 'rpg' && global.db.data.chats[m.from]?.rpgOff) {
         return m.reply('Fitur RPG sedang dimatikan di grup ini.')
     }
 
-    if (!m.isOwner && user?.banned) {
-        const banMsg = msgTpl.banned
-        if (banMsg) await m.reply(renderMessage(banMsg, { botName: config.botName, user: m.pushName })).catch(() => {})
-        return
-    }
+    const user = global.db.data.users[m.sender]
+    if (!m.isOwner && user?.banned) return
 
-    // ---- Verification gate (Bot Settings controlled) ----
-    const verifOn = botSettings.verificationEnabled !== false
-    if (verifOn && !m.isOwner && cmd !== 'verify' && !user?.registered) {
-        const isPremUser = isPremiumActive(user)
-        const bypass =
-            (botSettings.verificationBypassOwner && m.isOwner) ||
-            (botSettings.verificationBypassAdmin && m.isAdmin) ||
-            (botSettings.verificationBypassPremium && isPremUser)
-        if (!bypass) {
-            const body = renderMessage(
-                botSettings.verificationMessage || msgTpl.verificationRequired || config.text.notRegistered,
-                { prefix: pfx, botName: config.botName, user: m.pushName, username: m.pushName, number: m.sender?.split('@')[0], timezone: botSettings.timezone }
-            )
-            let pp
-            try {
-                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), PP_FETCH_TIMEOUT_MS))
-                pp = await Promise.race([sock.profilePictureUrl(m.sender, 'image'), timeout])
-            } catch { pp = null }
-            return sock.sendInteractiveButton(m.from, {
-                body,
-                footer: botSettings.footer || 'Registration Message',
-                ...(pp ? { image: pp } : {}),
-                buttons: [
-                    { type: 'reply', label: 'Verifikasi Sekarang', id: `${pfx}verify` }
-                ]
-            }, { quoted: m }).catch(() => m.reply(body))
+    if (!m.isOwner && cmd !== 'verify' && !user?.registered) {
+        let pp
+        try {
+            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), PP_FETCH_TIMEOUT_MS))
+            pp = await Promise.race([sock.profilePictureUrl(m.sender, 'image'), timeout])
+        } catch {
+            pp = null
         }
+        return sock.sendInteractiveButton(m.from, {
+            body: config.text.notRegistered,
+            footer: 'Registration Message',
+            ...(pp ? { image: pp } : {}),
+            buttons: [
+                { type: 'reply', label: 'Verifikasi Sekarang', id: `${prefix || '.'}verify` }
+            ]
+        }, { quoted: m }).catch(() => m.reply(config.text.notRegistered))
     }
 
     // Feature Settings gate — reuse earlier resolve when possible
@@ -344,57 +274,11 @@ export async function handleMessage(sock, config, { messages, type }) {
     if (!feat.enabled) return
     if (!checkAccessRule(feat.accessRules || feat.accessRule, m)) return
 
-    // Feature-level premiumOnly / requireVerified
-    if (feat.premiumOnly && !m.isOwner && !isPremiumActive(user)) {
-        return m.reply(renderMessage(msgTpl.premiumRequired || 'Fitur ini khusus Premium.', {
-            prefix: pfx, botName: config.botName, command: cmd
-        }))
-    }
-    if (feat.requireVerified && !m.isOwner && !user?.registered) {
-        return m.reply(renderMessage(msgTpl.verificationRequired || botSettings.verificationMessage || config.text.notRegistered, {
-            prefix: pfx, botName: config.botName, command: cmd
-        }))
-    }
-
-    // Cooldown (per feature)
-    const cdSec = Number(feat.cooldown) || 0
-    if (cdSec > 0 && !m.isOwner) {
-        const cd = checkCooldown(botIdForGate, m.sender, canonicalCmd, cdSec)
-        if (!cd.ok) {
-            return m.reply(`⏱ Tunggu *${cd.retryAfter}s* sebelum memakai command ini lagi.`)
-        }
-    }
-
-    // Limit system
-    if (botSettings.limitEnabled && !m.isOwner) {
-        const isPremUser = isPremiumActive(user)
-        const role = m.isAdmin ? 'admin' : (isPremUser ? 'premium' : 'free')
-        const { remaining, quota } = ensureUserLimit(user, botSettings, role)
-        const cost = Math.max(0, Number(feat.limitCost) || 1)
-        if (quota >= 0 && remaining < cost) {
-            return m.reply(renderMessage(
-                botSettings.limitMessage || msgTpl.limitHabis || 'Limit harian kamu sudah habis.',
-                { prefix: pfx, botName: config.botName, command: cmd, user: m.pushName }
-            ))
-        }
-        // consume after successful gate (before run) — still consume even if plugin fails? yes, standard
-        if (quota >= 0 && cost > 0) consumeUserLimit(user, cost)
-    }
-
     const tGate = Date.now()
 
     try {
         const textWithoutCmd = afterPrefix.slice(cmd.length).trim()
-        const doTyping = botSettings.autotyping ?? settings.autotyping
-        const doRecording = botSettings.autorecording
-        if (doTyping) sock.sendPresenceUpdate('composing', m.from).catch(() => {})
-        else if (doRecording) sock.sendPresenceUpdate('recording', m.from).catch(() => {})
-
-        // Optional response delay
-        const delayMs = Number(botSettings.responseDelayMs) || 0
-        if (delayMs > 0 && delayMs < 10000) {
-            await new Promise(r => setTimeout(r, delayMs))
-        }
+        if (settings.autotyping) sock.sendPresenceUpdate('composing', m.from).catch(() => {})
 
         // Custom Response (Feature Settings): timpa balasan pertama plugin dengan teks custom.
         if (feat.customResponse) {
@@ -427,7 +311,7 @@ export async function handleMessage(sock, config, { messages, type }) {
             } catch {}
         }
 
-        const isPremiumLane = premiumUser || !!(botSettings.fastrespon ?? settings.fastrespon)
+        const isPremiumLane = premiumUser || !!settings.fastrespon
         const sessionKey = sock.sessionId || config.botId || 'default'
         trackMessageIn(sessionKey, m.sender)
         const t0 = Date.now()
@@ -436,7 +320,6 @@ export async function handleMessage(sock, config, { messages, type }) {
             // Per-chat concurrency only — independent chats never wait on each other.
             // Heavy commands keep their own timeout tier; they do not block light commands
             // in other chats, and same-chat slots free as soon as each job settles/timeouts.
-            // Light categories are preferred inside the same lane so .ping/menu/admin stay snappy.
             await runWithFreeQueue(isPremiumLane, async () => {
                 const tPlugin0 = Date.now()
                 await plugin.run(m, {
@@ -463,62 +346,21 @@ export async function handleMessage(sock, config, { messages, type }) {
             })
         } catch (cmdErr) {
             cmdOk = false
-            const msg = cmdErr?.message || String(cmdErr)
-            // User-facing soft errors — no stack spam, no owner report
-            if (msg.includes('Command timed out')) {
-                await m.reply('⏱ Command membutuhkan waktu terlalu lama. Coba lagi atau gunakan command lain.').catch(() => {})
-                return
-            }
-            if (msg.includes('Too many concurrent commands')) {
-                await m.reply('⏳ Bot sedang sibuk di chat ini. Tunggu sebentar lalu coba lagi.').catch(() => {})
-                return
-            }
             throw cmdErr
         } finally {
             trackCommand(sessionKey, cmdOk, Date.now() - t0)
         }
-        if (botSettings.autotyping ?? settings.autotyping ?? botSettings.autorecording) sock.sendPresenceUpdate('paused', m.from).catch(() => {})
+        if (settings.autotyping) sock.sendPresenceUpdate('paused', m.from).catch(() => {})
     } catch (e) {
-        const msg = e?.message || String(e)
-        // Soft / expected errors already handled above
-        if (msg.includes('Command timed out') || msg.includes('Too many concurrent commands')) return
-
         console.error(chalk.redBright(e))
         logCommandError({
             botId: config.botId || sock.sessionId,
             sessionId: sock.sessionId,
             cmd,
-            message: msg,
+            message: e?.message || String(e),
             stack: e?.stack
         }).catch(() => {})
-
-        // User-facing error (never leak stack/token by default)
-        try {
-            const bs = m._botSettings || {}
-            const tpl = bs.messages?.error || 'Maaf fitur sedang error.'
-            const showTech = bs.showTechnicalError === true
-            const userMsg = renderMessage(tpl, {
-                e: showTech ? msg : '',
-                error: showTech ? msg : '',
-                command: cmd || '',
-                prefix: prefix || '.',
-                botName: config.botName,
-                user: m.pushName,
-                username: m.pushName,
-                number: m.sender?.split('@')[0],
-                timezone: bs.timezone
-            })
-            // Only append technical detail when explicitly enabled
-            const finalMsg = showTech && !String(tpl).includes('${e}') && !String(tpl).includes('${error}')
-                ? `${userMsg}\n\n> ${msg}`
-                : userMsg
-            await m.reply(finalMsg).catch(() => {})
-        } catch {}
-
-        const doReport = (m._botSettings?.errorReport ?? settings.errorReport)
-        if (doReport) {
-            reportPluginError({ sock, config, m, cmd, prefix: prefix || '', text: afterPrefix?.slice(cmd.length).trim() || '', e }).catch(() => {})
-        }
+        if (settings.errorReport) reportPluginError({ sock, config, m, cmd, prefix: prefix || '', text: afterPrefix.slice(cmd.length).trim(), e })
     }
 }
 
@@ -621,11 +463,6 @@ async function notifyParticipant({ sock, config, item, botJid, metadata, action,
         if (settings.mode === 'self') return
 
         let text = action === 'add' ? chatSettings.welcomeText : chatSettings.goodbyeText
-        // Fallback ke Bot Settings global messages
-        if (!text) {
-            const bs = sock._botSettings
-            text = action === 'add' ? (bs?.messages?.welcome) : (bs?.messages?.goodbye)
-        }
         if (!text) return
 
         text = String(text)
