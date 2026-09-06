@@ -152,6 +152,12 @@ export async function handleMessage(sock, config, { messages, type }) {
     const botIdForGate = config.botId || sock.sessionId || 'default'
     const botSettings = await resolveRuntimeSettings(sock, botIdForGate)
     m._botSettings = botSettings
+    // Recompute isOwner with per-bot extraOwners (serialize may have run before settings loaded)
+    if (botSettings.extraOwners?.length) {
+        const liveCfg = resolveBotConfig(sock, config)
+        const ownerNumbers = (liveCfg.ownerNumber || []).map(n => String(n).replace(/[^0-9]/g, '') + '@s.whatsapp.net')
+        m.isOwner = ownerNumbers.includes(m.sender) || botSettings.extraOwners.includes(m.sender)
+    }
 
     // Bot disabled
     if (botSettings.enabled === false && !m.isOwner) return

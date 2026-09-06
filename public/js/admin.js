@@ -191,8 +191,9 @@ async function loadBots(page) {
           if (act === 'settings') {
             openSettings(id)
           } else if (act === 'premium') {
-            await Z.api('/admin/bots/' + id + '/premium', { method: 'POST', body: { months: 1 } })
+            await Z.api('/admin/bots/' + id + '/premium', { method: 'POST', body: { months: 1, tier: 'pro' } })
             Z.toast('Premium activated for 1 month.', 'success')
+            loadBots(data.page)
           } else if (act === 'stop') {
             await Z.api('/admin/bots/' + id + '/status', { method: 'POST', body: { action: 'stop' } })
             Z.toast('Bot stopped successfully.', 'success')

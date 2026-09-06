@@ -290,10 +290,20 @@ router.get('/bots', authMiddleware, loadAccount, async (req, res) => {
             }
         }))
         const anyPremium = await isAccountPremium(req.account._id.toString())
+        // Keep each bot's own subscription plan; only normalize display for account-level premium
         for (const b of enriched) {
-            b.plan = anyPremium ? 'premium' : 'free'
+            const botPlan = b.plan
+            if (anyPremium) {
+                // account premium applies to all bots
+                if (!botPlan || botPlan === 'free') b.plan = 'premium'
+            } else if (botPlan && botPlan !== 'free') {
+                // bot-level premium from admin still counts
+                b.plan = botPlan
+            } else {
+                b.plan = 'free'
+            }
         }
-        const maxBots = anyPremium ? 3 : 1
+        const maxBots = anyPremium || enriched.some(b => b.plan && b.plan !== 'free') ? 3 : 1
         res.json({
             bots: enriched,
             limits: { max: maxBots, used: enriched.length, plan: anyPremium ? 'premium' : 'free' }
@@ -1384,10 +1394,24 @@ router.delete('/admin/accounts/:id', authMiddleware, loadAccount, requireAdmin, 
 
 router.post('/admin/bots/:id/premium', authMiddleware, loadAccount, requireAdmin, async (req, res) => {
     try {
-        if (!safeObjectId(req.params.id)) return res.status(400).json({ error: 'Invalid ID' })
+        const oid = safeObjectId(req.params.id)
+        if (!oid) return res.status(400).json({ error: 'Invalid ID' })
         const months = Math.min(24, Math.max(1, Number(req.body?.months) || 1))
+        const tier = (req.body?.tier || 'pro').toString().toLowerCase()
+        const db = await getMongoDb()
+        const bot = await db.collection(COLLECTIONS.BOTS).findOne({ _id: oid })
+        if (!bot) return res.status(404).json({ error: 'Bot not found' })
+
+        // Activate bot-level subscription (by document id — consistent with isBotPremium checks)
         await activatePremium(req.params.id, { months })
-        res.json({ ok: true })
+
+        // Also activate account-level premium for the bot owner so dashboard plan gates work
+        const ownerId = bot.ownerId?.toString?.() || bot.ownerId
+        if (ownerId) {
+            await activateAccountPremium(ownerId, { months, tier: tier === 'premium' ? 'pro' : tier })
+        }
+
+        res.json({ ok: true, botId: req.params.id, ownerId: ownerId || null, months })
     } catch (e) {
         res.status(500).json({ error: publicError(e) })
     }
