@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>
+    (function(){try{var t=localStorage.getItem('zora_theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');}catch(e){}})();
+  </script>
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin Ads — ZoraBot</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="/css/style.css?v=26" />
+  <link rel="stylesheet" href="/css/style.css?v=40" />
 </head>
 <body data-page="admin-ads">
   <div id="loading-view" class="loading-wrap hidden" style="display:none">
     <div class="loading-card">
-      <div class="loading-logo">ZoraBot</div>
+      <div class="loading-logo">Zora<span>Bot</span></div>
       <div class="spinner center" aria-hidden="true">
         <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
         <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
@@ -26,11 +30,12 @@
       <button id="menu-btn" class="icon-btn" aria-label="Menu">
         <span></span><span></span><span></span>
       </button>
-      <div class="brand">ZoraBot</div>
+      <div class="brand">Zora<span>Bot</span></div>
       <div class="user-chip" id="user-chip"></div>
     </header>
 
     <aside id="sidebar" class="sidebar">
+      <div class="sidebar-brand">Zora<span>Bot</span></div>
       <nav>
         <div class="nav-label">Admin</div>
         <a href="/admin" class="nav-item"><i class="fa-solid fa-gauge-high"></i><span>Overview</span></a>
@@ -43,7 +48,7 @@
       </nav>
       <button id="logout-btn" class="btn outline logout"><i class="fa-solid fa-right-from-bracket"></i><span>Log out</span></button>
     </aside>
-    <div id="sidebar-overlay" class="overlay"></div>
+    <div id="sidebar-overlay"></div>
 
     <main class="content">
       <h2>Ads</h2>

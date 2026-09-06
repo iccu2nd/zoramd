@@ -41,7 +41,7 @@
     if (!usersEl) return
     usersEl.innerHTML = (data.accounts || []).map(function (a) {
       return '<div class="bot-card" data-id="' + esc(a.id) + '">' +
-        '<button type="button" class="bot-menu-btn" aria-label="Menu">&#8942;</button>' +
+        '<button type="button" class="bot-menu-btn" aria-label="Menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>' +
         '<div class="bot-menu-dropdown hidden">' +
           '<button type="button" data-act="role" data-role="' + (a.role === 'admin' ? 'user' : 'admin') + '">' +
             (a.role === 'admin' ? 'Make user' : 'Make admin') + '</button>' +
@@ -102,7 +102,7 @@ async function loadBots(page) {
       var wa = b.waNumber ? ('+' + String(b.waNumber).replace(/^\+/, '')) : 'Not linked'
       var st = b.statusLabel || b.status || 'disconnected'
       return '<div class="bot-card" data-id="' + esc(b.id) + '" data-session="' + esc(b.sessionId || '') + '">' +
-        '<button type="button" class="bot-menu-btn" aria-label="Menu">&#8942;</button>' +
+        '<button type="button" class="bot-menu-btn" aria-label="Menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>' +
         '<div class="bot-menu-dropdown hidden">' +
           '<button type="button" data-act="settings">Settings</button>' +
           '<button type="button" data-act="premium">+1 month Premium</button>' +

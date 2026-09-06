@@ -80,7 +80,7 @@
     }
     list.innerHTML = Z.state.bots.map(function (b) {
       return '<div class="bot-card" data-id="' + Z.escapeHtml(b.id) + '">' +
-        '<button type="button" class="bot-menu-btn" aria-label="Menu">&#8942;</button>' +
+        '<button type="button" class="bot-menu-btn" aria-label="Menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>' +
         '<div class="bot-menu-dropdown hidden">' +
           '<button type="button" data-act="rename">Rename bot</button>' +
           '<button type="button" data-act="settings">Bot settings</button>' +
