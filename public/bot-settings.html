@@ -77,120 +77,137 @@
         </div>
         <div id="settings-empty" class="panel-loading hidden"><span>Belum ada bot tersambung.</span></div>
         <div id="settings-content" class="hidden">
-        <div class="toggle-list">
-          <div class="toggle-row">
-            <div class="toggle-meta">
-              <strong>Bot Aktif</strong>
-              <span>Disable without logging out or re-pairing</span>
-            </div>
-            <label class="switch"><input type="checkbox" id="set-enabled" checked /><span class="slider"></span></label>
+        <div class="tabs" id="settings-tabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+          <button type="button" class="btn outline tab-btn active" data-tab="general">General</button>
+          <button type="button" class="btn outline tab-btn" data-tab="verification">Verification</button>
+          <button type="button" class="btn outline tab-btn" data-tab="limit">Limit</button>
+          <button type="button" class="btn outline tab-btn" data-tab="messages">Messages</button>
+          <button type="button" class="btn outline tab-btn" data-tab="identity">Identity</button>
+          <button type="button" class="btn outline tab-btn" data-tab="advanced">Advanced</button>
+        </div>
+        <p class="hint" id="plan-badge">Plan: Free</p>
+
+        <!-- GENERAL -->
+        <div class="tab-panel" data-panel="general">
+          <div class="toggle-list">
+            <div class="toggle-row"><div class="toggle-meta"><strong>Bot Aktif</strong><span>Disable tanpa logout/pairing ulang</span></div>
+              <label class="switch"><input type="checkbox" id="set-enabled" checked /><span class="slider"></span></label></div>
+            <div class="toggle-row"><div class="toggle-meta"><strong>Autoread</strong><span>Tandai pesan terbaca otomatis</span></div>
+              <label class="switch"><input type="checkbox" id="set-autoread" /><span class="slider"></span></label></div>
+            <div class="toggle-row"><div class="toggle-meta"><strong>Autotyping</strong><span>Status mengetik</span></div>
+              <label class="switch"><input type="checkbox" id="set-autotyping" /><span class="slider"></span></label></div>
+            <div class="toggle-row"><div class="toggle-meta"><strong>Auto-recording</strong><span>Status merekam suara</span></div>
+              <label class="switch"><input type="checkbox" id="set-autorecording" /><span class="slider"></span></label></div>
+            <div class="toggle-row"><div class="toggle-meta"><strong>Fast Respon</strong><span>Lewati antrian proses</span></div>
+              <label class="switch"><input type="checkbox" id="set-fastrespon" /><span class="slider"></span></label></div>
+            <div class="toggle-row"><div class="toggle-meta"><strong>No Prefix</strong><span>Perintah tanpa awalan</span></div>
+              <label class="switch"><input type="checkbox" id="set-noprefix" /><span class="slider"></span></label></div>
+            <div class="toggle-row"><div class="toggle-meta"><strong>Gconly</strong><span>Hanya respons di groups</span></div>
+              <label class="switch"><input type="checkbox" id="set-gconly" /><span class="slider"></span></label></div>
+            <div class="toggle-row"><div class="toggle-meta"><strong>Maintenance Mode</strong><span>Bot hanya owner yang bisa pakai</span></div>
+              <label class="switch"><input type="checkbox" id="set-maintenance" /><span class="slider"></span></label></div>
           </div>
-          <div class="toggle-row">
-            <div class="toggle-meta">
-              <strong>Autoread</strong>
-              <span>Tandai pesan terbaca otomatis</span>
-            </div>
-            <label class="switch"><input type="checkbox" id="set-autoread" /><span class="slider"></span></label>
+          <div class="field" style="margin-top:16px"><label>Mode</label>
+            <select id="set-mode"><option value="public">Public</option><option value="self">Self</option></select></div>
+          <div class="field"><label>Prefixes (pisah spasi/koma)</label>
+            <input type="text" id="set-prefixes" placeholder=". / # !" /></div>
+          <div class="field"><label>Language</label>
+            <select id="set-language"><option value="id">Indonesia</option><option value="en">English</option></select></div>
+          <div class="field"><label>Timezone</label>
+            <input type="text" id="set-timezone" placeholder="Asia/Jakarta" /></div>
+          <div class="field"><label>Footer</label>
+            <input type="text" id="set-footer" placeholder="© ZoraBot" /></div>
+          <div class="field"><label>Response Delay (ms, 0=off)</label>
+            <input type="number" id="set-responsedelay" min="0" max="5000" value="0" /></div>
+          <div class="field"><label>Pesan Maintenance</label>
+            <textarea id="set-maintenancemsg" rows="2" placeholder="Bot sedang maintenance..."></textarea></div>
+        </div>
+
+        <!-- VERIFICATION -->
+        <div class="tab-panel hidden" data-panel="verification">
+          <div class="toggle-list">
+            <div class="toggle-row"><div class="toggle-meta"><strong>Verification ON</strong><span>Wajib verifikasi sebelum pakai command</span></div>
+              <label class="switch"><input type="checkbox" id="set-verif-enabled" checked /><span class="slider"></span></label></div>
+            <div class="toggle-row"><div class="toggle-meta"><strong>Bypass Owner</strong></div>
+              <label class="switch"><input type="checkbox" id="set-verif-owner" checked /><span class="slider"></span></label></div>
+            <div class="toggle-row"><div class="toggle-meta"><strong>Bypass Admin</strong></div>
+              <label class="switch"><input type="checkbox" id="set-verif-admin" /><span class="slider"></span></label></div>
+            <div class="toggle-row"><div class="toggle-meta"><strong>Bypass Premium User</strong></div>
+              <label class="switch"><input type="checkbox" id="set-verif-prem" /><span class="slider"></span></label></div>
           </div>
-          <div class="toggle-row">
-            <div class="toggle-meta">
-              <strong>Autotyping</strong>
-              <span>Tampilkan status mengetik</span>
-            </div>
-            <label class="switch"><input type="checkbox" id="set-autotyping" /><span class="slider"></span></label>
+          <div class="field"><label>Pesan Verification</label>
+            <textarea id="set-verif-msg" rows="3" placeholder="Kamu belum terverifikasi... Variabel: ${prefix} ${botName} ${user}"></textarea>
+            <span class="hint">Variabel: ${prefix} ${botName} ${user} ${username} ${number}</span></div>
+        </div>
+
+        <!-- LIMIT -->
+        <div class="tab-panel hidden" data-panel="limit">
+          <div class="toggle-list">
+            <div class="toggle-row"><div class="toggle-meta"><strong>Limit System ON</strong><span>Batasi pemakaian command harian</span></div>
+              <label class="switch"><input type="checkbox" id="set-limit-enabled" /><span class="slider"></span></label></div>
           </div>
-          <div class="toggle-row">
-            <div class="toggle-meta">
-              <strong>Fast Respon</strong>
-              <span>Balas user lebih cepat, lewati antrian proses</span>
-            </div>
-            <label class="switch"><input type="checkbox" id="set-fastrespon" /><span class="slider"></span></label>
-          </div>
-          <div class="toggle-row">
-            <div class="toggle-meta">
-              <strong>No Prefix</strong>
-              <span>Perintah tanpa awalan . / #</span>
-            </div>
-            <label class="switch"><input type="checkbox" id="set-noprefix" /><span class="slider"></span></label>
-          </div>
-          <div class="toggle-row">
-            <div class="toggle-meta">
-              <strong>Gconly</strong>
-              <span>Hanya respons di groups</span>
-            </div>
-            <label class="switch"><input type="checkbox" id="set-gconly" /><span class="slider"></span></label>
-          </div>
+          <div class="field"><label>Limit Free</label><input type="number" id="set-limit-free" min="0" value="15" /></div>
+          <div class="field"><label>Limit Premium</label><input type="number" id="set-limit-prem" min="0" value="100" /></div>
+          <div class="field"><label>Limit Admin</label><input type="number" id="set-limit-admin" min="0" value="200" /></div>
+          <div class="field"><label>Limit Owner (-1 = unlimited)</label><input type="number" id="set-limit-owner" value="-1" /></div>
+          <div class="field"><label>Reset jam (0-23, timezone bot)</label><input type="number" id="set-limit-reset" min="0" max="23" value="0" /></div>
+          <div class="field"><label>Pesan Limit Habis</label>
+            <textarea id="set-limit-msg" rows="2"></textarea></div>
         </div>
-        <div class="field" style="margin-top:16px">
-          <label>Mode</label>
-          <select id="set-mode">
-            <option value="public">Public</option>
-            <option value="self">Self</option>
-          </select>
+
+        <!-- MESSAGES -->
+        <div class="tab-panel hidden" data-panel="messages">
+          <p class="hint">Variabel: ${e} ${error} ${command} ${user} ${username} ${number} ${botName} ${prefix} ${time}</p>
+          <div class="field"><label>Error</label><textarea id="msg-error" rows="2">Maaf fitur sedang error.</textarea></div>
+          <div class="field"><label>Loading</label><input type="text" id="msg-loading" value="⏳ Sedang diproses..." /></div>
+          <div class="field"><label>Success</label><input type="text" id="msg-success" value="✅ Berhasil." /></div>
+          <div class="field"><label>Failed</label><input type="text" id="msg-failed" value="❌ Gagal." /></div>
+          <div class="field"><label>Premium Required</label><input type="text" id="msg-premium" /></div>
+          <div class="field"><label>Verification Required</label><input type="text" id="msg-verifreq" /></div>
+          <div class="field"><label>Limit Habis</label><input type="text" id="msg-limithabis" /></div>
+          <div class="field"><label>Owner Only</label><input type="text" id="msg-owneronly" /></div>
+          <div class="field"><label>Admin Only</label><input type="text" id="msg-adminonly" /></div>
+          <div class="field"><label>Banned</label><input type="text" id="msg-banned" /></div>
+          <div class="field"><label>Maintenance</label><input type="text" id="msg-maintenance" /></div>
+          <div class="field"><label>Unknown Command</label><input type="text" id="msg-unknown" /></div>
+          <div class="field"><label>Welcome</label><input type="text" id="msg-welcome" /></div>
+          <div class="field"><label>Goodbye</label><input type="text" id="msg-goodbye" /></div>
+          <div class="toggle-row" style="margin-top:12px"><div class="toggle-meta"><strong>Tampilkan Technical Error</strong><span>OFF default — jangan bocor stack/token ke user</span></div>
+            <label class="switch"><input type="checkbox" id="set-showtech" /><span class="slider"></span></label></div>
+          <div class="toggle-row"><div class="toggle-meta"><strong>Error Report ke Owner</strong></div>
+            <label class="switch"><input type="checkbox" id="set-errorreport" checked /><span class="slider"></span></label></div>
         </div>
-        <hr />
-        <p class="hint" id="premium-hint">Fitur di bawah hanya untuk Premium.</p>
-        <div class="field">
-          <label>Nama Bot</label>
-          <input type="text" id="set-botname" />
+
+        <!-- IDENTITY -->
+        <div class="tab-panel hidden" data-panel="identity">
+          <p class="hint" id="premium-hint">Identity & branding — Basic ke atas.</p>
+          <div class="field"><label>Nama Bot</label><input type="text" id="set-botname" /></div>
+          <div class="field"><label>Owner Number</label><input type="text" id="set-ownernumber" placeholder="628xxxxxxxxx" /></div>
+          <div class="field"><label>Author</label><input type="text" id="set-author" /></div>
+          <div class="field"><label>Packname (Sticker)</label><input type="text" id="set-packname" /></div>
+          <div class="field"><label>Title</label><input type="text" id="set-title" /></div>
+          <div class="field"><label>Body / Tagline</label><input type="text" id="set-body" /></div>
+          <div class="field"><label>Thumbnail URL</label><input type="text" id="set-thumbnail" /></div>
+          <div class="field"><label>Channel URL</label><input type="text" id="set-channelurl" /></div>
+          <div class="field"><label>Channel ID</label><input type="text" id="set-idch" /></div>
+          <div class="field"><label>Group URL</label><input type="text" id="set-groupurl" /></div>
+          <div class="field"><label>Group ID</label><input type="text" id="set-groupid" /></div>
+          <div class="field"><label>Source URL</label><input type="text" id="set-sourceurl" /></div>
         </div>
-        <div class="field">
-          <label>Owner Number</label>
-          <input type="text" id="set-ownernumber" placeholder="628xxxxxxxxx" />
+
+        <!-- ADVANCED -->
+        <div class="tab-panel hidden" data-panel="advanced">
+          <div class="field"><label>Extra Owners</label>
+            <input type="text" id="set-extraowners" placeholder="628xxx, 628yyy" />
+            <span class="hint">Nomor tambahan sebagai owner (Pro+)</span></div>
+          <div class="field"><label>Blocked Commands</label>
+            <input type="text" id="set-blockedcmds" placeholder="ping, menu" />
+            <span class="hint">Command dimatikan bot-wide, tanpa prefix</span></div>
+          <div class="toggle-row"><div class="toggle-meta"><strong>Gconly Premium Bypass</strong></div>
+            <label class="switch"><input type="checkbox" id="set-gconly-prem" /><span class="slider"></span></label></div>
         </div>
-        <div class="field">
-          <label>Author</label>
-          <input type="text" id="set-author" placeholder="Nama kamu / brand bot" />
-        </div>
-        <div class="field">
-          <label>Packname (Sticker)</label>
-          <input type="text" id="set-packname" placeholder="Nama pack yang muncul di stiker" />
-        </div>
-        <div class="field">
-          <label>Title</label>
-          <input type="text" id="set-title" placeholder="© ZoraBot" />
-        </div>
-        <div class="field">
-          <label>Body / Tagline</label>
-          <input type="text" id="set-body" placeholder="powered by ZoraBot" />
-        </div>
-        <div class="field">
-          <label>Thumbnail URL</label>
-          <input type="text" id="set-thumbnail" placeholder="https://..." />
-        </div>
-        <div class="field">
-          <label>Channel URL</label>
-          <input type="text" id="set-channelurl" />
-        </div>
-        <div class="field">
-          <label>Channel ID</label>
-          <input type="text" id="set-idch" placeholder="1203xxxxx@newsletter" />
-        </div>
-        <div class="field">
-          <label>Group URL</label>
-          <input type="text" id="set-groupurl" />
-        </div>
-        <div class="field">
-          <label>Group ID</label>
-          <input type="text" id="set-groupid" placeholder="1203xxxxx@g.us" />
-        </div>
-        <div class="field">
-          <label>Source URL</label>
-          <input type="text" id="set-sourceurl" placeholder="https://github.com/..." />
-        </div>
-        <hr />
-        <p class="hint">Advanced — sebelumnya cuma bisa diubah lewat edit source code.</p>
-        <div class="field">
-          <label>Extra Owners</label>
-          <input type="text" id="set-extraowners" placeholder="628xxxxxxxxx, 628yyyyyyyyy" />
-          <span class="hint">Nomor tambahan yang dianggap owner (pisahkan koma).</span>
-        </div>
-        <div class="field">
-          <label>Blocked Commands</label>
-          <input type="text" id="set-blockedcmds" placeholder="ping, menu" />
-          <span class="hint">Command yang dimatikan bot-wide (pisahkan koma, tanpa titik/prefix).</span>
-        </div>
-        <button id="save-settings-btn" class="btn primary">Save</button>
+
+        <button id="save-settings-btn" class="btn primary" style="margin-top:16px">Save Settings</button>
         <p id="settings-msg" class="msg"></p>
         </div>
       </div>

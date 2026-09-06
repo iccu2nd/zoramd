@@ -13,6 +13,7 @@ import {
 import { getSubscription, isBotPremium, activatePremium, isAccountPremium, activateAccountPremium, getAccountSubscription } from '../../lib/db/subscription.js'
 import { getAllFeatureSettings, setFeatureSetting, getFeatureSetting, ACCESS_FLAGS } from '../../lib/db/featureSettings.js'
 import { invalidateFeatureCache } from '../../lib/featureGate.js'
+import { saveBotSettings, getBotSettings, invalidateBotSettingsCache, applySettingsToSock, DEFAULT_BOT_SETTINGS } from '../../lib/botSettingsService.js'
 import { DEFAULT_ACCESS_RULES } from '../../lib/db/defaultAccessRules.js'
 import { createOrder, findOrder, findOrdersByAccount, markOrderChecked, cancelOrder, deleteOrder, isOrderExpired } from '../../lib/db/orders.js'
 import { getMongoDb } from '../../lib/db/mongo.js'
@@ -65,8 +66,22 @@ router.get('/health', (req, res) => {
 
 
 const PREMIUM_PRICE = 15000
-const PREMIUM_PLANS = { '7d': { days: 7, price: 5000, label: '7 Hari' }, '30d': { months: 1, price: 15000, label: '30 Hari' } }
-function resolvePlan(duration) { return PREMIUM_PLANS[duration] || PREMIUM_PLANS['30d'] }
+/** Configurable premium tiers — harga bisa diubah dari admin platform settings nanti */
+const PREMIUM_PLANS = {
+    // legacy duration keys (kept for existing orders UI)
+    '7d': { days: 7, price: 5000, label: '7 Hari', tier: 'pro' },
+    '30d': { months: 1, price: 15000, label: '30 Hari', tier: 'pro' },
+    // New 3-tier monthly packages
+    basic: { months: 1, price: 5000, label: 'Basic — 30 Hari', tier: 'basic',
+        features: ['Basic Bot Settings', 'Custom prefix/nama', 'Custom messages', 'Verification & Limit', 'Basic feature control'] },
+    pro: { months: 1, price: 15000, label: 'Pro — 30 Hari', tier: 'pro',
+        features: ['Semua Basic', 'Advanced messages', 'Per-command limit', 'Permission system', 'Feature/command control', 'Maintenance mode', 'Premium management'] },
+    ultimate: { months: 1, price: 30000, label: 'Ultimate — 30 Hari', tier: 'ultimate',
+        features: ['Semua Pro', 'Full Bot Control', 'Advanced command/result settings', 'Custom permission rules', 'Detailed logs', 'Analytics', 'Multi-bot management', 'Backup/restore settings'] }
+}
+function resolvePlan(duration) {
+    return PREMIUM_PLANS[duration] || PREMIUM_PLANS['pro'] || PREMIUM_PLANS['30d']
+}
 
 function statusLabel(s) {
     const map = {
@@ -446,15 +461,19 @@ router.get('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
         if (!bot) return res.status(404).json({ error: 'Bot not found' })
+        const sub = await getAccountSubscription(req.account._id.toString())
+        let plan = sub?.plan || 'free'
+        if (plan === 'premium') plan = 'pro' // legacy
         const premium = (await isAccountPremium(req.account._id.toString())) || (await isBotPremium(bot._id.toString()))
-        const db = await getMongoDb()
-        const settingsDoc = await db.collection(COLLECTIONS.BOT_SETTINGS).findOne({ botId: bot.sessionId })
+        const settings = await getBotSettings(bot.sessionId)
         res.json({
-            settings: settingsDoc || {},
+            settings,
+            defaults: DEFAULT_BOT_SETTINGS,
             identity: bot.identity || {},
             botName: bot.botName,
             ownerNumber: bot.ownerNumber,
-            isPremium: premium
+            isPremium: premium,
+            plan
         })
     } catch (e) {
         res.status(500).json({ error: publicError(e, 'Something went wrong') })
@@ -465,77 +484,107 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
     try {
         const bot = await findOwnedBot(req.params.botId, req.account._id)
         if (!bot) return res.status(404).json({ error: 'Bot not found' })
-        const premium = ((await isAccountPremium(req.account._id.toString())) || (await isBotPremium(bot._id.toString())))
+        const accountId = req.account._id.toString()
+        const sub = await getAccountSubscription(accountId)
+        const plan = (sub?.plan === 'premium' || sub?.plan === 'basic' || sub?.plan === 'pro' || sub?.plan === 'ultimate')
+            ? (sub.plan === 'premium' ? 'pro' : sub.plan)  // legacy premium → pro
+            : 'free'
+        const isPrem = plan !== 'free' && sub?.status === 'active' && (!sub.expiresAt || new Date(sub.expiresAt).getTime() > Date.now())
         const body = req.body || {}
 
-        // Free users: limited settings only
-        const allowedFree = ['mode', 'autoread', 'autotyping', 'noprefix', 'gconly', 'fastrespon', 'enabled']
+        // Plan capabilities
+        const can = {
+            free: new Set(['mode', 'autoread', 'autotyping', 'noprefix', 'gconly', 'fastrespon', 'enabled', 'language', 'timezone']),
+            basic: new Set([
+                'mode', 'autoread', 'autotyping', 'autorecording', 'noprefix', 'gconly', 'gconlyPremiumBypass',
+                'fastrespon', 'enabled', 'language', 'timezone', 'footer', 'prefixes', 'responseDelayMs',
+                'verificationEnabled', 'verificationMessage', 'verificationBypassOwner', 'verificationBypassAdmin', 'verificationBypassPremium',
+                'limitEnabled', 'limitGlobal', 'limitFree', 'limitPremium', 'limitAdmin', 'limitOwner', 'limitMessage', 'limitResetHour',
+                'messages', 'errorReport', 'showTechnicalError'
+            ]),
+            pro: null, // all except ultimate-only
+            ultimate: null
+        }
+        const basicKeys = can.basic
+        const ultimateOnly = new Set([]) // reserved
+
         const patchSettings = {}
-        for (const k of allowedFree) {
-            if (body[k] !== undefined) patchSettings[k] = body[k]
+        const allKeys = Object.keys(DEFAULT_BOT_SETTINGS).concat(['messages'])
+        for (const k of Object.keys(body)) {
+            if (k === 'identity' || k === 'botName' || k === 'ownerNumber') continue
+            if (!(k in DEFAULT_BOT_SETTINGS) && k !== 'messages') continue
+            if (plan === 'free' && !can.free.has(k)) continue
+            if (plan === 'basic' && !basicKeys.has(k)) continue
+            // pro + ultimate: allow all bot settings fields
+            patchSettings[k] = body[k]
         }
 
-        if (premium) {
-            // Premium: full bot settings + identity
-            const extra = ['errorReport', 'gconly', 'gconlyPremiumBypass']
-            for (const k of extra) {
-                if (body[k] !== undefined) patchSettings[k] = body[k]
-            }
-            // Extra owners & blocked commands: advanced/security-sensitive knobs that
-            // used to require editing the script directly. Accept either an array or a
-            // comma-separated string from the UI and normalize before storing.
-            if (body.extraOwners !== undefined) {
-                const list = Array.isArray(body.extraOwners)
-                    ? body.extraOwners
-                    : String(body.extraOwners || '').split(',')
+        // Normalize prefixes / lists
+        if (patchSettings.prefixes !== undefined) {
+            const list = Array.isArray(patchSettings.prefixes)
+                ? patchSettings.prefixes
+                : String(patchSettings.prefixes || '').split(/[\s,]+/)
+            patchSettings.prefixes = [...new Set(list.map(s => String(s).trim()).filter(Boolean))]
+        }
+        if (patchSettings.extraOwners !== undefined) {
+            if (!isPrem || plan === 'free') {
+                // basic+ can set extra owners in basic plan? put under pro
+                if (plan === 'free' || plan === 'basic') {
+                    delete patchSettings.extraOwners
+                } else {
+                    const list = Array.isArray(patchSettings.extraOwners)
+                        ? patchSettings.extraOwners
+                        : String(patchSettings.extraOwners || '').split(',')
+                    patchSettings.extraOwners = [...new Set(
+                        list.map(n => String(n).replace(/[^0-9]/g, '')).filter(Boolean).map(n => `${n}@s.whatsapp.net`)
+                    )]
+                }
+            } else {
+                const list = Array.isArray(patchSettings.extraOwners)
+                    ? patchSettings.extraOwners
+                    : String(patchSettings.extraOwners || '').split(',')
                 patchSettings.extraOwners = [...new Set(
-                    list.map(n => String(n).replace(/[^0-9]/g, '')).filter(Boolean)
-                        .map(n => `${n}@s.whatsapp.net`)
+                    list.map(n => String(n).replace(/[^0-9]/g, '')).filter(Boolean).map(n => `${n}@s.whatsapp.net`)
                 )]
             }
-            if (body.blockedCmds !== undefined) {
-                const list = Array.isArray(body.blockedCmds)
-                    ? body.blockedCmds
-                    : String(body.blockedCmds || '').split(',')
+        }
+        if (patchSettings.blockedCmds !== undefined) {
+            if (plan === 'free') delete patchSettings.blockedCmds
+            else {
+                const list = Array.isArray(patchSettings.blockedCmds)
+                    ? patchSettings.blockedCmds
+                    : String(patchSettings.blockedCmds || '').split(',')
                 patchSettings.blockedCmds = [...new Set(
                     list.map(c => String(c).trim().toLowerCase()).filter(Boolean)
                 )]
             }
-            if (body.identity || body.botName || body.ownerNumber) {
-                const identity = { ...(bot.identity || {}), ...(body.identity || {}) }
-                if (body.botName) identity.botName = body.botName
-                if (body.ownerNumber) identity.ownerNumber = body.ownerNumber
-                if (body.identity?.channelUrl) identity.channelUrl = body.identity.channelUrl
-                if (body.identity?.groupUrl) identity.groupUrl = body.identity.groupUrl
-                if (body.identity?.idch) identity.idch = body.identity.idch
-                if (body.identity?.groupId) identity.groupId = body.identity.groupId
-                if (body.identity?.author) identity.author = body.identity.author
-                if (body.identity?.packname) identity.packname = body.identity.packname
-                if (body.identity?.title) identity.title = body.identity.title
-                if (body.identity?.body) identity.body = body.identity.body
-                if (body.identity?.thumbnail) identity.thumbnail = body.identity.thumbnail
-                if (body.identity?.sourceUrl) identity.sourceUrl = body.identity.sourceUrl
-                await updateOwnedBot(bot._id.toString(), req.account._id.toString(), {
-                    botName: identity.botName || bot.botName,
-                    ownerNumber: identity.ownerNumber || bot.ownerNumber,
-                    identity
-                })
+        }
+
+        // Identity (premium basic+)
+        if (isPrem && (body.identity || body.botName || body.ownerNumber)) {
+            const identity = { ...(bot.identity || {}), ...(body.identity || {}) }
+            if (body.botName) identity.botName = body.botName
+            if (body.ownerNumber) identity.ownerNumber = body.ownerNumber
+            for (const k of ['channelUrl', 'idch', 'groupUrl', 'groupId', 'author', 'packname', 'title', 'body', 'thumbnail', 'sourceUrl']) {
+                if (body.identity?.[k] != null) identity[k] = body.identity[k]
             }
-        } else if (body.identity || body.botName || body.ownerNumber || body.extraOwners !== undefined || body.blockedCmds !== undefined) {
-            return res.status(403).json({ error: 'Custom identity is available for Premium only' })
+            await updateOwnedBot(bot._id.toString(), accountId, {
+                botName: identity.botName || bot.botName,
+                ownerNumber: identity.ownerNumber || bot.ownerNumber,
+                identity
+            })
+        } else if (!isPrem && (body.identity || body.botName || body.ownerNumber || body.extraOwners !== undefined || body.blockedCmds !== undefined)) {
+            // Free may still toggle free keys; identity blocked
+            if (body.identity || body.botName || body.ownerNumber) {
+                return res.status(403).json({ error: 'Custom identity tersedia untuk paket Basic ke atas' })
+            }
         }
 
         if (Object.keys(patchSettings).length) {
-            const db = await getMongoDb()
-            await db.collection(COLLECTIONS.BOT_SETTINGS).updateOne(
-                { botId: bot.sessionId },
-                { $set: { ...patchSettings, updatedAt: new Date() } },
-                { upsert: true }
-            )
+            await saveBotSettings(bot.sessionId, patchSettings)
         }
 
-        // Refresh identity/config di instance yang sedang running agar sticker & plugin
-        // langsung ikut Bot Settings tanpa wajib restart manual.
+        // Live apply — no restart required
         try {
             const fresh = await findOwnedBot(req.params.botId, req.account._id)
             if (fresh) {
@@ -547,6 +596,8 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
                         cfg.ownerAccountId = fresh.ownerId?.toString?.() || fresh.ownerId || null
                         inst.sock.botConfig = cfg
                         inst.sock.sessionId = fresh.sessionId
+                        const liveSettings = await getBotSettings(fresh.sessionId)
+                        applySettingsToSock(inst.sock, liveSettings)
                     }
                 }
             }
@@ -554,67 +605,13 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
             console.error('[settings] refresh botConfig:', e.message)
         }
 
-        res.json({ ok: true })
+        const settings = await getBotSettings(bot.sessionId)
+        res.json({ ok: true, settings, plan })
     } catch (e) {
         res.status(500).json({ error: publicError(e, 'Something went wrong') })
     }
 })
 
-// ---------- Feature Settings ----------
-router.get('/bots/:botId/features', authMiddleware, loadAccount, async (req, res) => {
-    try {
-        const bot = await findOwnedBot(req.params.botId, req.account._id)
-        if (!bot) return res.status(404).json({ error: 'Bot not found' })
-        const premium = ((await isAccountPremium(req.account._id.toString())) || (await isBotPremium(bot._id.toString())))
-        const saved = await getAllFeatureSettings(bot.sessionId)
-        const savedMap = {}
-        for (const s of saved) savedMap[s.featureKey] = s
-
-        // Katalog penuh dari plugins yang ter-load, dikelompokkan per category
-        const { plugins } = await import('../../lib/plugins.js')
-        const groups = {}
-        for (const [, plugin] of plugins) {
-            const cmds = plugin.cmd || []
-            if (!cmds.length) continue
-            const key = cmds[0]
-            const cat = (plugin.category || 'others').toLowerCase()
-            if (!groups[cat]) groups[cat] = []
-            // hindari duplikat key dalam group
-            if (groups[cat].some(f => f.featureKey === key)) continue
-            // savedMap[key] datang dari getAllFeatureSettings, yang sudah nge-resolve
-            // accessRules dengan fallback ke DEFAULT_ACCESS_RULES kalau fitur itu belum
-            // pernah disave secara eksplisit lewat Access Rule -- jangan dihitung ulang
-            // di sini (dulu ada bug: dihitung ulang pakai s.accessRules yang defaultnya
-            // selalu ada sebagai array, jadi checkbox Access Rule keliatan kosong/publik
-            // padahal defaultnya owner/admin-only).
-            const s = savedMap[key]
-            const accessRules = s ? s.accessRules : (DEFAULT_ACCESS_RULES[key] || [])
-            groups[cat].push({
-                featureKey: key,
-                aliases: cmds,
-                description: plugin.description || plugin.help || '',
-                enabled: s ? s.enabled !== false : true,
-                customResponse: (s && s.customResponse) || null,
-                customCommand: (s && s.customCommand) || null,
-                accessRule: accessRules.length ? accessRules.join('+') : 'public',
-                accessRules
-            })
-        }
-        // sort keys in each group
-        for (const cat of Object.keys(groups)) {
-            groups[cat].sort((a, b) => a.featureKey.localeCompare(b.featureKey))
-        }
-
-        res.json({
-            groups,
-            categories: Object.keys(groups).sort(),
-            isPremium: premium,
-            accessRules: ACCESS_FLAGS
-        })
-    } catch (e) {
-        res.status(500).json({ error: publicError(e, 'Something went wrong') })
-    }
-})
 
 router.put('/bots/:botId/features/:featureKey', authMiddleware, loadAccount, async (req, res) => {
     try {
@@ -624,7 +621,7 @@ router.put('/bots/:botId/features/:featureKey', authMiddleware, loadAccount, asy
         const body = req.body || {}
         const patch = {}
 
-        // Free: only ON/OFF for basic features
+        // Free: only ON/OFF
         if (body.enabled !== undefined) patch.enabled = !!body.enabled
 
         if (premium) {
@@ -636,8 +633,19 @@ router.put('/bots/:botId/features/:featureKey', authMiddleware, loadAccount, asy
                     : body.accessRule
                 patch.accessRules = rules
             }
-        } else if (body.customResponse || body.customCommand || body.accessRule || body.accessRules) {
-            return res.status(403).json({ error: 'Custom response/command/access rule hanya Premium' })
+            // Extended controls
+            if (body.cooldown !== undefined) patch.cooldown = Math.max(0, Number(body.cooldown) || 0)
+            if (body.limitCost !== undefined) patch.limitCost = Math.max(0, Number(body.limitCost) || 0)
+            if (body.requireVerified !== undefined) patch.requireVerified = !!body.requireVerified
+            if (body.premiumOnly !== undefined) patch.premiumOnly = !!body.premiumOnly
+            if (body.resultCaption !== undefined) patch.resultCaption = body.resultCaption
+            if (body.resultFooter !== undefined) patch.resultFooter = body.resultFooter
+            if (body.resultLoading !== undefined) patch.resultLoading = body.resultLoading
+            if (body.resultSuccess !== undefined) patch.resultSuccess = body.resultSuccess
+            if (body.resultError !== undefined) patch.resultError = body.resultError
+        } else if (body.customResponse || body.customCommand || body.accessRule || body.accessRules ||
+                   body.cooldown || body.limitCost || body.requireVerified || body.premiumOnly) {
+            return res.status(403).json({ error: 'Advanced feature control hanya Premium' })
         }
 
         await setFeatureSetting(bot.sessionId, req.params.featureKey, patch)
@@ -747,7 +755,7 @@ router.post('/premium/check', authMiddleware, loadAccount, async (req, res) => {
         if (paid) {
             await markOrderChecked(orderId, 'paid')
             const plan = resolvePlan(order.duration)
-            await activateAccountPremium(req.account._id.toString(), { months: plan.months, days: plan.days })
+            await activateAccountPremium(req.account._id.toString(), { months: plan.months, days: plan.days, tier: plan.tier || 'pro' })
             await pushNotification(req.account._id.toString(), {
                 type: 'success',
                 title: 'Premium aktif',
