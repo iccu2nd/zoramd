@@ -481,6 +481,26 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
             for (const k of extra) {
                 if (body[k] !== undefined) patchSettings[k] = body[k]
             }
+            // Extra owners & blocked commands: advanced/security-sensitive knobs that
+            // used to require editing the script directly. Accept either an array or a
+            // comma-separated string from the UI and normalize before storing.
+            if (body.extraOwners !== undefined) {
+                const list = Array.isArray(body.extraOwners)
+                    ? body.extraOwners
+                    : String(body.extraOwners || '').split(',')
+                patchSettings.extraOwners = [...new Set(
+                    list.map(n => String(n).replace(/[^0-9]/g, '')).filter(Boolean)
+                        .map(n => `${n}@s.whatsapp.net`)
+                )]
+            }
+            if (body.blockedCmds !== undefined) {
+                const list = Array.isArray(body.blockedCmds)
+                    ? body.blockedCmds
+                    : String(body.blockedCmds || '').split(',')
+                patchSettings.blockedCmds = [...new Set(
+                    list.map(c => String(c).trim().toLowerCase()).filter(Boolean)
+                )]
+            }
             if (body.identity || body.botName || body.ownerNumber) {
                 const identity = { ...(bot.identity || {}), ...(body.identity || {}) }
                 if (body.botName) identity.botName = body.botName
@@ -494,13 +514,14 @@ router.put('/bots/:botId/settings', authMiddleware, loadAccount, async (req, res
                 if (body.identity?.title) identity.title = body.identity.title
                 if (body.identity?.body) identity.body = body.identity.body
                 if (body.identity?.thumbnail) identity.thumbnail = body.identity.thumbnail
+                if (body.identity?.sourceUrl) identity.sourceUrl = body.identity.sourceUrl
                 await updateOwnedBot(bot._id.toString(), req.account._id.toString(), {
                     botName: identity.botName || bot.botName,
                     ownerNumber: identity.ownerNumber || bot.ownerNumber,
                     identity
                 })
             }
-        } else if (body.identity || body.botName || body.ownerNumber) {
+        } else if (body.identity || body.botName || body.ownerNumber || body.extraOwners !== undefined || body.blockedCmds !== undefined) {
             return res.status(403).json({ error: 'Custom identity is available for Premium only' })
         }
 

@@ -73,9 +73,17 @@
       if (Z.$('#set-idch')) Z.$('#set-idch').value = id.idch || ''
       if (Z.$('#set-groupurl')) Z.$('#set-groupurl').value = id.groupUrl || ''
       if (Z.$('#set-groupid')) Z.$('#set-groupid').value = id.groupId || ''
+      if (Z.$('#set-sourceurl')) Z.$('#set-sourceurl').value = id.sourceUrl || ''
+      if (Z.$('#set-extraowners')) {
+        Z.$('#set-extraowners').value = (s.extraOwners || []).map(function (j) {
+          return String(j).split('@')[0]
+        }).join(', ')
+      }
+      if (Z.$('#set-blockedcmds')) Z.$('#set-blockedcmds').value = (s.blockedCmds || []).join(', ')
       var disabled = !data.isPremium
       ;['set-botname', 'set-ownernumber', 'set-author', 'set-packname', 'set-title', 'set-body',
-        'set-thumbnail', 'set-channelurl', 'set-idch', 'set-groupurl', 'set-groupid'].forEach(function (i) {
+        'set-thumbnail', 'set-channelurl', 'set-idch', 'set-groupurl', 'set-groupid', 'set-sourceurl',
+        'set-extraowners', 'set-blockedcmds'].forEach(function (i) {
         var el = Z.$('#' + i)
         if (el) el.disabled = disabled
       })
@@ -150,6 +158,8 @@
             gconly: gconlyOn ? 'join' : false,
             botName: Z.$('#set-botname') && Z.$('#set-botname').value,
             ownerNumber: Z.$('#set-ownernumber') && Z.$('#set-ownernumber').value,
+            extraOwners: Z.$('#set-extraowners') && Z.$('#set-extraowners').value,
+            blockedCmds: Z.$('#set-blockedcmds') && Z.$('#set-blockedcmds').value,
             identity: {
               channelUrl: Z.$('#set-channelurl') && Z.$('#set-channelurl').value,
               groupUrl: Z.$('#set-groupurl') && Z.$('#set-groupurl').value,
@@ -159,7 +169,8 @@
               packname: Z.$('#set-packname') && Z.$('#set-packname').value,
               title: Z.$('#set-title') && Z.$('#set-title').value,
               body: Z.$('#set-body') && Z.$('#set-body').value,
-              thumbnail: Z.$('#set-thumbnail') && Z.$('#set-thumbnail').value
+              thumbnail: Z.$('#set-thumbnail') && Z.$('#set-thumbnail').value,
+              sourceUrl: Z.$('#set-sourceurl') && Z.$('#set-sourceurl').value
             }
           }
         })
